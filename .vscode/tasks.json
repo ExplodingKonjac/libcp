@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [  
+        {
+            "type": "shell",
+            "label": "C++ Compile",
+            "command": "g++",
+            "args": [
+                "${fileBasename}",
+                "-g",
+                "-o",
+                "${fileBasenameNoExtension}",
+                "-std=c++23",
+                "-DDADALZY",
+                "-Wall",
+                "-Wno-unused-result",
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "Compiler: /usr/bin/g++"
+        },
+    ]
+}

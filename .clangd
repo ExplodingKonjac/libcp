@@ -1,0 +1,12 @@
+Index:
+  Background: Build
+
+CompileFlags:
+  Add: [-Wall, -std=c++23, -DDADALZY]
+  Compiler: g++
+
+Completion:
+  HeaderInsertion: IWYU
+
+Documentation:
+  CommentFormat: Doxygen
