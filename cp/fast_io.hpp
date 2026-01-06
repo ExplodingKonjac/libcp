@@ -21,16 +21,19 @@
 namespace cp
 {
 
-using namespace std;
 constexpr size_t IN_BUF_SIZE = 1 << 21;
 constexpr size_t OUT_BUF_SIZE = 1 << 21;
 
 #ifndef CP_FORMAT_STRING
 #define CP_FORMAT_STRING
 template <size_t N>
-struct FixedString: array<char, N> {
-    consteval FixedString(const char (&str)[N]) { ranges::copy(str, *this); }
-    constexpr auto view() const { return string_view{this->data(), N - 1}; }
+struct FixedString: std::array<char, N> {
+    consteval FixedString(const char (&str)[N]) {
+        std::ranges::copy(str, this->data());
+    }
+    constexpr auto view() const {
+        return std::string_view{this->data(), N - 1};
+    }
 };
 
 template <FixedString S>
@@ -80,7 +83,7 @@ private:
             return *this;
         }
         void skipws() {
-            while (isspace(c)) ++(*this);
+            while (std::isspace(c)) ++(*this);
         }
         char operator*() { return c; }
         bool eof() { return c == EOF; }
@@ -89,14 +92,14 @@ private:
         FastInput* t = nullptr;
 #ifdef CP_FASTIO_USE_BUF
         char c = t ? (~t->_pos ? t->_buf[t->_pos] : t->sync()) : EOF;
-        ~BufIterator() { ungetc(c, t->_target); }
+        ~BufIterator() { std::ungetc(c, t->_target); }
 #else
-        char c = t ? fgetc(t->_target) : EOF;
+        char c = t ? std::fgetc(t->_target) : EOF;
 #endif
     };
 
 public:
-    FastInput(FILE* target = stdin): FastIOBase(target) {
+    FastInput(FILE* target): FastIOBase(target) {
 #ifdef CP_FASTIO_USE_BUF
 #ifdef __linux__
         int fd = fileno(target);
@@ -119,7 +122,7 @@ public:
 #ifdef CP_FASTIO_USE_BUF
     char sync() {
         if (_is_mmap) return EOF;
-        size_t read_sz = fread(_buf, 1, IN_BUF_SIZE, _target);
+        size_t read_sz = std::fread(_buf, 1, IN_BUF_SIZE, _target);
         _pos = 0;
         if (read_sz < IN_BUF_SIZE) _buf[read_sz] = EOF;
         return _buf[0];
@@ -129,81 +132,82 @@ public:
     operator bool() { return !eof(); }
     bool eof() { return BufIterator{this}.eof(); }
 
-    template <integral T>
-    optional<T> scan() {
+    template <std::integral T>
+    std::optional<T> scan() {
         BufIterator it{this};
         bool neg = false;
         T res = 0;
         it.skipws();
         if (*it == '-') neg = true, it++;
         else if (*it == '+') it++;
-        if (!isdigit(*it)) return nullopt;
+        if (!std::isdigit(*it)) return std::nullopt;
         do {
             res = res * 10 + (*it ^ 48);
             it++;
-        } while (isdigit(*it));
+        } while (std::isdigit(*it));
         return neg ? -res : res;
     }
 
-    template <same_as<string> T>
-    optional<T> scan() {
+    template <std::same_as<std::string> T>
+    std::optional<T> scan() {
         BufIterator it{this};
         it.skipws();
-        if (it.eof()) return nullopt;
+        if (it.eof()) return std::nullopt;
         T res{};
         do {
             res.push_back(*it);
             it++;
-        } while (!isspace(*it));
+        } while (std::isgraph(*it));
         return res;
     }
 
-    template <floating_point T>
-    optional<T> scan() {
+    template <std::floating_point T>
+    std::optional<T> scan() {
         BufIterator it{this};
         bool neg = false, ok = false;
-        double res = 0.0;
+        T res = 0;
         it.skipws();
         if (*it == '-') neg = true, it++;
         else if (*it == '+') it++;
-        if (isdigit(*it)) {
+        if (std::isdigit(*it)) {
             ok = true;
             do {
                 res = res * 10 + (*it ^ 48);
                 it++;
-            } while (isdigit(*it));
+            } while (std::isdigit(*it));
         }
-        if (*it == '.' && isdigit(*(++it))) {
-            ok = false;
-            double mul = 0.1;
+        if (*it == '.' && std::isdigit(*(++it))) {
+            ok = true;
+            T mul = 0.1;
             do {
                 res += mul * (*it ^ 48);
-                it++;
                 mul *= 0.1;
-            } while (isdigit(*it));
+                it++;
+            } while (std::isdigit(*it));
         }
-        return ok ? optional(neg ? -res : res) : nullopt;
+        return ok ? std::optional(neg ? -res : res) : std::nullopt;
     }
 
     template <typename... Args>
         requires(sizeof...(Args) > 1)
-    optional<tuple<Args...>> scan() {
-        tuple<optional<Args>...> tmp;
-        auto try_scan = [this](auto&... items) {
-            return ((items = scan<remove_cvref_t<decltype(items.value())>>()) &&
+    std::optional<std::tuple<Args...>> scan() {
+        std::tuple<std::optional<Args>...> tmp;
+        auto try_scan = [this](auto&... r) {
+            return ((r = scan<std::remove_cvref_t<decltype(r.value())>>()) &&
                     ...);
         };
         auto unwrap = [](auto&&... items) {
-            return make_tuple(std::move(items).value()...);
+            return std::tuple(std::move(items).value()...);
         };
-        return apply(try_scan, tmp) ? optional(apply(unwrap, tmp)) : nullopt;
+        if (std::apply(try_scan, tmp)) return std::apply(unwrap, tmp);
+        return std::nullopt;
     }
 };
 
 class FastOutput final: FastIOBase {
 private:
-    static constexpr array<char, 200> lut = [] {
-        array<char, 200> res;
+    static constexpr std::array<char, 200> lut = [] {
+        std::array<char, 200> res;
         for (size_t i = 0; i < 100; i++) {
             res[i * 2] = i / 10 + '0';
             res[i * 2 + 1] = i % 10 + '0';
@@ -233,7 +237,7 @@ private:
     };
 
 public:
-    FastOutput(FILE* target = stdout): FastIOBase{target} {
+    FastOutput(FILE* target): FastIOBase{target} {
 #ifdef CP_FASTIO_USE_BUF
         _buf = new char[OUT_BUF_SIZE];
         _size = OUT_BUF_SIZE;
@@ -248,22 +252,17 @@ public:
     }
 
     template <FixedString S, typename... Args>
-    void print(FormatString<S>, Args&&... args) {
-        format_to(BufIterator{this}, S, args...);
-    }
-
-    template <FixedString S, typename... Args>
-    void println(FormatString<S>, Args&&... args) {
-        format_to(BufIterator{this}, S, args...);
-        print('\n');
+    void print(FormatString<S> fmt, Args&&... args) {
+        using std::format_to;
+        format_to(BufIterator{this}, fmt, args...);
     }
 
     void print(char c) { BufIterator{this} = c; }
 
-    template <integral T>
+    template <std::integral T>
     void print(T x) {
-        using U = make_unsigned_t<T>;
-        char stk[numeric_limits<T>::digits10], *top = stk;
+        using U = std::make_unsigned_t<T>;
+        char stk[std::numeric_limits<T>::digits10], *top = stk;
         BufIterator it{this};
         U u = (x < 0 ? print('-'), -x : x);
         while (u >= 100) {
@@ -281,35 +280,36 @@ public:
         while (top > stk) it = *(--top);
     }
 
-    template <floating_point T>
+    template <std::floating_point T>
     void print(T x) {
         constexpr size_t S = sizeof(T) > 8 ? 64 : 32;
         char buf[S];
-        auto [p, e] = to_chars(buf, buf + S, x, chars_format::general);
-        if (e == errc{}) {
+        auto [p, e] =
+            std::to_chars(buf, buf + S, x, std::chars_format::general);
+        if (e == std::errc{}) {
             BufIterator it{this};
             for (auto i = buf; i != p; i++) it = *i;
         }
     }
 
-    template <convertible_to<string_view> T>
+    template <std::convertible_to<std::string_view> T>
     void print(T&& x) {
-        BufIterator it{this};
-        for (auto& c: string_view(x)) it = c;
+        std::ranges::copy(std::string_view(x), BufIterator{this});
     }
 
     template <typename First, typename... Args>
         requires(sizeof...(Args) > 0)
     void print(First&& first, Args&&... args) {
-        print(first);
-        ((print(' '), print(args)), ...);
+        print(first), print(' '), print(args...);
     }
 
     template <typename... Args>
     void println(Args&&... args) {
-        print(args...);
-        print('\n');
+        print(args...), print('\n');
     }
 };
+
+inline cp::FastInput qin(stdin);
+inline cp::FastOutput qout(stdout);
 
 }  // namespace cp
