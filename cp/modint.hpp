@@ -3,7 +3,6 @@
 #include <cassert>
 #include <concepts>
 #include <cstdint>
-#include <print>
 #include <stdexcept>
 
 namespace cp
@@ -40,13 +39,6 @@ struct MontInfo {
         u32 m = (u32)t * P_INV;
         return (t + (u64)m * P) >> 32;
     }
-    template <std::integral T>
-    constexpr u32 qpow(u32 x, T y) const {
-        u32 res = toMont(1);
-        for (; y; y >>= 1, x = mul(x, x))
-            if (y & 1) res = mul(res, x);
-        return res;
-    }
     constexpr u32 inv(u32 a) const {
         i64 c = a, x = 1, y = 0, t;
         for (i64 b = P; b; std::swap(c, b), std::swap(x, y))
@@ -66,10 +58,9 @@ public:
     explicit constexpr operator T() const {
         return m.fromMont(_val);
     }
-    constexpr operator D&() { return *static_cast<D*>(this); }
 
-#define DEF_OP_ARI(op, expr)                                   \
-    constexpr D operator op(D rhs) const { return raw(expr); } \
+#define DEF_OP_ARI(op, expr)                                             \
+    constexpr D operator op(D rhs) const { return D(*this) op## = rhs; } \
     constexpr D& operator op## = (D rhs) { return _val = (expr), *this; }
 #define DEF_OP_INC(op, expr)                                    \
     constexpr D& operator op() { return _val = (expr), *this; } \
@@ -78,7 +69,7 @@ public:
         return op(*this), res;                                  \
     }
 #define DEF_OP_UNARY(op, expr) \
-    constexpr D operator op() const { return raw(expr); }
+    constexpr D operator op() const { return D(0, (expr)); }
 
     DEF_OP_ARI(+, m.add(_val, rhs._val))
     DEF_OP_ARI(-, m.sub(_val, rhs._val))
@@ -88,7 +79,12 @@ public:
     DEF_OP_INC(--, m.sub(_val, m.R))
     DEF_OP_UNARY(+, _val)
     DEF_OP_UNARY(-, _val ? m.P - _val : 0)
-    constexpr D inv() const { return D(m.inv(_val)); }
+    constexpr bool operator==(D other) const {
+        u32 delta = _val >= other._val ? _val - other._val : other._val - _val;
+        return delta == 0 || delta == m.P;
+    }
+    constexpr bool operator!=(D other) const { return !(*this == other); }
+    constexpr D inv() const { return D(0, m.inv(_val)); }
 
 #undef DEF_OP_ARI
 #undef DEF_OP_INC
@@ -96,7 +92,10 @@ public:
 
 private:
     static constexpr const MontInfo& m = D::mont;
-    static D raw(u32 x) { return reinterpret_cast<D&>(x); }
+
+    constexpr ModintBase(int, u32 x): _val{x} {}
+    constexpr operator D() const { return *static_cast<const D*>(this); }
+    constexpr operator D&() { return *static_cast<D*>(this); }
 
     u32 _val;
 };
@@ -104,33 +103,32 @@ private:
 }  // namespace detail
 
 template <u32 P>
-class SModint: public detail::ModintBase<SModint<P>> {
+struct SModint: detail::ModintBase<SModint<P>> {
     static_assert(P > 0 && P < (1 << 30), "P must be in [0, 2^{30})");
 
-private:
-    using Base = detail::ModintBase<SModint<P>>;
-    friend Base;
     static constexpr detail::MontInfo mont{P};
-
-public:
-    using Base::Base;
+    using detail::ModintBase<SModint<P>>::ModintBase;
 };
 
-class DModint: public detail::ModintBase<DModint> {
-private:
-    using Base = detail::ModintBase<DModint>;
-    friend Base;
+struct DModint: public detail::ModintBase<DModint> {
     inline static detail::MontInfo mont{998244353};
+    using detail::ModintBase<DModint>::ModintBase;
 
-public:
-    using Base::Base;
     static void setMod(u32 P) {
-        if (P == 0 || P >= (1 << 30)) {
+        if (P == 0 || P >= (1 << 30))
             throw std::out_of_range("P must be in [0, 2^{30})");
-        }
         mont = detail::MontInfo{P};
     }
     static u32 getMod() { return mont.P; }
 };
+
+template <typename T, std::integral U>
+    requires std::derived_from<T, detail::ModintBase<T>>
+constexpr auto qpow(T x, U y) {
+    T res{1};
+    for (; y; y >>= 1, x = x * x)
+        if (y & 1) res = res * x;
+    return res;
+}
 
 }  // namespace cp
