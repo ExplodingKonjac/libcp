@@ -8,7 +8,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/${fileBasenameNoExtension}",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "command script import \"${workspaceFolder}/.vscode/lldb_formatter.py\""
+            ]
         },
     ]
 }

@@ -15,8 +15,6 @@ constexpr int MOD = 998244353;
 using Mint = cp::SModint<MOD>;
 using Poly = cp::FPoly<MOD, (1 << 20)>;
 
-std::mt19937 mt_rnd(19260817);
-
 template <std::uint32_t P, typename CharT>
 struct std::formatter<cp::SModint<P>, CharT>: std::formatter<int, CharT> {
     constexpr auto format(auto v, auto& ctx) const {
@@ -28,26 +26,44 @@ template <std::uint32_t P, size_t MAXN, typename CharT>
 struct std::formatter<cp::FPoly<P, MAXN>, CharT>
     : std::range_formatter<cp::SModint<P>, CharT> {};
 
+void verify(const Poly& f, const Poly& g) {
+    Poly prod = f * g;
+    for (size_t i = 0; i < f.size(); i++) {
+        int expected = (i == 0 ? 1 : 0);
+        if (prod[i]() != expected) {
+            qout.println("prod[{}]: expect: {}, got: {}"_fmt, i, expected,
+                         prod[i]());
+            break;
+        }
+    }
+}
+
+unsigned next() {
+    static unsigned seed = 114514;
+    seed ^= seed << 5;
+    seed ^= seed >> 13;
+    seed ^= seed << 17;
+    return seed;
+}
+
 int main() {
     // freopen("P4238_1.in", "r", stdin);
     // freopen("output.out", "w", stdout);
 
-    // Poly f{1, 1, 4, 5, 1}, g{1, 9, 1, 9, 8};
-    // f *= g;
-    // qout.println("{}"_fmt, f);
-
-    int T = 10;
+    int T = 100;
     while (T--) {
         int n = 1000000;
 
-        std::uniform_int_distribution dist(1, MOD - 1);
-        Poly f(std::views::iota(0, n) |
-               std::views::transform([&](auto...) { return dist(mt_rnd); }));
+        Poly f(n, true);
+        for (int i = 0; i < n; i++) f[i] = next();
+        Poly g = f.inv();
+        // qout.println("f: {}"_fmt, f);
+        // verify(f, g);
 
-        f = f.inv();
-        qout.println(std::ranges::fold_left(
-            f | std::views::transform([](auto& x) { return int(x); }), 0,
-            std::bit_xor<>{}));
+        int checksum = 0;
+        for (auto& i: g) checksum ^= i();
+        qout.println(checksum);
     }
+
     return 0;
 }
