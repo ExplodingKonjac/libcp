@@ -6,7 +6,7 @@
             "type": "lldb",
             "preLaunchTask": "C++ Compile",
             "request": "launch",
-            "program": "${workspaceFolder}/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [],
             "cwd": "${workspaceFolder}",
             "initCommands": [

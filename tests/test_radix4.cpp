@@ -26,17 +26,7 @@ template <std::uint32_t P, size_t MAXN, typename CharT>
 struct std::formatter<cp::FPoly<P, MAXN>, CharT>
     : std::range_formatter<cp::SModint<P>, CharT> {};
 
-void verify(const Poly& f, const Poly& g) {
-    Poly prod = f * g;
-    for (size_t i = 0; i < f.size(); i++) {
-        int expected = (i == 0 ? 1 : 0);
-        if (prod[i]() != expected) {
-            qout.println("prod[{}]: expect: {}, got: {}"_fmt, i, expected,
-                         prod[i]());
-            break;
-        }
-    }
-}
+unsigned a[1000005];
 
 unsigned next() {
     static unsigned seed = 114514;
@@ -54,14 +44,11 @@ int main() {
     while (T--) {
         int n = 1000000;
 
-        Poly f(n, true);
-        for (int i = 0; i < n; i++) f[i] = next();
-        Poly g = f.inv();
-        // qout.println("f: {}"_fmt, f);
-        // verify(f, g);
+        for (int i = 0; i < n; i++) a[i] = next();
+        Poly ans = Poly(a, a + n).inv();
 
         int checksum = 0;
-        for (auto& i: g) checksum ^= i();
+        for (auto& i: ans) checksum ^= i();
         qout.println(checksum);
     }
 

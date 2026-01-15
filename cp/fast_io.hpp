@@ -82,19 +82,19 @@ private:
 #endif
             return *this;
         }
-        void skipws() {
-            while (std::isspace(c)) ++(*this);
-        }
         char operator*() { return c; }
-        bool eof() { return c == EOF; }
         void operator++(int) { ++(*this); }
+        void skipws() {
+            while (c <= 32) ++(*this);
+        }
+        bool eof() { return c == EOF; }
 
         FastInput* t = nullptr;
 #ifdef CP_FASTIO_USE_BUF
         char c = t ? (~t->_pos ? t->_buf[t->_pos] : t->sync()) : EOF;
-        ~BufIterator() { std::ungetc(c, t->_target); }
 #else
         char c = t ? std::fgetc(t->_target) : EOF;
+        ~BufIterator() { std::ungetc(c, t->_target); }
 #endif
     };
 
@@ -136,15 +136,15 @@ public:
     std::optional<T> scan() {
         BufIterator it{this};
         bool neg = false;
-        T res = 0;
         it.skipws();
-        if (*it == '-') neg = true, it++;
-        else if (*it == '+') it++;
+        if constexpr (std::is_unsigned_v<T>) {
+            if (*it == '-') neg = true, it++;
+            else if (*it == '+') it++;
+        }
         if (!std::isdigit(*it)) return std::nullopt;
-        do {
-            res = res * 10 + (*it ^ 48);
-            it++;
-        } while (std::isdigit(*it));
+        T res = 0;
+        do res = res * 10 + (*it ^ 48), it++;
+        while (std::isdigit(*it));
         return neg ? -res : res;
     }
 
@@ -154,36 +154,29 @@ public:
         it.skipws();
         if (it.eof()) return std::nullopt;
         T res{};
-        do {
-            res.push_back(*it);
-            it++;
-        } while (std::isgraph(*it));
+        do res.push_back(*it), it++;
+        while (std::isgraph(*it));
         return res;
     }
 
     template <std::floating_point T>
     std::optional<T> scan() {
         BufIterator it{this};
-        bool neg = false, ok = false;
         T res = 0;
+        bool neg = false, ok = false;
         it.skipws();
         if (*it == '-') neg = true, it++;
         else if (*it == '+') it++;
         if (std::isdigit(*it)) {
             ok = true;
-            do {
-                res = res * 10 + (*it ^ 48);
-                it++;
-            } while (std::isdigit(*it));
+            do res = res * 10 + (*it ^ 48), it++;
+            while (std::isdigit(*it));
         }
         if (*it == '.' && std::isdigit(*(++it))) {
             ok = true;
             T mul = 0.1;
-            do {
-                res += mul * (*it ^ 48);
-                mul *= 0.1;
-                it++;
-            } while (std::isdigit(*it));
+            do res += mul * (*it ^ 48), mul *= 0.1, it++;
+            while (std::isdigit(*it));
         }
         return ok ? std::optional(neg ? -res : res) : std::nullopt;
     }

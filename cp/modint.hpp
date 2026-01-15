@@ -43,10 +43,10 @@ template <typename D>
 class ModintBase {
 public:
     C ModintBase(): _val{0} {}
-    template <std::signed_integral T>
-    C ModintBase(T x): _val{u32(i64(x) * m.R % m.P + m.P)} {}
-    template <std::unsigned_integral T>
-    C ModintBase(T x): _val{u32(u64(x) * m.R % m.P)} {}
+    C ModintBase(i32 x): _val{m.toMont(x + (1 << 31) / m.P * m.P)} {}
+    C ModintBase(u32 x): _val{m.toMont(x)} {}
+    C ModintBase(i64 x): _val{m.toMont(x % m.P + m.P)} {}
+    C ModintBase(u64 x): _val{m.toMont(x % m.P)} {}
     C bool operator==(D other) const {
         u32 delta = _val >= other._val ? _val - other._val : other._val - _val;
         return delta == 0 || delta == m.P;
@@ -54,6 +54,7 @@ public:
     C bool operator!=(D other) const { return !(*this == other); }
     C u32 operator()() const { return m.fromMont(_val); }
     C D inv() const { return D(0, m.inv(_val)); }
+    C D strict() const { return D(0, _val < m.P ? _val : _val - m.P); }
     C u32 raw() const { return _val; }
 
 #define DEF_OP_ARI(op, expr)                                     \
