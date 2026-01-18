@@ -45,12 +45,11 @@ int main() {
         int n = 1000000;
 
         for (int i = 0; i < n; i++) a[i] = next();
-        Poly ans = Poly(a, a + n).inv();
+        Poly ans = inv(Poly(a, a + n));
 
         int checksum = 0;
         for (auto& i: ans) checksum ^= i();
         qout.println(checksum);
     }
-
     return 0;
 }

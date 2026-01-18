@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstdint>
 #include <stdexcept>
+#include <type_traits>
 
 namespace cp
 {
@@ -57,8 +58,8 @@ public:
     C D strict() const { return D(0, _val < m.P ? _val : _val - m.P); }
     C u32 raw() const { return _val; }
 
-#define DEF_OP_ARI(op, expr)                                     \
-    C D operator op(D rhs) const { return D(*this) op## = rhs; } \
+#define DEF_OP_ARI(op, expr)                                        \
+    friend C D operator op(D lhs, D rhs) { return lhs op## = rhs; } \
     C D& operator op## = (D rhs) { return _val = (expr), *this; }
 #define DEF_OP_INC(op, expr)                            \
     C D& operator op() { return _val = (expr), *this; } \
@@ -116,7 +117,8 @@ struct DModint: public detail::ModintBase<DModint> {
 
 template <typename T, std::integral U>
     requires std::derived_from<T, detail::ModintBase<T>>
-C auto qpow(T x, U y) {
+C T qpow(T x, U y) {
+    if (y < 0) return qpow(x.inv(), std::make_signed_t<U>(-y));
     T res{1};
     for (; y; y >>= 1, x = x * x)
         if (y & 1) res = res * x;

@@ -1,14 +1,11 @@
-#include <emmintrin.h>
 #include <immintrin.h>
 
 #include <bit>
-#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
-#include <print>
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
@@ -17,7 +14,7 @@
 
 #include "modint.hpp"
 
-#pragma GCC target("avx2", "fma")
+#pragma GCC target("avx2")
 
 namespace cp
 {
@@ -108,20 +105,41 @@ struct PolyUtils {
     static constexpr m256i vset1(u32 x) {
         return (m256i)__v8su{x, x, x, x, x, x, x, x};
     }
+    static constexpr m256i vsetr(u32 v0, u32 v1, u32 v2, u32 v3, u32 v4, u32 v5,
+                                 u32 v6, u32 v7) {
+        return (m256i)__v8su{v0, v1, v2, v3, v4, v5, v6, v7};
+    }
+    static constexpr m256i vset1(Mint x) { return vset1(x.strict().raw()); }
+    static constexpr m256i vsetr(Mint v0, Mint v1, Mint v2, Mint v3, Mint v4,
+                                 Mint v5, Mint v6, Mint v7) {
+        return vsetr(v0.strict().raw(), v1.strict().raw(), v2.strict().raw(),
+                     v3.strict().raw(), v4.strict().raw(), v5.strict().raw(),
+                     v6.strict().raw(), v7.strict().raw());
+    }
+    template <int imm>
+    static m256i vshuffle(m256i a) {
+        return _mm256_shuffle_epi32(a, imm);
+    }
+    template <int imm>
+    static m256i vpermute(m256i a) {
+        return _mm256_permute4x64_epi64(a, imm);
+    }
+    template <int control>
+    static m256i vblend(m256i x, m256i y) {
+        return _mm256_blend_epi32(x, y, control);
+    }
 
     static constexpr bool is_prime = [] {
         for (u32 i = 2; (u64)i * i <= P; i++)
             if (P % i == 0) return false;
         return true;
     }();
-    static constexpr size_t MAXN =
-        std::min(_MAXN, size_t(1) << std::countr_zero(P - 1));
-    static constexpr size_t B = 8192;
+    static constexpr size_t LG_MAXN = std::countr_zero(P - 1),
+                            MAXN = std::min(_MAXN, size_t(1) << LG_MAXN);
+    static constexpr const auto& M = Mint::mont;
 
     static_assert(is_prime, "P must be prime number");
-    static_assert(MAXN >= 4, "MAXN must be at least 4");
-
-    static constexpr const auto& M = Mint::mont;
+    static_assert(MAXN >= 8, "MAXN must be at least 8");
 
     static constexpr Mint G = [] {
         u32 phi = P - 1, tmp = phi;
@@ -143,49 +161,75 @@ struct PolyUtils {
         }
         return Mint{};
     }();
-    static constexpr Mint I = qpow(G, (P - 1) / 4).strict(),
-                          I_INV = (-I).strict();
-    static constexpr m256i V_P = vset1(P), V_P2 = vset1(2 * P),
-                           V_P_INV = vset1(M.P_INV), V_R = vset1(M.R),
-                           V_R2 = vset1(M.R2), V_I = vset1(I.raw());
 
-    alignas(32) Mint g[MAXN * 2], inv[MAXN + 1];
-    size_t g_len = 4, inv_len = 2;
+    static constexpr struct _DFTInfo {
+        Mint rt[LG_MAXN + 1], irt[LG_MAXN + 1];
+        Mint w4d[LG_MAXN - 2], iw4d[LG_MAXN - 2];
+        alignas(32) Mint w8d[LG_MAXN - 3][8], iw8d[LG_MAXN - 3][8];
 
-    PolyUtils() { inv[1] = 1; }
-    void prepareG(size_t len) {
-        constexpr Mint one = Mint{1}.strict();
-        for (size_t& i = g_len; i <= len; i <<= 1) {
-            size_t s = i / 4;
-            auto w0 = g + i, w1 = w0 + s, w2 = w1 + s, w3 = w2 + s;
-            Mint cur = one, gn = qpow(G, (P - 1) / i);
-            std::fill(w0, w0 + s, one);
-            for (size_t k = 0; k < s; k++) w1[k] = cur, cur *= gn;
-            dot(w1, w1, s, w2);
-            dot(w1, w2, s, w3);
-            for (size_t k = s; k < i; k++) w0[k] = w0[k].strict();
+        static constexpr void fillpow(Mint* a, Mint x, int k) {
+            a[0] = 1;
+            for (int i = 1; i < k; i++) a[i] = a[i - 1] * x;
         }
-    }
-    void prepareInv(size_t len) {
-        for (size_t& i = inv_len; i <= len; i++)
-            inv[i] = -Mint{P / i} * inv[P % i];
-    }
+        constexpr _DFTInfo() {
+            Mint prd = qpow(G, (P - 1) >> LG_MAXN), iprd = prd.inv();
+            for (size_t i = LG_MAXN; ~i; i--) {
+                rt[i] = prd, irt[i] = iprd;
+                prd *= prd, iprd *= iprd;
+            }
+            prd = iprd = 1;
+            for (size_t i = 0; i + 3 <= LG_MAXN; i++) {
+                w4d[i] = rt[i + 3] * prd, prd *= irt[i + 3];
+                iw4d[i] = irt[i + 3] * iprd, iprd *= rt[i + 3];
+            }
+            prd = iprd = 1;
+            for (size_t i = 0; i + 4 <= LG_MAXN; i++) {
+                fillpow(w8d[i], rt[i + 4] * prd, 8), prd *= irt[i + 4];
+                fillpow(iw8d[i], irt[i + 4] * iprd, 8), iprd *= rt[i + 4];
+            }
+        }
+    } dft_info{};
 
-    template <bool lazy = false>
+    static inline struct _InvInfo {
+        alignas(32) Mint inv[MAXN];
+        size_t inv_len = 2;
+
+        _InvInfo() { inv[1] = 1; }
+        void prepare(size_t len) {
+            for (size_t i = inv_len; i <= len; i++)
+                inv[i] = -Mint{P / i} * inv[P % i];
+            inv_len = len;
+        }
+    } inv_info;
+
+    static constexpr m256i V_P = vset1(P), V_P2 = vset1(2 * P),
+                           V_R = vset1(M.R), V_R2 = vset1(M.R2),
+                           V_P_INV = vset1(M.P_INV),
+                           V_I = vset1(dft_info.rt[2]),
+                           V_I_INV = vset1(dft_info.irt[2]);
+
+    static m256i shrink(m256i x) {
+        return _mm256_min_epu32(x, _mm256_sub_epi32(x, V_P2));
+    }
+    template <bool strict = true>
     static m256i add(m256i x, m256i y) {
         m256i t = _mm256_add_epi32(x, y);
-        return lazy ? t : _mm256_min_epu32(t, _mm256_sub_epi32(t, V_P2));
+        return strict ? shrink(t) : t;
     }
-    template <bool lazy = false>
+    template <bool strict = true>
     static m256i sub(m256i x, m256i y) {
         m256i s = _mm256_sub_epi32(x, y);
         m256i t = _mm256_add_epi32(s, V_P2);
-        return lazy ? t : _mm256_min_epu32(s, t);
+        return strict ? _mm256_min_epu32(s, t) : t;
     }
+    template <bool strict = true, int mask = 0xFF>
     static m256i neg(m256i x) {
-        m256i mask = _mm256_cmpeq_epi32(x, _mm256_setzero_si256());
         m256i y = _mm256_sub_epi32(V_P2, x);
-        return _mm256_andnot_si256(mask, y);
+        if constexpr (strict) {
+            m256i eq = _mm256_cmpeq_epi32(x, _mm256_setzero_si256());
+            y = _mm256_andnot_si256(eq, y);
+        }
+        return mask == 0xFF ? y : vblend<mask>(x, y);
     }
     static m256i redc(m256i t) {
         m256i m = _mm256_mul_epu32(t, V_P_INV);
@@ -193,12 +237,12 @@ struct PolyUtils {
         return _mm256_add_epi64(t, v);
     }
     static m256i mul(m256i x, m256i y) {
-        m256i x1 = _mm256_shuffle_epi32(x, 0xF5);
-        m256i y1 = _mm256_shuffle_epi32(y, 0xF5);
+        m256i x1 = vshuffle<0xF5>(x);
+        m256i y1 = vshuffle<0xF5>(y);
         m256i res0 = redc(_mm256_mul_epu32(x, y));
         m256i res1 = redc(_mm256_mul_epu32(x1, y1));
-        res0 = _mm256_shuffle_epi32(res0, 0xF5);
-        return _mm256_blend_epi32(res0, res1, 0xAA);
+        res0 = vshuffle<0xF5>(res0);
+        return vblend<0xAA>(res0, res1);
     }
 
     static void clear(Mint* a, size_t len) {
@@ -207,16 +251,6 @@ struct PolyUtils {
     static void copy(const Mint* a, size_t len, Mint* out, size_t pad = 0) {
         std::memcpy((void*)out, (const void*)a, len * sizeof(Mint));
         if (pad) clear(out + len, pad - len);
-    }
-    static void rev(Mint* begin, Mint* end) {
-        constexpr m256i rev_mask = (m256i)__v8si{7, 6, 5, 4, 3, 2, 1, 0};
-        for (; end - begin >= 16; begin += 8, end -= 8) {
-            m256i x = vloadu(begin), y = vloadu(end - 8);
-            x = _mm256_permutevar8x32_epi32(x, rev_mask);
-            y = _mm256_permutevar8x32_epi32(y, rev_mask);
-            vstoreu(begin, y), vstoreu(end - 8, x);
-        }
-        std::reverse(begin, end);
     }
 
     // out <- a + b
@@ -249,212 +283,169 @@ struct PolyUtils {
     // out <- k * a
     static void scale(const Mint* a, Mint k, size_t len, Mint* out) {
         size_t i = 0;
-        const m256i vk = vset1(reinterpret_cast<int&>(k));
+        const m256i vk = vset1(k);
         for (; i + 7 < len; i += 8) vstore(&out[i], mul(vload(&a[i]), vk));
         for (; i < len; i++) out[i] = a[i] * k;
     }
 
-    template <bool inv = false>
-    static void vbutterfly(m256i& A, m256i& B, m256i& C, m256i& D) {
-        m256i t0 = add(A, C), t1 = sub(A, C), t2 = add(B, D),
-              t3 = mul(sub<inv>(B, D), V_I);
-        A = add(t0, t2), B = add<!inv>(t1, t3);
-        C = sub<!inv>(t0, t2), D = sub<!inv>(t1, t3);
-    }
-    template <bool inv = false>
-    static m256i vbutterfly2(m256i v) {
-        m256i v_swp = _mm256_shuffle_epi32(v, 0xB1);
-        m256i s = add(v_swp, v);
-        m256i t = sub(v_swp, v);
-        return _mm256_blend_epi32(s, t, 0xAA);
-    }
-    template <bool inv = false>
-    static m256i vbutterfly4(m256i v) {
-        constexpr m256i c = (m256i)__v8su{M.R, I.raw(), P - M.R, I_INV.raw(),
-                                          M.R, I.raw(), P - M.R, I_INV.raw()};
-        m256i v_swp = _mm256_shuffle_epi32(v, 0x4E);
-        m256i s = add(v, v_swp);
-        m256i t = sub(v, v_swp);
-        m256i u = _mm256_unpacklo_epi64(s, t);
-        m256i L = _mm256_shuffle_epi32(u, 0x88);
-        m256i R = mul(_mm256_shuffle_epi32(u, 0xDD), c);
-        return add(L, R);
-    }
-    template <bool inv = false>
-    static m256i vbutterfly8(m256i v) {
-        constexpr m256i c = (m256i)__v8su{M.R,     M.R,     I.raw(), I.raw(),
-                                          P - M.R, P - M.R, I.raw(), I.raw()};
-        m256i v_swp = _mm256_permute4x64_epi64(v, 0x4E);
-        m256i s = add(v, v_swp), t = sub(v, v_swp);
-        m256i L = _mm256_unpacklo_epi64(s, t);
-        m256i R = _mm256_unpackhi_epi64(s, t);
-        m256i L_fixed = _mm256_permute4x64_epi64(L, 0x44);
-        m256i R_fixed = mul(R, c);
-        return add<!inv>(L_fixed, R_fixed);
-    }
-    template <bool inv = false>
-    static void vbutterfly16(m256i& v0, m256i& v1) {
-        constexpr m256i c = (m256i)__v8su{M.R,     M.R,     M.R,     M.R,
-                                          I.raw(), I.raw(), I.raw(), I.raw()};
-        m256i s = add(v0, v1);
-        m256i t = mul(sub<true>(v0, v1), c);
-        m256i L = _mm256_permute2f128_si256(s, t, 0x20);
-        m256i R = _mm256_permute2f128_si256(s, t, 0x31);
-        v0 = add<!inv>(L, R), v1 = sub<!inv>(L, R);
-    }
-    void DIFLayer(Mint* a, size_t len, size_t& i) {
-        if (i == 2) {
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8)
-                vstore(a + j, vbutterfly2(vload(a + j)));
-            i = 0;
-        } else if (i == 4) {
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8)
-                vstore(a + j, vbutterfly4(vload(a + j)));
-            i = 0;
-        } else if (i == 8) {
-            m256i rot = vload(g + 8);
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8) {
-                m256i v = vload(a + j);
-                v = mul(vbutterfly8(v), rot);
-                v = vbutterfly2(v);
-                vstore(a + j, v);
-            }
-            i = 0;
-        } else if (i == 16) {
-            m256i rot0 = vload(g + 16), rot1 = vload(g + 24);
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 16) {
-                m256i v0 = vload(a + j), v1 = vload(a + j + 8);
-                vbutterfly16(v0, v1);
-                v0 = vbutterfly4(mul(v0, rot0));
-                v1 = vbutterfly4(mul(v1, rot1));
-                vstore(a + j, v0), vstore(a + j + 8, v1);
-            }
-            i = 0;
+    template <bool inv, bool strict = true>
+    static m256i butterfly8(m256i v) {
+        constexpr auto w8 = inv ? dft_info.irt[3] : dft_info.rt[3],
+                       w4 = inv ? dft_info.irt[2] : dft_info.rt[2];
+        constexpr auto W1 = vsetr(1, 1, 1, 1, 1, w8, w4, w8 * w4),
+                       W2 = vsetr(1, 1, 1, w4, 1, 1, 1, w4);
+        if constexpr (!inv) {
+            v = mul(add<false>(vpermute<0x4E>(v), neg<false, 0xF0>(v)), W1);
+            v = mul(add<false>(vshuffle<0x4E>(v), neg<false, 0xCC>(v)), W2);
+            return add<strict>(vshuffle<0xB1>(v), neg<false, 0xAA>(v));
         } else {
-            size_t s = i >> 2;
-            auto w1 = g + i + s, w2 = w1 + s, w3 = w2 + s;
-            for (size_t j = 0; j < len; j += i) {
-                auto pA = a + j, pB = pA + s, pC = pB + s, pD = pC + s;
-#pragma GCC unroll 8
-                for (size_t k = 0; k < s; k += 8) {
-                    auto A = vload(pA + k), B = vload(pB + k),
-                         C = vload(pC + k), D = vload(pD + k);
-                    vbutterfly(A, B, C, D);
-                    vstore(pA + k, A);
-                    vstore(pB + k, mul(B, vload(w1 + k)));
-                    vstore(pC + k, mul(C, vload(w2 + k)));
-                    vstore(pD + k, mul(D, vload(w3 + k)));
-                }
-            }
-            i >>= 2;
+            v = mul(add<false>(vshuffle<0xB1>(v), neg<false, 0xAA>(v)), W2);
+            v = mul(add<false>(vshuffle<0x4E>(v), neg<false, 0xCC>(v)), W1);
+            return add<strict>(vpermute<0x4E>(v), neg<false, 0xF0>(v));
         }
     }
-    void DITLayer(Mint* a, size_t len, size_t& i) {
-        if (i == 2 && len >= 8) {
-            m256i rot = vload(g + 8);
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8) {
-                m256i v = vload(a + j);
-                v = vbutterfly2<true>(v);
-                v = vbutterfly8<true>(mul(v, rot));
-                vstore(a + j, v);
-            }
-            i = 32;
-        } else if (i == 4 && len >= 16) {
-            m256i rot0 = vload(g + 16), rot1 = vload(g + 24);
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 16) {
-                m256i v0 = vload(a + j), v1 = vload(a + j + 8);
-                v0 = mul(vbutterfly4<true>(v0), rot0);
-                v1 = mul(vbutterfly4<true>(v1), rot1);
-                vbutterfly16<true>(v0, v1);
-                vstore(a + j, v0), vstore(a + j + 8, v1);
-            }
-            i = 64;
-        } else if (i == 2) {
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8)
-                vstore(a + j, vbutterfly2<true>(vload(a + j)));
-            i = 8;
-        } else if (i == 4) {
-#pragma GCC unroll 8
-            for (size_t j = 0; j < len; j += 8)
-                vstore(a + j, vbutterfly4<true>(vload(a + j)));
-            i = 16;
+    static void DIF(Mint* a, size_t len) {
+        if (len == 1) return;
+        if (len == 2) {
+            Mint x = a[0], y = a[1];
+            a[0] = x + y, a[1] = x - y;
+        } else if (len == 4) {
+            constexpr Mint I = dft_info.rt[2];
+            Mint A = a[0], B = a[1], C = a[2], D = a[3];
+            Mint t0 = A + C, t1 = A - C, t2 = B + D, t3 = I * (B - D);
+            a[0] = t0 + t2, a[1] = t1 + t3;
+            a[2] = t0 - t2, a[3] = t1 - t3;
         } else {
-            size_t s = i >> 2;
-            auto w1 = g + i + s, w2 = w1 + s, w3 = w2 + s;
-            for (size_t j = 0; j < len; j += i) {
-                auto pA = a + j, pB = pA + s, pC = pB + s, pD = pC + s;
-#pragma GCC unroll 8
-                for (size_t k = 0; k < s; k += 8) {
-                    auto A = vload(pA + k);
-                    auto B = mul(vload(pB + k), vload(w1 + k));
-                    auto C = mul(vload(pC + k), vload(w2 + k));
-                    auto D = mul(vload(pD + k), vload(w3 + k));
-                    vbutterfly<true>(A, B, C, D);
-                    vstore(pA + k, A), vstore(pB + k, B);
-                    vstore(pC + k, C), vstore(pD + k, D);
+            size_t i = len;
+            if ((std::countr_zero(len) & 1) == 0) {
+                i >>= 1;
+#pragma GCC unroll(8)
+                for (size_t k = 0; k < i; k += 8) {
+                    auto x = vload(a + k), y = vload(a + i + k);
+                    vstore(a + k, add(x, y));
+                    vstore(a + i + k, sub(x, y));
                 }
             }
-            i <<= 2;
+            for (size_t s = i >> 2; i >= 32; i >>= 2, s >>= 2) {
+                Mint _w1{1}, _w2{1}, _w3{1};
+                for (size_t j = 0, jc = 0; j < len; j += i, jc++) {
+                    auto w1 = vset1(_w1), w2 = vset1(_w2), w3 = vset1(_w3);
+                    auto pA = a + j, pB = pA + s, pC = pB + s, pD = pC + s;
+#pragma GCC unroll(8)
+                    for (size_t k = 0; k < s; k += 8) {
+                        auto A = shrink(vload(pA + k));
+                        auto C = mul(vload(pC + k), w2);
+                        auto B = mul(vload(pB + k), w1);
+                        auto D = mul(vload(pD + k), w3);
+                        auto t0 = add(A, C), t1 = sub(A, C), t2 = add(B, D),
+                             t3 = mul(V_I, sub<false>(B, D));
+                        vstore(pA + k, add<false>(t0, t2));
+                        vstore(pB + k, sub<false>(t0, t2));
+                        vstore(pC + k, add<false>(t1, t3));
+                        vstore(pD + k, sub<false>(t1, t3));
+                    }
+                    _w1 *= dft_info.w4d[std::countr_one(jc)];
+                    _w2 = _w1 * _w1;
+                    _w3 = _w2 * _w1;
+                }
+            }
+            auto w = V_R;
+#pragma GCC unroll(8)
+            for (size_t j = 0; j < len; j += 8) {
+                vstore(a + j, butterfly8<false>(mul(vload(a + j), w)));
+                w = mul(w, vload(dft_info.w8d[std::countr_one(j >> 3)]));
+            }
         }
     }
-    void DIF(Mint* a, size_t len) {
-        size_t i = len;
-        for (; i > B; DIFLayer(a, len, i));
-        for (size_t j = 0; j < len; j += i)
-            for (size_t k = i; k > 0; DIFLayer(a + j, i, k));
-    }
-    void DIT(Mint* a, size_t len) {
-        size_t st = (std::countr_zero(len) & 1) ? 2 : 4,
-               i = std::min(len, B << (std::countr_zero(B / st) & 1));
-        for (size_t j = 0; j < len; j += i)
-            for (size_t k = st; k <= i; DITLayer(a + j, i, k));
-        for (i <<= 2; i <= len; DITLayer(a, len, i));
-        scale(a, Mint{len}.inv(), len, a);
-        rev(a + 1, a + len);
+    static void DIT(Mint* a, size_t len) {
+        if (len == 1) return;
+        if (len == 2) {
+            constexpr Mint i2 = Mint{2}.inv();
+            Mint x = a[0], y = a[1];
+            a[0] = (x + y) * i2, a[1] = (x - y) * i2;
+        } else if (len == 4) {
+            constexpr Mint i4 = Mint{4}.inv(), I = dft_info.irt[2];
+            Mint A = a[0], B = a[1], C = a[2], D = a[3];
+            Mint t0 = A + C, t1 = A - C, t2 = B + D, t3 = I * (B - D);
+            a[0] = (t0 + t2) * i4, a[1] = (t1 + t3) * i4;
+            a[2] = (t0 - t2) * i4, a[3] = (t1 - t3) * i4;
+        } else {
+            auto w = V_R;
+#pragma GCC unroll(8)
+            for (size_t j = 0; j < len; j += 8) {
+                vstore(a + j, mul(butterfly8<true>(vload(a + j)), w));
+                w = mul(w, vload(dft_info.iw8d[std::countr_one(j >> 3)]));
+            }
+            for (size_t i = 32, s = i >> 2; i <= len; i <<= 2, s <<= 2) {
+                Mint _w1{1}, _w2{1}, _w3{1};
+                for (size_t j = 0, jc = 0; j < len; j += i, jc++) {
+                    auto w1 = vset1(_w1), w2 = vset1(_w2), w3 = vset1(_w3);
+                    auto pA = a + j, pB = pA + s, pC = pB + s, pD = pC + s;
+#pragma GCC unroll(8)
+                    for (size_t k = 0; k < s; k += 8) {
+                        auto A = vload(pA + k);
+                        auto B = vload(pB + k);
+                        auto C = vload(pC + k);
+                        auto D = vload(pD + k);
+                        auto t0 = add(A, B), t1 = sub(A, B), t2 = add(C, D),
+                             t3 = mul(V_I_INV, sub<false>(C, D));
+                        vstore(pA + k, add(t0, t2));
+                        vstore(pB + k, mul(add<false>(t1, t3), w1));
+                        vstore(pC + k, mul(sub<false>(t0, t2), w2));
+                        vstore(pD + k, mul(sub<false>(t1, t3), w3));
+                    }
+                    _w1 *= dft_info.iw4d[std::countr_one(jc)];
+                    _w2 = _w1 * _w1;
+                    _w3 = _w2 * _w1;
+                }
+            }
+            if ((std::countr_zero(len) & 1) == 0) {
+                size_t s = len >> 1;
+#pragma GCC unroll(8)
+                for (size_t k = 0; k < s; k += 8) {
+                    auto x = vload(a + k), y = vload(a + k + s);
+                    vstore(a + k, add(x, y));
+                    vstore(a + k + s, sub(x, y));
+                }
+            }
+            scale(a, Mint{len}.inv(), len, a);
+        }
     }
 
     // a <- b'
-    void polyder(const Mint* f, size_t len, Mint* out) {
-        constexpr m256i init =
-            (m256i)__v8su{M.toMont(1), M.toMont(2), M.toMont(3), M.toMont(4),
-                          M.toMont(5), M.toMont(6), M.toMont(7), M.toMont(8)};
-        constexpr m256i step = vset1(M.toMont(8));
+    static void polyder(const Mint* f, size_t len, Mint* out) {
+        constexpr auto init = vsetr(Mint{1}, 2, 3, 4, 5, 6, 7, 8),
+                       step = vset1(Mint{8});
         size_t i = 0;
-        for (m256i v = init; i + 8 < len; i += 8, v = add(v, step))
+        for (auto v = init; i + 8 < len; i += 8, v = add(v, step))
             vstore(out + i, mul(v, vloadu(f + i + 1)));
         for (; i + 1 < len; i++) out[i] = Mint{i + 1} * f[i + 1];
         out[len - 1] = 0;
     }
     // a <- \int b \dd x
-    void polyint(const Mint* f, size_t len, Mint* out, Mint C = 0) {
+    static void polyint(const Mint* f, size_t len, Mint* out, Mint C = 0) {
         size_t i = len - 1;
-        prepareInv(len);
-        for (; i > 0 && (i & 7); i--) out[i] = f[i - 1] * inv[i];
-        for (; i > 0; i -= 8)
-            vstoreu(out + i - 7, mul(vload(f + i - 8), vloadu(inv + i - 7)));
+        inv_info.prepare(len);
+        for (; i > 0 && (i & 7); i--) out[i] = f[i - 1] * inv_info.inv[i];
+        for (; i > 0; i -= 8) {
+            auto x = vload(f + i - 8), y = vloadu(inv_info.inv + i - 7);
+            vstoreu(out + i - 7, mul(x, y));
+        }
         out[0] = C;
     }
     // f <- f * g, assume f, g can both be modified
-    void polymul(Mint* f, Mint* g, size_t len) {
+    static void polymul(Mint* f, Mint* g, size_t len) {
         DIF(f, len);
         if (f != g) DIF(g, len);
         dot(f, g, len, f);
         DIT(f, len);
     }
     // out <- f^{-1}
-    void polyinv(const Mint* f, size_t len_f, Mint* out) {
+    static void polyinv(const Mint* f, size_t len_f, Mint* out) {
         if (!len_f || f[0] == 0) throw std::runtime_error("inv does not exist");
         out[0] = f[0].inv();
         size_t len = std::bit_ceil(len_f);
         auto t1 = Pool::allocate(len), t2 = Pool::allocate(len);
-        prepareG(len);
         for (size_t k = 1, k2 = 2; k < len; k = k2, k2 <<= 1) {
             copy(f, std::min(k2, len_f), t1, k2);
             copy(out, k, t2, k2);
@@ -464,13 +455,12 @@ struct PolyUtils {
         }
     }
     // out <- ln(f)
-    void polyln(const Mint* f, size_t len_f, Mint* out) {
+    static void polyln(const Mint* f, size_t len_f, Mint* out) {
         if (!len_f || f[0] != 1) throw std::runtime_error("ln does not exist");
         size_t len = std::bit_ceil(len_f);
         auto d = Pool::allocate(len), g = Pool::allocate(len),
              t1 = Pool::allocate(len), t2 = Pool::allocate(len),
              t3 = Pool::allocate(len);
-        prepareG(len);
         polyder(f, len_f, d), clear(d + len_f, len - len_f);
         out[0] = d[0], g[0] = 1;
         for (size_t k = 1, k2 = 2; k < len; k = k2, k2 <<= 1) {
@@ -489,14 +479,13 @@ struct PolyUtils {
         polyint(out, len, out);
     }
     // out <- exp(f)
-    void polyexp(const Mint* f, size_t len_f, Mint* out) {
+    static void polyexp(const Mint* f, size_t len_f, Mint* out) {
         if (!len_f) return;
         if (f[0] != 0) throw std::runtime_error("exp does not exist");
         size_t len = std::bit_ceil(len_f);
         auto g = Pool::allocate(len), t1 = Pool::allocate(len),
              t2 = Pool::allocate(len), t3 = Pool::allocate(len),
              t4 = Pool::allocate(len);
-        prepareG(len);
         out[0] = g[0] = 1;
         for (size_t k = 1, k2 = 2; k < len; k = k2, k2 <<= 1) {
             copy(out, k, t1, k2), DIF(t1, k2);
@@ -524,26 +513,26 @@ struct PolyUtils {
 
 }  // namespace detail
 
-template <u32 P, size_t _MAXN = -1>
+template <u32 P, size_t _MAXN = size_t(-1)>
 class FPoly {
+public:
+    using U = detail::PolyUtils<P, _MAXN>;
+    using Mint = U::Mint;
+    using Pool = U::Pool;
+
 private:
-    using Mint = SModint<P>;
-    using Pool = detail::AlignedPool<Mint, 32>;
-
-    static inline detail::PolyUtils<P, _MAXN> u{};
-
     size_t _len = 0;
-    Pool::pointer_type _data{};
+    mutable Pool::pointer_type _data{};
 
 public:
     FPoly() = default;
     explicit FPoly(size_t n, bool no_init = false):
         _len{n}, _data{Pool::allocate(n)} {
-        if (!no_init) u.clear(_data, n);
+        if (!no_init) U::clear(_data, n);
     }
     FPoly(const std::initializer_list<Mint>& init):
         _len{init.size()}, _data{Pool::allocate(_len)} {
-        u.copy(init.begin(), init.size(), _data);
+        U::copy(init.begin(), init.size(), _data);
     }
     template <std::ranges::contiguous_range R,
               typename T = std::ranges::range_value_t<R>>
@@ -551,10 +540,10 @@ public:
     FPoly(R&& r): _len{std::ranges::size(r)}, _data{Pool::allocate(_len)} {
         size_t i = 0;
         for (; i + 7 < _len; i += 8) {
-            auto v = u.vloadu(r.data() + i);
+            auto v = U::vloadu(r.data() + i);
             if constexpr (std::is_signed_v<T>)
-                v = u.add(v, u.vset1((1 << 31) / P * P));
-            u.vstore(_data + i, u.mul(u.vloadu(r.data() + i), u.V_R2));
+                v = U::add(v, U::vset1((1 << 31) / P * P));
+            U::vstore(_data + i, U::mul(U::vloadu(r.data() + i), U::V_R2));
         }
         for (; i < _len; i++) _data[i] = Mint{r.data()[i]};
     }
@@ -567,7 +556,7 @@ public:
         for (auto&& x: r) tmp.emplace_back(x);
         _len = tmp.size();
         _data = Pool::allocate(_len);
-        u.copy(tmp.data(), _len, _data);
+        U::copy(tmp.data(), _len, _data);
     }
     template <std::input_iterator Iter, std::sentinel_for<Iter> Sent>
     FPoly(Iter begin, Sent end): FPoly(std::ranges::subrange(begin, end)) {}
@@ -576,20 +565,20 @@ public:
     FPoly(const FPoly& other): _data() {
         _len = other._len;
         _data = Pool::allocate(_len);
-        u.copy(other._data, _len, _data);
+        U::copy(other._data, _len, _data);
     }
     FPoly& operator=(FPoly&& other) = default;
     FPoly& operator=(const FPoly& other) { return *this = FPoly(other); }
 
     void resize(size_t sz) {
         reserve(sz);
-        if (sz > _len) u.clear(_data + _len, sz - _len);
+        if (sz > _len) U::clear(_data + _len, sz - _len);
         _len = sz;
     }
     void reserve(size_t sz) const {
         if (sz > _data.capacity()) {
             auto new_data = Pool::allocate(sz);
-            u.copy(_data, _len, new_data);
+            U::copy(_data, _len, new_data);
             _data = std::move(new_data);
         }
     }
@@ -607,12 +596,12 @@ public:
 
     FPoly& operator+=(const FPoly& other) {
         if (other._len > _len) resize(other._len);
-        u.add(_data, other._data, other._len, _data);
+        U::add(_data, other._data, other._len, _data);
         return *this;
     }
     FPoly& operator-=(const FPoly& other) {
         if (other._len > _len) resize(other._len);
-        u.sub(_data, other._data, other._len, _data);
+        U::sub(_data, other._data, other._len, _data);
         return *this;
     }
     FPoly& operator*=(FPoly other) {
@@ -620,15 +609,15 @@ public:
         size_t n = _len + other._len - 1, nn = std::bit_ceil(n);
         resize(nn);
         other.resize(nn);
-        u.polymul(_data, other._data, nn);
+        U::polymul(_data, other._data, nn);
         return resize(n), *this;
     }
     FPoly& operator*=(Mint k) {
-        u.scale(_data, k, _len, _data);
+        U::scale(_data, k, _len, _data);
         return *this;
     }
     friend FPoly operator-(FPoly f) {
-        return u.neg(f._data, f._len, f._data), f;
+        return U::neg(f._data, f._len, f._data), f;
     }
     friend FPoly operator+(FPoly f, const FPoly& g) { return f += g, f; }
     friend FPoly operator-(FPoly f, const FPoly& g) { return f -= g, f; }
@@ -636,12 +625,8 @@ public:
     friend FPoly operator*(FPoly f, Mint k) { return f *= k, f; }
     friend FPoly operator*(FPoly f, FPoly g) { return f *= g, f; }
 
-    FPoly inv() const {
-        FPoly res(_len, true);
-        u.polyinv(_data, _len, res._data);
-        return res;
-    }
-
+    template <u32 Q, size_t N>
+    friend FPoly<Q, N> inv(const FPoly<Q, N>&);
     template <u32 Q, size_t N>
     friend FPoly<Q, N> ln(const FPoly<Q, N>&);
     template <u32 Q, size_t N>
@@ -649,15 +634,21 @@ public:
 };
 
 template <u32 Q, size_t N>
+FPoly<Q, N> inv(const FPoly<Q, N>& f) {
+    FPoly<Q, N> res(f._len, true);
+    FPoly<Q, N>::U::polyinv(f._data, f._len, res._data);
+    return res;
+}
+template <u32 Q, size_t N>
 FPoly<Q, N> ln(const FPoly<Q, N>& f) {
     FPoly<Q, N> res(f._len, true);
-    f.u.polyln(f._data, f._len, res._data);
+    FPoly<Q, N>::U::polyln(f._data, f._len, res._data);
     return res;
 }
 template <u32 Q, size_t N>
 FPoly<Q, N> exp(const FPoly<Q, N>& f) {
     FPoly<Q, N> res(f._len, true);
-    f.u.polyexp(f._data, f._len, res._data);
+    FPoly<Q, N>::U::polyexp(f._data, f._len, res._data);
     return res;
 }
 

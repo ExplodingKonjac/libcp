@@ -22,3 +22,4 @@ BreakConstructorInitializers: AfterColon
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
