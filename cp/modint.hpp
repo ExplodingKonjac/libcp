@@ -3,6 +3,8 @@
 #include <cassert>
 #include <concepts>
 #include <cstdint>
+#include <optional>
+#include <random>
 #include <stdexcept>
 #include <type_traits>
 
@@ -95,6 +97,9 @@ private:
 
 }  // namespace detail
 
+template <typename T>
+concept modint = std::derived_from<T, detail::ModintBase<T>>;
+
 template <u32 P>
 struct SModint: detail::ModintBase<SModint<P>> {
     static_assert(P > 0 && P < (1 << 30), "P must be in [0, 2^{30})");
@@ -115,14 +120,39 @@ struct DModint: public detail::ModintBase<DModint> {
     static u32 getMod() { return mont.P; }
 };
 
-template <typename T, std::integral U>
-    requires std::derived_from<T, detail::ModintBase<T>>
+template <modint T, std::integral U>
 C T qpow(T x, U y) {
     if (y < 0) return qpow(x.inv(), std::make_signed_t<U>(-y));
     T res{1};
     for (; y; y >>= 1, x = x * x)
         if (y & 1) res = res * x;
     return res;
+}
+
+template <modint T>
+C int legendre(T x) {
+    auto r = qpow(x, (x.mont.P - 1) / 2)();
+    return r == x.mont.P - 1 ? -1 : r;
+}
+
+template <modint T>
+C std::optional<T> sqrt(T x) {
+    static std::default_random_engine rng(std::random_device{}());
+    if (x == T{0}) return x;
+    if (legendre(x) != 1) return std::nullopt;
+    T r{}, g{};
+    do r = rng(), g = r * r - x;
+    while (legendre(g) != -1);
+    auto mul = [&](auto& x, auto& y) {
+        return std::pair{x.second * y.second * g + x.first * y.first,
+                         x.first * y.second + y.first * x.second};
+    };
+    std::pair<T, T> res{1, 0}, base{r, 1};
+    for (u32 t = (x.mont.P + 1) / 2; t; t >>= 1) {
+        if (t & 1) res = mul(res, base);
+        base = mul(base, base);
+    }
+    return res.first;
 }
 #undef C
 

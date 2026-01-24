@@ -11,7 +11,9 @@
 #include <format>
 #include <limits>
 #include <optional>
+#include <random>
 #include <ranges>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -23,10 +25,9 @@
 #include <sys/stat.h>
 #endif
 
-#pragma GCC target("avx2", "fma")
 #define CP_FASTIO_USE_BUF
-// #include "cp/modint.hpp"
 // #include "cp/fpoly.hpp"
+// #include "cp/modint.hpp"
 
 namespace cp
 {
@@ -147,7 +148,7 @@ public:
         BufIterator it{this};
         bool neg = false;
         it.skipws();
-        if constexpr (std::is_unsigned_v<T>) {
+        if constexpr (std::is_signed_v<T>) {
             if (*it == '-') neg = true, it++;
             else if (*it == '+') it++;
         }
@@ -406,6 +407,9 @@ private:
 
 }  // namespace detail
 
+template <typename T>
+concept modint = std::derived_from<T, detail::ModintBase<T>>;
+
 template <u32 P>
 struct SModint: detail::ModintBase<SModint<P>> {
     static_assert(P > 0 && P < (1 << 30), "P must be in [0, 2^{30})");
@@ -426,8 +430,7 @@ struct DModint: public detail::ModintBase<DModint> {
     static u32 getMod() { return mont.P; }
 };
 
-template <typename T, std::integral U>
-    requires std::derived_from<T, detail::ModintBase<T>>
+template <modint T, std::integral U>
 C T qpow(T x, U y) {
     if (y < 0) return qpow(x.inv(), std::make_signed_t<U>(-y));
     T res{1};
@@ -435,10 +438,38 @@ C T qpow(T x, U y) {
         if (y & 1) res = res * x;
     return res;
 }
+
+template <modint T>
+C int legendre(T x) {
+    auto r = qpow(x, (x.mont.P - 1) / 2)();
+    return r == x.mont.P - 1 ? -1 : r;
+}
+
+template <modint T>
+C std::optional<T> sqrt(T x) {
+    static std::default_random_engine rng(std::random_device{}());
+    if (x == T{0}) return x;
+    if (legendre(x) != 1) return std::nullopt;
+    T r{}, g{};
+    do r = rng(), g = r * r - x;
+    while (legendre(g) != -1);
+    auto mul = [&](auto& x, auto& y) {
+        return std::pair{x.second * y.second * g + x.first * y.first,
+                         x.first * y.second + y.first * x.second};
+    };
+    std::pair<T, T> res{1, 0}, base{r, 1};
+    for (u32 t = (x.mont.P + 1) / 2; t; t >>= 1) {
+        if (t & 1) res = mul(res, base);
+        base = mul(base, base);
+    }
+    return res.first;
+}
 #undef C
 
 }  // namespace cp
 
+#pragma GCC push_options
+#pragma GCC target("avx2")
 namespace cp
 {
 
@@ -680,34 +711,34 @@ struct PolyUtils {
     static void add(const Mint* a, const Mint* b, size_t len, Mint* out) {
         size_t i = 0;
         for (; i + 7 < len; i += 8)
-            vstore(&out[i], add(vload(&a[i]), vload(&b[i])));
+            vstore(out + i, add(vload(a + i), vload(b + i)));
         for (; i < len; i++) out[i] = a[i] + b[i];
     }
     // out <- a - b
     static void sub(const Mint* a, const Mint* b, size_t len, Mint* out) {
         size_t i = 0;
         for (; i + 7 < len; i += 8)
-            vstore(&out[i], sub(vload(&a[i]), vload(&b[i])));
+            vstore(out + i, sub(vload(a + i), vload(b + i)));
         for (; i < len; i++) out[i] = a[i] - b[i];
     }
     // out <- -a
     static void neg(const Mint* a, size_t len, Mint* out) {
         size_t i = 0;
-        for (; i + 7 < len; i += 8) vstore(&out[i], neg(vload(&a[i])));
+        for (; i + 7 < len; i += 8) vstore(out + i, neg(vload(a + i)));
         for (; i < len; i++) out[i] = -a[i];
     }
     // out <- a \dot b
     static void dot(const Mint* a, const Mint* b, size_t len, Mint* out) {
         size_t i = 0;
         for (; i + 7 < len; i += 8)
-            vstore(&out[i], mul(vload(&a[i]), vload(&b[i])));
+            vstore(out + i, mul(vload(a + i), vload(b + i)));
         for (; i < len; i++) out[i] = a[i] * b[i];
     }
     // out <- k * a
     static void scale(const Mint* a, Mint k, size_t len, Mint* out) {
         size_t i = 0;
         const m256i vk = vset1(k);
-        for (; i + 7 < len; i += 8) vstore(&out[i], mul(vload(&a[i]), vk));
+        for (; i + 7 < len; i += 8) vstore(out + i, mul(vload(a + i), vk));
         for (; i < len; i++) out[i] = a[i] * k;
     }
 
@@ -757,8 +788,8 @@ struct PolyUtils {
 #pragma GCC unroll(8)
                     for (size_t k = 0; k < s; k += 8) {
                         auto A = shrink(vload(pA + k));
-                        auto C = mul(vload(pC + k), w2);
                         auto B = mul(vload(pB + k), w1);
+                        auto C = mul(vload(pC + k), w2);
                         auto D = mul(vload(pD + k), w3);
                         auto t0 = add(A, C), t1 = sub(A, C), t2 = add(B, D),
                              t3 = mul(V_I, sub<false>(B, D));
@@ -865,7 +896,7 @@ struct PolyUtils {
     }
     // out <- f^{-1}
     static void polyinv(const Mint* f, size_t len_f, Mint* out) {
-        if (!len_f || f[0] == 0) throw std::runtime_error("inv does not exist");
+        if (!len_f || f[0] == 0) throw std::invalid_argument("[x^0] is 0");
         out[0] = f[0].inv();
         size_t len = std::bit_ceil(len_f);
         auto t1 = Pool::allocate(len), t2 = Pool::allocate(len);
@@ -879,7 +910,7 @@ struct PolyUtils {
     }
     // out <- ln(f)
     static void polyln(const Mint* f, size_t len_f, Mint* out) {
-        if (!len_f || f[0] != 1) throw std::runtime_error("ln does not exist");
+        if (!len_f || f[0] != 1) throw std::invalid_argument("[x^0] is not 1");
         size_t len = std::bit_ceil(len_f);
         auto d = Pool::allocate(len), g = Pool::allocate(len),
              t1 = Pool::allocate(len), t2 = Pool::allocate(len),
@@ -904,7 +935,7 @@ struct PolyUtils {
     // out <- exp(f)
     static void polyexp(const Mint* f, size_t len_f, Mint* out) {
         if (!len_f) return;
-        if (f[0] != 0) throw std::runtime_error("exp does not exist");
+        if (f[0] != 0) throw std::invalid_argument("[x^0] is not 0");
         size_t len = std::bit_ceil(len_f);
         auto g = Pool::allocate(len), t1 = Pool::allocate(len),
              t2 = Pool::allocate(len), t3 = Pool::allocate(len),
@@ -932,6 +963,35 @@ struct PolyUtils {
             DIT(t2, k2), copy(t2 + k, k, g + k);
         }
     }
+    // out <- sqrt(f)
+    static void polysqrt(const Mint* f, size_t len_f, Mint* out) {
+        if (!len_f || f[0]() == 0) throw std::invalid_argument("[x^0] is 0");
+        auto out0 = sqrt(f[0]);
+        if (!out0) throw std::invalid_argument("sqrt does not exist");
+
+        size_t len = std::bit_ceil(len_f);
+        auto h = Pool::allocate(len), t1 = Pool::allocate(len),
+             t2 = Pool::allocate(len), t3 = Pool::allocate(len);
+        out[0] = out0.transform([](auto x) { return std::min(x(), P - x()); })
+                     .value();
+        h[0] = out[0].inv();
+        for (size_t k = 1, k2 = 2; k < len; k = k2, k2 <<= 1) {
+            copy(f, std::min(k2, len_f), t1, k2), DIF(t1, k2);
+            copy(out, k, t2, k2), DIF(t2, k2);
+            copy(h, k, t3, k2), DIF(t3, k2);
+
+            for (size_t i = 0; i < k2; i += 8) {
+                constexpr auto C = vset1(-Mint{2}.inv());
+                auto vf = vload(t1 + i), vg = vload(t2 + i), vh = vload(t3 + i);
+                vstore(t1 + i, mul(sub(mul(vg, vg), vf), mul(vh, C)));
+            }
+            DIT(t1, k2), copy(out, k, t1), copy(t1 + k, k, out + k);
+
+            DIF(t1, k2), dot(t1, t3, k2, t1), DIT(t1, k2);
+            clear(t1, k), DIF(t1, k2), dot(t1, t3, k2, t1), DIT(t1, k2);
+            neg(t1 + k, k, h + k);
+        }
+    }
 };
 
 }  // namespace detail
@@ -947,6 +1007,12 @@ private:
     size_t _len = 0;
     mutable Pool::pointer_type _data{};
 
+    template <std::ranges::input_range R,
+              typename T = std::ranges::range_value_t<R>>
+    static constexpr bool can_fast_init =
+        (std::is_same_v<T, u32> || std::is_same_v<T, i32>) &&
+        std::ranges::contiguous_range<R>;
+
 public:
     FPoly() = default;
     explicit FPoly(size_t n, bool no_init = false):
@@ -957,23 +1023,22 @@ public:
         _len{init.size()}, _data{Pool::allocate(_len)} {
         U::copy(init.begin(), init.size(), _data);
     }
-    template <std::ranges::contiguous_range R,
-              typename T = std::ranges::range_value_t<R>>
-        requires std::same_as<T, u32> || std::same_as<T, i32>
+    template <std::ranges::input_range R>
+        requires can_fast_init<R>
     FPoly(R&& r): _len{std::ranges::size(r)}, _data{Pool::allocate(_len)} {
         size_t i = 0;
         for (; i + 7 < _len; i += 8) {
             auto v = U::vloadu(r.data() + i);
-            if constexpr (std::is_signed_v<T>)
-                v = U::add(v, U::vset1((1 << 31) / P * P));
-            U::vstore(_data + i, U::mul(U::vloadu(r.data() + i), U::V_R2));
+            if constexpr (std::is_signed_v<std::ranges::range_value_t<R>>)
+                v = _mm256_add_epi32(v, U::vset1((1u << 31) / P * P));
+            U::vstore(_data + i, U::mul(v, U::V_R2));
         }
         for (; i < _len; i++) _data[i] = Mint{r.data()[i]};
     }
     template <std::ranges::input_range R>
         requires std::convertible_to<std::ranges::range_value_t<R>, Mint> &&
-                 (!std::ranges::contiguous_range<R>) &&
-                 (!std::same_as<std::remove_cvref_t<R>, FPoly>)
+                 (!can_fast_init<R> &&
+                  !std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
         std::vector<Mint> tmp{};
         for (auto&& x: r) tmp.emplace_back(x);
@@ -1054,29 +1119,68 @@ public:
     friend FPoly<Q, N> ln(const FPoly<Q, N>&);
     template <u32 Q, size_t N>
     friend FPoly<Q, N> exp(const FPoly<Q, N>&);
+    template <u32 Q, size_t N>
+    friend FPoly<Q, N> sqrt(const FPoly<Q, N>&);
 };
 
+#define Poly FPoly<Q, N>
+#define U Poly::U
 template <u32 Q, size_t N>
-FPoly<Q, N> inv(const FPoly<Q, N>& f) {
-    FPoly<Q, N> res(f._len, true);
-    FPoly<Q, N>::U::polyinv(f._data, f._len, res._data);
+Poly inv(const Poly& f) {
+    Poly res(f._len, true);
+    U::polyinv(f._data, f._len, res._data);
     return res;
 }
+
 template <u32 Q, size_t N>
-FPoly<Q, N> ln(const FPoly<Q, N>& f) {
-    FPoly<Q, N> res(f._len, true);
-    FPoly<Q, N>::U::polyln(f._data, f._len, res._data);
+Poly ln(const Poly& f) {
+    Poly res(f._len, true);
+    U::polyln(f._data, f._len, res._data);
     return res;
 }
+
 template <u32 Q, size_t N>
-FPoly<Q, N> exp(const FPoly<Q, N>& f) {
-    FPoly<Q, N> res(f._len, true);
-    FPoly<Q, N>::U::polyexp(f._data, f._len, res._data);
+Poly exp(const Poly& f) {
+    Poly res(f._len, true);
+    U::polyexp(f._data, f._len, res._data);
     return res;
 }
+
+template <u32 Q, size_t N>
+Poly sqrt(const Poly& f) {
+    int k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
+    if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
+    Poly res(f._len, true);
+    if (k == 0) U::polysqrt(f._data, f._len, res._data);
+    else {
+        auto tmp = U::Pool::allocate(f._len);
+        U::copy(f._data + k, f._len - k, tmp, f._len);
+        U::polysqrt(tmp, f._len, res._data);
+        std::memmove(res._data + k / 2, res._data, f._len - k / 2);
+        U::clear(res._data, k / 2);
+    }
+    return res;
+}
+
+template <u32 Q, size_t N>
+std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
+    size_t n = f.size(), m = g.size();
+    if (m == 0) throw std::invalid_argument("divider is empty");
+    if (n < m) return {{}, f};
+    Poly h(n - m + 1, true), q(n - m + 1, true), r{};
+    for (size_t i = 0; i < n - m + 1; i++) {
+        q[i] = f[n - 1 - i];
+        h[i] = i > m - 1 ? 0 : g[m - 1 - i];
+    }
+    q *= inv(h), q.resize(n - m + 1), std::ranges::reverse(q);
+    r = f - q * g, r.resize(m - 1);
+    return {std::move(q), std::move(r)};
+}
+#undef Poly
+#undef U
 
 }  // namespace cp
-
+#pragma GCC pop_options
 using cp::qin, cp::qout;
 
 constexpr int MOD = 998244353;
@@ -1086,17 +1190,11 @@ using Poly = cp::FPoly<MOD, (1 << 17)>;
 unsigned a[100005];
 
 int main() {
-    auto [n, type] = qin.scan<int, int>().value();
-    for (int i = 0; i < n; i++) a[i] = qin.scan<int>().value();
-
-    constexpr Mint I = qpow(Mint{3}, (MOD - 1) / 4);
-    Poly f = exp(Poly(a, a + n) * I), g = inv(f), res;
-    if (type == 0) {
-        res = (f - g) * (2 * I).inv();
-    } else {
-        res = (f + g) * Mint{2}.inv();
-    }
-    for (int i = 0; i < n; i++) qout.print(res[i]()), qout.print(' ');
+    // freopen("P4723_1.in", "r", stdin);
+    int n = qin.scan<int>().value();
+    for (int i = 0; i < n; i++) a[i] = qin.scan<unsigned>().value();
+    Poly ans = sqrt(Poly(a, a + n));
+    for (int i = 0; i < n; i++) qout.print(ans[i](), "");
     qout.print('\n');
     return 0;
 }

@@ -137,7 +137,7 @@ public:
         BufIterator it{this};
         bool neg = false;
         it.skipws();
-        if constexpr (std::is_unsigned_v<T>) {
+        if constexpr (std::is_signed_v<T>) {
             if (*it == '-') neg = true, it++;
             else if (*it == '+') it++;
         }
