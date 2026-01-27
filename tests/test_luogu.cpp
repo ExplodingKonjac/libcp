@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <charconv>
 #include <concepts>
@@ -9,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
+#include <initializer_list>
 #include <limits>
 #include <optional>
 #include <random>
@@ -26,6 +28,7 @@
 #endif
 
 #define CP_FASTIO_USE_BUF
+// #include "cp/fast_io.hpp"
 // #include "cp/fpoly.hpp"
 // #include "cp/modint.hpp"
 
@@ -479,15 +482,28 @@ namespace detail
 template <typename T, size_t A = alignof(T)>
 class AlignedPool {
 private:
-    static inline struct _Vec: std::vector<T*> {
-        ~_Vec() {
-#ifdef _WIN32
-            for (auto ptr: *this) _aligned_free(ptr);
-#else
-            for (auto ptr: *this) std::free(ptr);
-#endif
+    static inline bool _cleaned = false;
+    static inline struct _PoolObj: std::array<std::vector<T*>, 32> {
+        ~_PoolObj() {
+            _cleaned = true;
+            for (auto& vec: *this) std::ranges::for_each(vec, free);
         }
-    } _pool[32];
+    } _pool;
+
+    static void free(T* p) {
+#ifdef _WIN32
+        _aligned_free(p);
+#else
+        std::free(p);
+#endif
+    }
+    static T* alloc(size_t n) {
+#ifdef _WIN32
+        return static_cast<T*>(_aligned_malloc(n * sizeof(T), A));
+#else
+        return static_cast<T*>(std::aligned_alloc(A, n * sizeof(T)));
+#endif
+    }
 
 public:
     class pointer_type {
@@ -530,15 +546,12 @@ public:
             _pool[k].pop_back();
             return {p, n};
         }
-#ifdef _WIN32
-        T* p = static_cast<T*>(_aligned_malloc(n * sizeof(T), A));
-#else
-        T* p = static_cast<T*>(std::aligned_alloc(A, n * sizeof(T)));
-#endif
-        return {p, n};
+        return {alloc(n), n};
     }
     static void deallocate(pointer_type& p) {
-        if (p) _pool[std::countr_zero(p.capacity())].push_back(p);
+        if (!p) return;
+        if (_cleaned) return free(p);
+        _pool[std::countr_zero(p.capacity())].push_back(p);
     }
 };
 
@@ -662,8 +675,9 @@ struct PolyUtils {
                            V_I = vset1(dft_info.rt[2]),
                            V_I_INV = vset1(dft_info.irt[2]);
 
+    template <bool strict = false>
     static m256i shrink(m256i x) {
-        return _mm256_min_epu32(x, _mm256_sub_epi32(x, V_P2));
+        return _mm256_min_epu32(x, _mm256_sub_epi32(x, strict ? V_P : V_P2));
     }
     template <bool strict = true>
     static m256i add(m256i x, m256i y) {
@@ -788,8 +802,8 @@ struct PolyUtils {
 #pragma GCC unroll(8)
                     for (size_t k = 0; k < s; k += 8) {
                         auto A = shrink(vload(pA + k));
-                        auto B = mul(vload(pB + k), w1);
                         auto C = mul(vload(pC + k), w2);
+                        auto B = mul(vload(pB + k), w1);
                         auto D = mul(vload(pD + k), w3);
                         auto t0 = add(A, C), t1 = sub(A, C), t2 = add(B, D),
                              t3 = mul(V_I, sub<false>(B, D));
@@ -808,6 +822,7 @@ struct PolyUtils {
             for (size_t j = 0; j < len; j += 8) {
                 vstore(a + j, butterfly8<false>(mul(vload(a + j), w)));
                 w = mul(w, vload(dft_info.w8d[std::countr_one(j >> 3)]));
+                w = shrink<true>(w);
             }
         }
     }
@@ -968,7 +983,6 @@ struct PolyUtils {
         if (!len_f || f[0]() == 0) throw std::invalid_argument("[x^0] is 0");
         auto out0 = sqrt(f[0]);
         if (!out0) throw std::invalid_argument("sqrt does not exist");
-
         size_t len = std::bit_ceil(len_f);
         auto h = Pool::allocate(len), t1 = Pool::allocate(len),
              t2 = Pool::allocate(len), t3 = Pool::allocate(len);
@@ -979,20 +993,26 @@ struct PolyUtils {
             copy(f, std::min(k2, len_f), t1, k2), DIF(t1, k2);
             copy(out, k, t2, k2), DIF(t2, k2);
             copy(h, k, t3, k2), DIF(t3, k2);
-
             for (size_t i = 0; i < k2; i += 8) {
                 constexpr auto C = vset1(-Mint{2}.inv());
                 auto vf = vload(t1 + i), vg = vload(t2 + i), vh = vload(t3 + i);
                 vstore(t1 + i, mul(sub(mul(vg, vg), vf), mul(vh, C)));
             }
             DIT(t1, k2), copy(out, k, t1), copy(t1 + k, k, out + k);
-
             DIF(t1, k2), dot(t1, t3, k2, t1), DIT(t1, k2);
             clear(t1, k), DIF(t1, k2), dot(t1, t3, k2, t1), DIT(t1, k2);
             neg(t1 + k, k, h + k);
         }
     }
 };
+
+template <typename T, typename Mint>
+concept init_friendly_type =
+    std::same_as<T, u32> || std::same_as<T, i32> || std::same_as<T, Mint>;
+
+template <typename R, typename Mint>
+concept can_fast_init = std::ranges::contiguous_range<R> &&
+                        init_friendly_type<std::ranges::range_value_t<R>, Mint>;
 
 }  // namespace detail
 
@@ -1005,46 +1025,44 @@ public:
 
 private:
     size_t _len = 0;
-    mutable Pool::pointer_type _data{};
-
-    template <std::ranges::input_range R,
-              typename T = std::ranges::range_value_t<R>>
-    static constexpr bool can_fast_init =
-        (std::is_same_v<T, u32> || std::is_same_v<T, i32>) &&
-        std::ranges::contiguous_range<R>;
+    Pool::pointer_type _data{};
 
 public:
     FPoly() = default;
+    FPoly(const std::initializer_list<Mint>& init):
+        FPoly(std::views::all(init)) {}
     explicit FPoly(size_t n, bool no_init = false):
         _len{n}, _data{Pool::allocate(n)} {
         if (!no_init) U::clear(_data, n);
     }
-    FPoly(const std::initializer_list<Mint>& init):
-        _len{init.size()}, _data{Pool::allocate(_len)} {
-        U::copy(init.begin(), init.size(), _data);
-    }
-    template <std::ranges::input_range R>
-        requires can_fast_init<R>
-    FPoly(R&& r): _len{std::ranges::size(r)}, _data{Pool::allocate(_len)} {
-        size_t i = 0;
-        for (; i + 7 < _len; i += 8) {
-            auto v = U::vloadu(r.data() + i);
-            if constexpr (std::is_signed_v<std::ranges::range_value_t<R>>)
-                v = _mm256_add_epi32(v, U::vset1((1u << 31) / P * P));
-            U::vstore(_data + i, U::mul(v, U::V_R2));
+    template <detail::can_fast_init<Mint> R>
+        requires(!std::same_as<std::remove_cvref_t<R>, FPoly>)
+    FPoly(R&& r): FPoly(std::ranges::size(r), true) {
+        using T = std::ranges::range_value_t<R>;
+        auto data = std::ranges::data(r);
+        if constexpr (std::same_as<T, Mint>) {
+            U::copy(data, _len, _data);
+        } else {
+            size_t i = 0;
+            for (; i + 7 < _len; i += 8) {
+                auto v = U::vloadu(data + i);
+                if constexpr (std::is_signed_v<T>) {
+                    v = _mm256_add_epi32(v, U::vset1((1u << 31) / P * P));
+                }
+                U::vstore(_data + i, U::mul(v, U::V_R2));
+            }
+            for (; i < _len; i++) _data[i] = Mint{data[i]};
         }
-        for (; i < _len; i++) _data[i] = Mint{r.data()[i]};
     }
     template <std::ranges::input_range R>
         requires std::convertible_to<std::ranges::range_value_t<R>, Mint> &&
-                 (!can_fast_init<R> &&
-                  !std::same_as<std::remove_cvref_t<R>, FPoly>)
+                 (!detail::can_fast_init<R, Mint>) &&
+                 (!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
-        std::vector<Mint> tmp{};
-        for (auto&& x: r) tmp.emplace_back(x);
-        _len = tmp.size();
-        _data = Pool::allocate(_len);
-        U::copy(tmp.data(), _len, _data);
+        if constexpr (std::ranges::sized_range<R>) {
+            reserve(std::ranges::size(r));
+        }
+        for (auto&& x: r) push_back(std::forward<decltype(x)>(x));
     }
     template <std::input_iterator Iter, std::sentinel_for<Iter> Sent>
     FPoly(Iter begin, Sent end): FPoly(std::ranges::subrange(begin, end)) {}
@@ -1063,24 +1081,26 @@ public:
         if (sz > _len) U::clear(_data + _len, sz - _len);
         _len = sz;
     }
-    void reserve(size_t sz) const {
+    void reserve(size_t sz) {
         if (sz > _data.capacity()) {
             auto new_data = Pool::allocate(sz);
             U::copy(_data, _len, new_data);
             _data = std::move(new_data);
         }
     }
+    void push_back(Mint x) { resize(_len + 1), _data[_len - 1] = x; }
+    void pop_back() { _len--; }
     void clear() { _len = 0; }
+    size_t size() const { return _len; }
 
-    auto size() const { return _len; }
     auto data() { return (Mint*)_data; }
     auto data() const { return (const Mint*)_data; }
     auto begin() { return (Mint*)_data; }
     auto begin() const { return (const Mint*)_data; }
     auto end() { return begin() + _len; }
     auto end() const { return begin() + _len; }
-    auto& operator[](size_t idx) { return _data[idx]; }
-    auto operator[](size_t idx) const { return _data[idx]; }
+    Mint& operator[](size_t idx) { return _data[idx]; }
+    Mint operator[](size_t idx) const { return _data[idx]; }
 
     FPoly& operator+=(const FPoly& other) {
         if (other._len > _len) resize(other._len);
@@ -1104,45 +1124,65 @@ public:
         U::scale(_data, k, _len, _data);
         return *this;
     }
-    friend FPoly operator-(FPoly f) {
-        return U::neg(f._data, f._len, f._data), f;
+    FPoly& operator/=(const FPoly& other) {
+        size_t sz = std::max(_len, other._len);
+        (*this) *= inv(other);
+        return resize(sz), *this;
     }
-    friend FPoly operator+(FPoly f, const FPoly& g) { return f += g, f; }
-    friend FPoly operator-(FPoly f, const FPoly& g) { return f -= g, f; }
-    friend FPoly operator*(Mint k, FPoly f) { return f *= k, f; }
-    friend FPoly operator*(FPoly f, Mint k) { return f *= k, f; }
-    friend FPoly operator*(FPoly f, FPoly g) { return f *= g, f; }
-
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> inv(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> ln(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> exp(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> sqrt(const FPoly<Q, N>&);
+    friend FPoly operator-(FPoly f) {
+        return U::neg(f._data, f._len, f._data), std::move(f);
+    }
+    friend FPoly operator+(FPoly f, const FPoly& g) {
+        return std::move(f += g);
+    }
+    friend FPoly operator-(FPoly f, const FPoly& g) {
+        return std::move(f -= g);
+    }
+    friend FPoly operator*(FPoly f, FPoly g) {
+        return std::move(f *= std::move(g));
+    }
+    friend FPoly operator/(FPoly f, const FPoly& g) {
+        return std::move(f /= g);
+    }
+    friend FPoly operator*(Mint k, FPoly f) { return std::move(f *= k); }
+    friend FPoly operator*(FPoly f, Mint k) { return std::move(f *= k); }
 };
 
 #define Poly FPoly<Q, N>
 #define U Poly::U
 template <u32 Q, size_t N>
+Poly integrate(Poly f) {
+    f.resize(f.size() + 1);
+    U::polyint(f.data(), f.size(), f.data());
+    return f;
+}
+
+template <u32 Q, size_t N>
+Poly derivative(Poly f) {
+    if (f.size() == 0) return f;
+    U::polyder(f.data(), f.size(), f.data());
+    f.resize(f.size() - 1);
+    return f;
+}
+
+template <u32 Q, size_t N>
 Poly inv(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyinv(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyinv(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q, size_t N>
 Poly ln(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyln(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyln(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q, size_t N>
 Poly exp(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyexp(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyexp(f.data(), f.size(), res.data());
     return res;
 }
 
@@ -1150,14 +1190,14 @@ template <u32 Q, size_t N>
 Poly sqrt(const Poly& f) {
     int k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
     if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
-    Poly res(f._len, true);
-    if (k == 0) U::polysqrt(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    if (k == 0) U::polysqrt(f.data(), f.size(), res.data());
     else {
-        auto tmp = U::Pool::allocate(f._len);
-        U::copy(f._data + k, f._len - k, tmp, f._len);
-        U::polysqrt(tmp, f._len, res._data);
-        std::memmove(res._data + k / 2, res._data, f._len - k / 2);
-        U::clear(res._data, k / 2);
+        auto tmp = U::Pool::allocate(f.size());
+        U::copy(f.data() + k, f.size() - k, tmp, f.size());
+        U::polysqrt(tmp, f.size(), res.data());
+        std::memmove(res.data() + k / 2, res.data(), f.size() - k / 2);
+        U::clear(res.data(), k / 2);
     }
     return res;
 }
@@ -1181,20 +1221,119 @@ std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
 
 }  // namespace cp
 #pragma GCC pop_options
+
 using cp::qin, cp::qout;
+using namespace cp::literals;
 
-constexpr int MOD = 998244353;
+constexpr int MOD = 998244353, MAXN = 100000;
 using Mint = cp::SModint<MOD>;
-using Poly = cp::FPoly<MOD, (1 << 17)>;
+using Poly = cp::FPoly<MOD, (1 << 18)>;
 
-unsigned a[100005];
+unsigned a[MAXN + 5];
+
+class XYPoly {
+public:
+    XYPoly() = default;
+    XYPoly(const std::initializer_list<std::initializer_list<Mint>>& init):
+        _nx(init.size()), _ny(0) {
+        _f.reserve(_nx);
+        for (auto& inner: init) {
+            _f.push_back(Poly(inner));
+            _ny = std::max(_ny, inner.size());
+        }
+        for (auto& row: _f) row.resize(_ny);
+    }
+    XYPoly(size_t nx, size_t ny): _nx(nx), _ny(ny), _f(nx, Poly(ny)) {}
+
+    auto& operator[](size_t idx) { return _f[idx]; }
+    auto& operator[](size_t idx) const { return _f[idx]; }
+
+    size_t size_x() const { return _nx; }
+    size_t size_y() const { return _ny; }
+    void resize_x(size_t new_x) {
+        if (new_x > _nx) _f.resize(new_x, Poly(_ny));
+        else _f.resize(new_x);
+        _nx = new_x;
+    }
+    void resize_y(size_t new_y) {
+        for (auto& row: _f) row.resize(new_y);
+        _ny = new_y;
+    }
+
+    friend XYPoly operator*(const XYPoly& f, const XYPoly& g) {
+        auto nx = f.size_x(), ny = f.size_y();
+        auto mx = g.size_x(), my = g.size_y();
+
+        auto sx = nx + mx - 1, sy = ny + my - 1;
+        Poly A(nx * sy), B(mx * sy);
+        for (size_t i = 0; i < nx; i++)
+            std::ranges::copy(f[i], A.begin() + i * sy);
+        for (size_t i = 0; i < mx; i++)
+            std::ranges::copy(g[i], B.begin() + i * sy);
+        A *= B;
+
+        XYPoly res(sx, sy);
+        for (size_t i = 0; i < sx; i++)
+            std::copy_n(A.begin() + i * sy, sy, res[i].begin());
+        return res;
+    }
+
+private:
+    size_t _nx = 0, _ny = 0;
+    std::vector<Poly> _f{};
+};
+
+Poly quotient(XYPoly f, XYPoly g, size_t n) {
+    if (n == 0) return f[0] / g[0];
+    XYPoly tmp = g;
+    for (size_t i = 1; i < tmp.size_x(); i += 2) tmp[i] = -std::move(tmp[i]);
+    f = f * tmp;
+    g = g * tmp;
+    size_t sf = 0, sg = 0;
+    for (size_t i = n % 2; i < f.size_x() && sf <= n / 2; i += 2)
+        f[sf++] = std::move(f[i]);
+    for (size_t i = 0; i < g.size_x() && sg <= n / 2; i += 2)
+        g[sg++] = std::move(g[i]);
+    f.resize_x(sf);
+    g.resize_x(sg);
+    return quotient(std::move(f), std::move(g), n / 2);
+}
+
+Poly compInv(Poly f) {
+    if (f.size() > 0 && f[0]() != 0)
+        throw std::invalid_argument("compositional inverse does not exist");
+    if (f.size() < 2) return Poly{};
+
+    size_t K = f.size() - 1;
+    Mint v = f[1].inv();
+    f *= v;
+
+    Poly g = [&]() {
+        XYPoly q(K + 1, 2);
+        q[0][0] = 1;
+        for (size_t i = 0; i <= K; i++) q[i][1] = -f[i];
+        return quotient(XYPoly{{1}}, std::move(q), K);
+    }();
+    g.resize(K + 1);
+    std::ranges::reverse(g);
+    for (size_t i = 0; i < K; i++) g[i] *= Mint{K} / Mint{K - i};
+
+    auto h = exp(ln(g) * (-Mint{K}.inv()));
+    Mint step = v;
+    g[0] = 0;
+    for (size_t i = 0; i < K; i++) g[i + 1] = h[i] * step, step *= v;
+    return g;
+}
 
 int main() {
-    // freopen("P4723_1.in", "r", stdin);
+    // freopen("input.in", "r", stdin);
+
     int n = qin.scan<int>().value();
     for (int i = 0; i < n; i++) a[i] = qin.scan<unsigned>().value();
-    Poly ans = sqrt(Poly(a, a + n));
-    for (int i = 0; i < n; i++) qout.print(ans[i](), "");
-    qout.print('\n');
+    Poly res = compInv(Poly(a, a + n));
+    for (int i = 0; i < n; i++) {
+        qout.print(res[i]());
+        qout.print(i == n - 1 ? '\n' : ' ');
+    }
     return 0;
 }

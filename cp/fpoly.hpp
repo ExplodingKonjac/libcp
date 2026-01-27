@@ -26,15 +26,28 @@ namespace detail
 template <typename T, size_t A = alignof(T)>
 class AlignedPool {
 private:
-    static inline struct _Vec: std::vector<T*> {
-        ~_Vec() {
-#ifdef _WIN32
-            for (auto ptr: *this) _aligned_free(ptr);
-#else
-            for (auto ptr: *this) std::free(ptr);
-#endif
+    static inline bool _cleaned = false;
+    static inline struct _PoolObj: std::array<std::vector<T*>, 32> {
+        ~_PoolObj() {
+            _cleaned = true;
+            for (auto& vec: *this) std::ranges::for_each(vec, free);
         }
-    } _pool[32];
+    } _pool;
+
+    static void free(T* p) {
+#ifdef _WIN32
+        _aligned_free(p);
+#else
+        std::free(p);
+#endif
+    }
+    static T* alloc(size_t n) {
+#ifdef _WIN32
+        return static_cast<T*>(_aligned_malloc(n * sizeof(T), A));
+#else
+        return static_cast<T*>(std::aligned_alloc(A, n * sizeof(T)));
+#endif
+    }
 
 public:
     class pointer_type {
@@ -77,15 +90,12 @@ public:
             _pool[k].pop_back();
             return {p, n};
         }
-#ifdef _WIN32
-        T* p = static_cast<T*>(_aligned_malloc(n * sizeof(T), A));
-#else
-        T* p = static_cast<T*>(std::aligned_alloc(A, n * sizeof(T)));
-#endif
-        return {p, n};
+        return {alloc(n), n};
     }
     static void deallocate(pointer_type& p) {
-        if (p) _pool[std::countr_zero(p.capacity())].push_back(p);
+        if (!p) return;
+        if (_cleaned) return free(p);
+        _pool[std::countr_zero(p.capacity())].push_back(p);
     }
 };
 
@@ -209,8 +219,9 @@ struct PolyUtils {
                            V_I = vset1(dft_info.rt[2]),
                            V_I_INV = vset1(dft_info.irt[2]);
 
+    template <bool strict = false>
     static m256i shrink(m256i x) {
-        return _mm256_min_epu32(x, _mm256_sub_epi32(x, V_P2));
+        return _mm256_min_epu32(x, _mm256_sub_epi32(x, strict ? V_P : V_P2));
     }
     template <bool strict = true>
     static m256i add(m256i x, m256i y) {
@@ -355,6 +366,7 @@ struct PolyUtils {
             for (size_t j = 0; j < len; j += 8) {
                 vstore(a + j, butterfly8<false>(mul(vload(a + j), w)));
                 w = mul(w, vload(dft_info.w8d[std::countr_one(j >> 3)]));
+                w = shrink<true>(w);
             }
         }
     }
@@ -538,57 +550,62 @@ struct PolyUtils {
     }
 };
 
+template <typename T, typename Mint>
+concept init_friendly_type =
+    std::same_as<T, u32> || std::same_as<T, i32> || std::same_as<T, Mint>;
+
+template <typename R, typename Mint>
+concept can_fast_init = std::ranges::contiguous_range<R> &&
+                        init_friendly_type<std::ranges::range_value_t<R>, Mint>;
+
 }  // namespace detail
 
 template <u32 P, size_t _MAXN = size_t(-1)>
 class FPoly {
-public:
+private:
     using U = detail::PolyUtils<P, _MAXN>;
     using Mint = U::Mint;
     using Pool = U::Pool;
 
-private:
     size_t _len = 0;
-    mutable Pool::pointer_type _data{};
-
-    template <std::ranges::input_range R,
-              typename T = std::ranges::range_value_t<R>>
-    static constexpr bool can_fast_init =
-        (std::is_same_v<T, u32> || std::is_same_v<T, i32>) &&
-        std::ranges::contiguous_range<R>;
+    Pool::pointer_type _data{};
 
 public:
     FPoly() = default;
+    FPoly(const std::initializer_list<Mint>& init):
+        FPoly(std::views::all(init)) {}
     explicit FPoly(size_t n, bool no_init = false):
         _len{n}, _data{Pool::allocate(n)} {
         if (!no_init) U::clear(_data, n);
     }
-    FPoly(const std::initializer_list<Mint>& init):
-        _len{init.size()}, _data{Pool::allocate(_len)} {
-        U::copy(init.begin(), init.size(), _data);
-    }
-    template <std::ranges::input_range R>
-        requires can_fast_init<R>
-    FPoly(R&& r): _len{std::ranges::size(r)}, _data{Pool::allocate(_len)} {
-        size_t i = 0;
-        for (; i + 7 < _len; i += 8) {
-            auto v = U::vloadu(r.data() + i);
-            if constexpr (std::is_signed_v<std::ranges::range_value_t<R>>)
-                v = _mm256_add_epi32(v, U::vset1((1u << 31) / P * P));
-            U::vstore(_data + i, U::mul(v, U::V_R2));
+    template <detail::can_fast_init<Mint> R>
+        requires(!std::same_as<std::remove_cvref_t<R>, FPoly>)
+    FPoly(R&& r): FPoly(std::ranges::size(r), true) {
+        using T = std::ranges::range_value_t<R>;
+        auto data = std::ranges::data(r);
+        if constexpr (std::same_as<T, Mint>) {
+            U::copy(data, _len, _data);
+        } else {
+            size_t i = 0;
+            for (; i + 7 < _len; i += 8) {
+                auto v = U::vloadu(data + i);
+                if constexpr (std::is_signed_v<T>) {
+                    v = _mm256_add_epi32(v, U::vset1((1u << 31) / P * P));
+                }
+                U::vstore(_data + i, U::mul(v, U::V_R2));
+            }
+            for (; i < _len; i++) _data[i] = Mint{data[i]};
         }
-        for (; i < _len; i++) _data[i] = Mint{r.data()[i]};
     }
     template <std::ranges::input_range R>
         requires std::convertible_to<std::ranges::range_value_t<R>, Mint> &&
-                 (!can_fast_init<R> &&
-                  !std::same_as<std::remove_cvref_t<R>, FPoly>)
+                 (!detail::can_fast_init<R, Mint>) &&
+                 (!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
-        std::vector<Mint> tmp{};
-        for (auto&& x: r) tmp.emplace_back(x);
-        _len = tmp.size();
-        _data = Pool::allocate(_len);
-        U::copy(tmp.data(), _len, _data);
+        if constexpr (std::ranges::sized_range<R>) {
+            reserve(std::ranges::size(r));
+        }
+        for (auto&& x: r) push_back(std::forward<decltype(x)>(x));
     }
     template <std::input_iterator Iter, std::sentinel_for<Iter> Sent>
     FPoly(Iter begin, Sent end): FPoly(std::ranges::subrange(begin, end)) {}
@@ -607,24 +624,26 @@ public:
         if (sz > _len) U::clear(_data + _len, sz - _len);
         _len = sz;
     }
-    void reserve(size_t sz) const {
+    void reserve(size_t sz) {
         if (sz > _data.capacity()) {
             auto new_data = Pool::allocate(sz);
             U::copy(_data, _len, new_data);
             _data = std::move(new_data);
         }
     }
+    void push_back(Mint x) { resize(_len + 1), _data[_len - 1] = x; }
+    void pop_back() { _len--; }
     void clear() { _len = 0; }
+    size_t size() const { return _len; }
 
-    auto size() const { return _len; }
     auto data() { return (Mint*)_data; }
     auto data() const { return (const Mint*)_data; }
     auto begin() { return (Mint*)_data; }
     auto begin() const { return (const Mint*)_data; }
     auto end() { return begin() + _len; }
     auto end() const { return begin() + _len; }
-    auto& operator[](size_t idx) { return _data[idx]; }
-    auto operator[](size_t idx) const { return _data[idx]; }
+    Mint& operator[](size_t idx) { return _data[idx]; }
+    Mint operator[](size_t idx) const { return _data[idx]; }
 
     FPoly& operator+=(const FPoly& other) {
         if (other._len > _len) resize(other._len);
@@ -648,45 +667,67 @@ public:
         U::scale(_data, k, _len, _data);
         return *this;
     }
-    friend FPoly operator-(FPoly f) {
-        return U::neg(f._data, f._len, f._data), f;
+    FPoly& operator/=(const FPoly& other) {
+        operator*=(inv(other));
+        return resize(other._len), *this;
     }
-    friend FPoly operator+(FPoly f, const FPoly& g) { return f += g, f; }
-    friend FPoly operator-(FPoly f, const FPoly& g) { return f -= g, f; }
-    friend FPoly operator*(Mint k, FPoly f) { return f *= k, f; }
-    friend FPoly operator*(FPoly f, Mint k) { return f *= k, f; }
-    friend FPoly operator*(FPoly f, FPoly g) { return f *= g, f; }
-
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> inv(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> ln(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> exp(const FPoly<Q, N>&);
-    template <u32 Q, size_t N>
-    friend FPoly<Q, N> sqrt(const FPoly<Q, N>&);
+    friend FPoly operator-(FPoly f) {
+        return U::neg(f._data, f._len, f._data), std::move(f);
+    }
+    friend FPoly operator+(FPoly f, const FPoly& g) {
+        return std::move(f += g);
+    }
+    friend FPoly operator-(FPoly f, const FPoly& g) {
+        return std::move(f -= g);
+    }
+    friend FPoly operator*(FPoly f, FPoly g) {
+        return std::move(f *= std::move(g));
+    }
+    friend FPoly operator/(FPoly f, const FPoly& g) {
+        return std::move(f /= g);
+    }
+    friend FPoly operator*(Mint k, FPoly f) { return std::move(f *= k); }
+    friend FPoly operator*(FPoly f, Mint k) { return std::move(f *= k); }
 };
 
 #define Poly FPoly<Q, N>
 #define U Poly::U
+
+#define Poly FPoly<Q, N>
+#define U Poly::U
+template <u32 Q, size_t N>
+Poly integrate(Poly f) {
+    f.resize(f.size() + 1);
+    U::polyint(f.data(), f.size(), f.data());
+    return f;
+}
+
+template <u32 Q, size_t N>
+Poly derivative(Poly f) {
+    if (f.size() == 0) return f;
+    U::polyder(f.data(), f.size(), f.data());
+    f.resize(f.size() - 1);
+    return f;
+}
+
 template <u32 Q, size_t N>
 Poly inv(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyinv(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyinv(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q, size_t N>
 Poly ln(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyln(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyln(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q, size_t N>
 Poly exp(const Poly& f) {
-    Poly res(f._len, true);
-    U::polyexp(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    U::polyexp(f.data(), f.size(), res.data());
     return res;
 }
 
@@ -694,14 +735,14 @@ template <u32 Q, size_t N>
 Poly sqrt(const Poly& f) {
     int k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
     if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
-    Poly res(f._len, true);
-    if (k == 0) U::polysqrt(f._data, f._len, res._data);
+    Poly res(f.size(), true);
+    if (k == 0) U::polysqrt(f.data(), f.size(), res.data());
     else {
-        auto tmp = U::Pool::allocate(f._len);
-        U::copy(f._data + k, f._len - k, tmp, f._len);
-        U::polysqrt(tmp, f._len, res._data);
-        std::memmove(res._data + k / 2, res._data, f._len - k / 2);
-        U::clear(res._data, k / 2);
+        auto tmp = U::Pool::allocate(f.size());
+        U::copy(f.data() + k, f.size() - k, tmp, f.size());
+        U::polysqrt(tmp, f.size(), res.data());
+        std::memmove(res.data() + k / 2, res.data(), f.size() - k / 2);
+        U::clear(res.data(), k / 2);
     }
     return res;
 }
