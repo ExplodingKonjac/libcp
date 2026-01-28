@@ -1188,7 +1188,8 @@ Poly exp(const Poly& f) {
 
 template <u32 Q, size_t N>
 Poly sqrt(const Poly& f) {
-    int k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
+    auto k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
+    if (k == f.size()) return Poly(f.size(), true);
     if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
     Poly res(f.size(), true);
     if (k == 0) U::polysqrt(f.data(), f.size(), res.data());
@@ -1196,7 +1197,8 @@ Poly sqrt(const Poly& f) {
         auto tmp = U::Pool::allocate(f.size());
         U::copy(f.data() + k, f.size() - k, tmp, f.size());
         U::polysqrt(tmp, f.size(), res.data());
-        std::memmove(res.data() + k / 2, res.data(), f.size() - k / 2);
+        std::memmove(res.data() + k / 2, res.data(),
+                     (res.size() - k / 2) * sizeof(typename Poly::Mint));
         U::clear(res.data(), k / 2);
     }
     return res;
@@ -1225,115 +1227,21 @@ std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
 using cp::qin, cp::qout;
 using namespace cp::literals;
 
-constexpr int MOD = 998244353, MAXN = 100000;
+constexpr int MOD = 998244353, MAXN = 500000;
 using Mint = cp::SModint<MOD>;
-using Poly = cp::FPoly<MOD, (1 << 18)>;
+using Poly = cp::FPoly<MOD, (1 << 19)>;
 
 unsigned a[MAXN + 5];
 
-class XYPoly {
-public:
-    XYPoly() = default;
-    XYPoly(const std::initializer_list<std::initializer_list<Mint>>& init):
-        _nx(init.size()), _ny(0) {
-        _f.reserve(_nx);
-        for (auto& inner: init) {
-            _f.push_back(Poly(inner));
-            _ny = std::max(_ny, inner.size());
-        }
-        for (auto& row: _f) row.resize(_ny);
-    }
-    XYPoly(size_t nx, size_t ny): _nx(nx), _ny(ny), _f(nx, Poly(ny)) {}
-
-    auto& operator[](size_t idx) { return _f[idx]; }
-    auto& operator[](size_t idx) const { return _f[idx]; }
-
-    size_t size_x() const { return _nx; }
-    size_t size_y() const { return _ny; }
-    void resize_x(size_t new_x) {
-        if (new_x > _nx) _f.resize(new_x, Poly(_ny));
-        else _f.resize(new_x);
-        _nx = new_x;
-    }
-    void resize_y(size_t new_y) {
-        for (auto& row: _f) row.resize(new_y);
-        _ny = new_y;
-    }
-
-    friend XYPoly operator*(const XYPoly& f, const XYPoly& g) {
-        auto nx = f.size_x(), ny = f.size_y();
-        auto mx = g.size_x(), my = g.size_y();
-
-        auto sx = nx + mx - 1, sy = ny + my - 1;
-        Poly A(nx * sy), B(mx * sy);
-        for (size_t i = 0; i < nx; i++)
-            std::ranges::copy(f[i], A.begin() + i * sy);
-        for (size_t i = 0; i < mx; i++)
-            std::ranges::copy(g[i], B.begin() + i * sy);
-        A *= B;
-
-        XYPoly res(sx, sy);
-        for (size_t i = 0; i < sx; i++)
-            std::copy_n(A.begin() + i * sy, sy, res[i].begin());
-        return res;
-    }
-
-private:
-    size_t _nx = 0, _ny = 0;
-    std::vector<Poly> _f{};
-};
-
-Poly quotient(XYPoly f, XYPoly g, size_t n) {
-    if (n == 0) return f[0] / g[0];
-    XYPoly tmp = g;
-    for (size_t i = 1; i < tmp.size_x(); i += 2) tmp[i] = -std::move(tmp[i]);
-    f = f * tmp;
-    g = g * tmp;
-    size_t sf = 0, sg = 0;
-    for (size_t i = n % 2; i < f.size_x() && sf <= n / 2; i += 2)
-        f[sf++] = std::move(f[i]);
-    for (size_t i = 0; i < g.size_x() && sg <= n / 2; i += 2)
-        g[sg++] = std::move(g[i]);
-    f.resize_x(sf);
-    g.resize_x(sg);
-    return quotient(std::move(f), std::move(g), n / 2);
-}
-
-Poly compInv(Poly f) {
-    if (f.size() > 0 && f[0]() != 0)
-        throw std::invalid_argument("compositional inverse does not exist");
-    if (f.size() < 2) return Poly{};
-
-    size_t K = f.size() - 1;
-    Mint v = f[1].inv();
-    f *= v;
-
-    Poly g = [&]() {
-        XYPoly q(K + 1, 2);
-        q[0][0] = 1;
-        for (size_t i = 0; i <= K; i++) q[i][1] = -f[i];
-        return quotient(XYPoly{{1}}, std::move(q), K);
-    }();
-    g.resize(K + 1);
-    std::ranges::reverse(g);
-    for (size_t i = 0; i < K; i++) g[i] *= Mint{K} / Mint{K - i};
-
-    auto h = exp(ln(g) * (-Mint{K}.inv()));
-    Mint step = v;
-    g[0] = 0;
-    for (size_t i = 0; i < K; i++) g[i + 1] = h[i] * step, step *= v;
-    return g;
-}
-
 int main() {
-    // freopen("input.in", "r", stdin);
-
     int n = qin.scan<int>().value();
     for (int i = 0; i < n; i++) a[i] = qin.scan<unsigned>().value();
-    Poly res = compInv(Poly(a, a + n));
-    for (int i = 0; i < n; i++) {
-        qout.print(res[i]());
-        qout.print(i == n - 1 ? '\n' : ' ');
+    try {
+        Poly ans = sqrt(Poly(a, a + n));
+        for (int i = 0; i < n; i++) qout.print(ans[i](), "");
+        qout.print('\n');
+    } catch (...) {
+        qout.println("-1");
     }
     return 0;
 }

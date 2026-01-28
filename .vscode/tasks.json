@@ -8,6 +8,7 @@
             "args": [
                 "${fileBasename}",
                 "-g",
+                "-fsanitize=address,undefined,leak",
                 "-o",
                 "${fileBasenameNoExtension}",
                 "-std=c++23",

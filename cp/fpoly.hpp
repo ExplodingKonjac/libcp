@@ -99,7 +99,7 @@ public:
     }
 };
 
-template <u32 P, size_t _MAXN>
+template <u32 P>
 struct PolyUtils {
     using Mint = SModint<P>;
     using Pool = AlignedPool<Mint, 32>;
@@ -145,12 +145,11 @@ struct PolyUtils {
             if (P % i == 0) return false;
         return true;
     }();
-    static constexpr size_t LG_MAXN = std::countr_zero(P - 1),
-                            MAXN = std::min(_MAXN, size_t(1) << LG_MAXN);
+    static constexpr size_t LG_MAXN = std::countr_zero(P - 1);
     static constexpr const auto& M = Mint::mont;
 
     static_assert(is_prime, "P must be prime number");
-    static_assert(MAXN >= 8, "MAXN must be at least 8");
+    static_assert(LG_MAXN >= 3, "MAXN must be at least 8");
 
     static constexpr Mint G = [] {
         u32 phi = P - 1, tmp = phi;
@@ -202,14 +201,12 @@ struct PolyUtils {
     } dft_info{};
 
     static inline struct _InvInfo {
-        alignas(32) Mint inv[MAXN];
-        size_t inv_len = 2;
+        std::vector<Mint> inv;
 
-        _InvInfo() { inv[1] = 1; }
+        _InvInfo(): inv{0, 1} {}
         void prepare(size_t len) {
-            for (size_t i = inv_len; i <= len; i++)
-                inv[i] = -Mint{P / i} * inv[P % i];
-            inv_len = len;
+            while (inv.size() <= len)
+                inv.push_back(-Mint{P / inv.size()} * inv[P % inv.size()]);
         }
     } inv_info;
 
@@ -560,10 +557,10 @@ concept can_fast_init = std::ranges::contiguous_range<R> &&
 
 }  // namespace detail
 
-template <u32 P, size_t _MAXN = size_t(-1)>
+template <u32 P>
 class FPoly {
 private:
-    using U = detail::PolyUtils<P, _MAXN>;
+    using U = detail::PolyUtils<P>;
     using Mint = U::Mint;
     using Pool = U::Pool;
 
@@ -690,19 +687,19 @@ public:
     friend FPoly operator*(FPoly f, Mint k) { return std::move(f *= k); }
 };
 
-#define Poly FPoly<Q, N>
+#define Poly FPoly<Q>
 #define U Poly::U
 
-#define Poly FPoly<Q, N>
+#define Poly FPoly<Q>
 #define U Poly::U
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly integrate(Poly f) {
     f.resize(f.size() + 1);
     U::polyint(f.data(), f.size(), f.data());
     return f;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly derivative(Poly f) {
     if (f.size() == 0) return f;
     U::polyder(f.data(), f.size(), f.data());
@@ -710,30 +707,31 @@ Poly derivative(Poly f) {
     return f;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly inv(const Poly& f) {
     Poly res(f.size(), true);
     U::polyinv(f.data(), f.size(), res.data());
     return res;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly ln(const Poly& f) {
     Poly res(f.size(), true);
     U::polyln(f.data(), f.size(), res.data());
     return res;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly exp(const Poly& f) {
     Poly res(f.size(), true);
     U::polyexp(f.data(), f.size(), res.data());
     return res;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 Poly sqrt(const Poly& f) {
-    int k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
+    auto k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
+    if (k == f.size()) return Poly(f.size(), true);
     if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
     Poly res(f.size(), true);
     if (k == 0) U::polysqrt(f.data(), f.size(), res.data());
@@ -741,13 +739,14 @@ Poly sqrt(const Poly& f) {
         auto tmp = U::Pool::allocate(f.size());
         U::copy(f.data() + k, f.size() - k, tmp, f.size());
         U::polysqrt(tmp, f.size(), res.data());
-        std::memmove(res.data() + k / 2, res.data(), f.size() - k / 2);
+        std::memmove(res.data() + k / 2, res.data(),
+                     (res.size() - k / 2) * sizeof(typename Poly::Mint));
         U::clear(res.data(), k / 2);
     }
     return res;
 }
 
-template <u32 Q, size_t N>
+template <u32 Q>
 std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
     size_t n = f.size(), m = g.size();
     if (m == 0) throw std::invalid_argument("divider is empty");

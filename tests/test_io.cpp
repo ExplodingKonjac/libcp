@@ -1,4 +1,3 @@
-#pragma once
 #include <algorithm>
 #include <cctype>
 #include <charconv>
@@ -16,7 +15,7 @@
 #include <sys/stat.h>
 #endif
 
-// #define CP_FASTIO_ACCELERATE
+#define CP_FASTIO_ACCELERATE
 
 namespace cp
 {
@@ -103,14 +102,16 @@ public:
     }
     void sync() {
         if (_eof) return;
+        size_t s = _end - _pos;
+        if (s > 0) std::memmove(_buf, _pos, s);
 #ifdef CP_FASTIO_ACCELERATE
-        _end = _buf + std::fread(_buf + s, 1, IN_BUF_SIZE - s, _target);
+        s += std::fread(_buf + s, 1, IN_BUF_SIZE - s, _target);
 #else
-        std::fgets(_buf, IN_BUF_SIZE, _target);
-        _end = _buf + std::strlen(_buf);
+        std::fgets(_buf + s, IN_BUF_SIZE - s, _target);
+        s += std::strlen(_buf + s);
 #endif
         _eof = std::feof(_target);
-        _pos = _buf, *_end = EOF;
+        _pos = _buf, *(_end = _buf + s) = EOF;
     }
 
     operator bool() { return !eof(); }
@@ -255,7 +256,7 @@ public:
 
     template <typename... Args>
     void printsp(Args&&... args) {
-        print(args...), print(' ');
+        print(args...), print('\n');
     }
 };
 
@@ -263,3 +264,11 @@ inline cp::FastInput qin(stdin);
 inline cp::FastOutput qout(stdout);
 
 }  // namespace cp
+
+using cp::qin, cp::qout;
+
+int main() {
+    auto [a, b] = qin.scan<int, int>().value();
+    qout.println(a + b);
+    return 0;
+}
