@@ -13,7 +13,7 @@ using cp::qin, cp::qout;
 
 constexpr int MOD = 998244353;
 using Mint = cp::SModint<MOD>;
-using Poly = cp::FPoly<MOD, (1 << 20)>;
+using Poly = cp::FPoly<MOD>;
 
 template <std::uint32_t P, typename CharT>
 struct std::formatter<cp::SModint<P>, CharT>: std::formatter<int, CharT> {
@@ -22,8 +22,8 @@ struct std::formatter<cp::SModint<P>, CharT>: std::formatter<int, CharT> {
     }
 };
 
-template <std::uint32_t P, size_t MAXN, typename CharT>
-struct std::formatter<cp::FPoly<P, MAXN>, CharT>
+template <std::uint32_t P, typename CharT>
+struct std::formatter<cp::FPoly<P>, CharT>
     : std::range_formatter<cp::SModint<P>, CharT> {};
 
 unsigned a[1000005];
