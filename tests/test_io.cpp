@@ -20,8 +20,8 @@
 namespace cp
 {
 
-constexpr size_t IN_BUF_SIZE = 1 << 20;
-constexpr size_t OUT_BUF_SIZE = 1 << 20;
+constexpr size_t IN_BUF_SIZE = 1 << 16;
+constexpr size_t OUT_BUF_SIZE = 1 << 16;
 
 #ifndef CP_FORMAT_STRING
 #define CP_FORMAT_STRING

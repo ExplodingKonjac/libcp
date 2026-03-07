@@ -27,7 +27,7 @@ struct FormatString {
     constexpr operator auto() const { return S.view(); }
 };
 
-namespace literals
+inline namespace literals
 {
 
 template <FixedString S>

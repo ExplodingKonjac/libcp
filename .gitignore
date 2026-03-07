@@ -11,3 +11,8 @@
 *.in
 *.out
 *.ans
+
+# config files
+.vscode
+.clang-format
+.clangd

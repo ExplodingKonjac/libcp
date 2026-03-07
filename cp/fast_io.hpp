@@ -21,8 +21,8 @@
 namespace cp
 {
 
-constexpr size_t IN_BUF_SIZE = 1 << 20;
-constexpr size_t OUT_BUF_SIZE = 1 << 20;
+constexpr size_t IN_BUF_SIZE = 1 << 16;
+constexpr size_t OUT_BUF_SIZE = 1 << 16;
 
 #ifndef CP_FORMAT_STRING
 #define CP_FORMAT_STRING
@@ -79,9 +79,7 @@ private:
         FastInput* _t = nullptr;
     };
 
-#ifdef __linux__
     bool _eof = false;
-#endif
 
 public:
     FastInput(FILE* target): FastIOBase(target) {
@@ -104,7 +102,7 @@ public:
     void sync() {
         if (_eof) return;
 #ifdef CP_FASTIO_ACCELERATE
-        _end = _buf + std::fread(_buf + s, 1, IN_BUF_SIZE - s, _target);
+        _end = _buf + std::fread(_buf, 1, IN_BUF_SIZE, _target);
 #else
         std::fgets(_buf, IN_BUF_SIZE, _target);
         _end = _buf + std::strlen(_buf);
@@ -198,7 +196,7 @@ private:
             return *this;
         }
         WriteIterator& operator++() { return *this; }
-        void operator++(int) {}
+        auto& operator++(int) { return *this; }
         auto& operator*() { return *this; }
 
         FastOutput* _t;
@@ -250,12 +248,14 @@ public:
 
     template <typename... Args>
     void println(Args&&... args) {
-        print(args...), print('\n');
+        if constexpr (sizeof...(Args) > 0) print(args...);
+        print('\n');
     }
 
     template <typename... Args>
     void printsp(Args&&... args) {
-        print(args...), print(' ');
+        if constexpr (sizeof...(Args) > 0) print(args...);
+        print(' ');
     }
 };
 
