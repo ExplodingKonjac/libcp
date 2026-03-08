@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "def.hpp"
 
@@ -21,15 +22,11 @@ class PairingHeap {
 private:
     struct Node {
         T val;
-        std::unique_ptr<Node> son;
-        std::unique_ptr<Node> nxt;
+        Node* son;
+        Node* nxt;
         Node* pre;
 
         Node(T v): val{std::move(v)}, son{}, nxt{}, pre{} {}
-        auto moveSon() {
-            if (son) son->pre = nullptr;
-            return std::move(son);
-        }
     };
 
     class Iter {
@@ -50,92 +47,170 @@ private:
         std::allocator_traits<Alloc>::template rebind_traits<Node>;
 
     template <typename... Args>
-    auto allocNode(Args&&... val) {
-        auto p = NodeAllocTrait::allocate(_alloc, sizeof(Node));
+    Node* newNode(Args&&... val) const {
+        auto p = NodeAllocTrait::allocate(_alloc, 1);
         NodeAllocTrait::construct(_alloc, p, std::forward<Args>(val)...);
-        return std::unique_ptr<Node>(p);
+        return p;
     }
-    auto merge(std::unique_ptr<Node> x, std::unique_ptr<Node> y) {
-        if (!x) return y;
-        if (!y) return x;
-        if (_cmp(x->val, y->val)) x.swap(y);
-        if (x->son) x->son->pre = y.get();
-        y->pre = x.get();
-        y->nxt = std::move(x->son);
-        x->son = std::move(y);
-        return x;
+    void delNode(Node* p) const {
+        NodeAllocTrait::destroy(_alloc, p);
+        NodeAllocTrait::deallocate(_alloc, p, 1);
     }
-    auto merges(std::unique_ptr<Node> x) {
-        if (!x) return x;
-        x->pre = nullptr;
-        auto y = std::move(x->nxt);
-        if (!y) return x;
-        y->pre = nullptr;
-        auto z = std::move(y->nxt);
-        return merge(merge(std::move(x), std::move(y)), merges(std::move(z)));
+    void rdelNode(Node* p) const {
+        std::vector<Node*> stk;
+        if (p) stk.push_back(p);
+        while (!stk.empty()) {
+            auto u = stk.back();
+            stk.pop_back();
+            if (u->nxt) stk.push_back(u->nxt);
+            if (u->son) stk.push_back(u->son);
+            delNode(u);
+        }
     }
-    auto extract(Node* x) {
-        Node* y = x->pre;
-        if (!y) return std::move(_rt);
-        auto& p = (y->nxt.get() == x ? y->nxt : y->son);
-        std::unique_ptr<Node> owning_x = std::move(p);
-        owning_x->pre = nullptr;
-        p = std::move(owning_x->nxt);
-        if (p) p->pre = y;
-        return owning_x;
+    Node* cpyNode(Node* src, Node* pre = nullptr) const {
+        if (!src) return nullptr;
+        Node* root = nullptr;
+        struct Task {
+            Node* src;
+            Node** dst;
+            Node* pre;
+        };
+        std::vector<Task> stk;
+        stk.push_back({src, &root, pre});
+        while (!stk.empty()) {
+            auto [s, d, pr] = stk.back();
+            stk.pop_back();
+            auto p = newNode(T(s->val));
+            p->pre = pr;
+            *d = p;
+            if (s->nxt) stk.push_back({s->nxt, &p->nxt, pr});
+            if (s->son) stk.push_back({s->son, &p->son, p});
+        }
+        return root;
     }
 
-    std::unique_ptr<Node> _rt;
+    Node* merge(Node* x, Node* y) const {
+        if (!x) return y;
+        if (!y) return x;
+        if (_cmp(x->val, y->val)) std::swap(x, y);
+        if (x->son) x->son->pre = y;
+        y->pre = x;
+        y->nxt = x->son;
+        x->son = y;
+        return x;
+    }
+    Node* merges(Node* x) const {
+        if (!x) return nullptr;
+        std::vector<Node*> lst;
+        while (x) {
+            x->pre = nullptr;
+            lst.push_back(x);
+            x = std::exchange(x->nxt, nullptr);
+        }
+        usize cur = lst.size() & 1;
+        for (usize i = cur; i < lst.size(); i += 2)
+            lst[cur++] = merge(lst[i], lst[i + 1]);
+        while (--cur) lst[cur - 1] = merge(lst[cur - 1], lst[cur]);
+        return lst[0];
+    }
+    Node* extract(Node* x) {
+        Node* y = x->pre;
+        if (!y) return std::exchange(_rt, nullptr);
+        auto& p = (y->nxt == x ? y->nxt : y->son);
+        x->pre = nullptr;
+        p = std::exchange(x->nxt, nullptr);
+        if (p) p->pre = y;
+        return x;
+    }
+
+    Node* _rt;
     usize _sz;
     Compare _cmp;
-    NodeAlloc _alloc;
+    mutable NodeAlloc _alloc;
 
 public:
     using point_iterator = Iter;
 
-    PairingHeap() = default;
+    PairingHeap(): _rt{}, _sz{}, _cmp{}, _alloc{} {}
+    PairingHeap(PairingHeap&& other):
+        _rt{std::exchange(other._rt, nullptr)},
+        _sz{std::exchange(other._sz, 0)},
+        _cmp(std::move(other._cmp)),
+        _alloc(std::move(other._alloc)) {}
+    PairingHeap(const PairingHeap& other):
+        _rt{other.cpyNode(other._rt)},
+        _sz{other._sz},
+        _cmp(other._cmp),
+        _alloc(other._alloc) {}
+    auto& operator=(PairingHeap&& other) {
+        if (this != &other) {
+            rdelNode(_rt);
+            _rt = std::exchange(other._rt, nullptr);
+            _sz = std::exchange(other._sz, 0);
+            _cmp = std::move(other._cmp);
+            _alloc = std::move(other._alloc);
+        }
+        return *this;
+    }
+    auto& operator=(const PairingHeap& other) {
+        if (this != &other) {
+            rdelNode(_rt);
+            _rt = other.cpyNode(other._rt);
+            _sz = other._sz;
+            _cmp = Compare(other._cmp);
+            _alloc = NodeAlloc(other._alloc);
+        }
+        return *this;
+    }
+    ~PairingHeap() { rdelNode(_rt); }
+
     PairingHeap(Alloc alloc): _rt{}, _sz{}, _cmp{}, _alloc{std::move(alloc)} {}
     PairingHeap(Compare cmp, Alloc alloc = {}):
         _rt{}, _sz{}, _cmp{std::move(cmp)}, _alloc{std::move(alloc)} {}
 
     template <typename... Args>
     point_iterator emplace(Args&&... args) {
-        auto x = allocNode(std::forward<Args>(args)...);
-        Iter it{x.get()};
-        _rt = merge(std::move(_rt), std::move(x));
+        auto x = newNode(std::forward<Args>(args)...);
+        _rt = merge(_rt, x);
         _sz++;
-        return it;
+        return point_iterator{x};
     }
     point_iterator push(T val) { return emplace(std::move(val)); }
-    T pop() {
-        auto old_rt = std::move(_rt);
-        _rt = merges(old_rt->moveSon());
-        _sz--;
-        return std::move(old_rt)->val;
-    }
     void join(PairingHeap& other) {
-        _rt = merge(std::move(_rt), std::move(other._rt));
+        _rt = merge(_rt, std::exchange(other._rt, nullptr));
         _sz += std::exchange(other._sz, 0);
-    }
-    T erase(point_iterator it) {
-        auto x = extract(it.node);
-        _rt = merge(std::move(_rt), merges(x->moveSon()));
-        _sz--;
-        return std::move(x->val);
     }
     void modify(point_iterator it, T val) {
         auto x = extract(it.node);
         if (_cmp(x->val, val)) {
             x->val = val;
-            _rt = merge(std::move(_rt), std::move(x));
         } else {
+            auto tmp = merges(x->son);
             x->val = val;
-            auto tmp = merges(x->moveSon());
-            _rt = merge(merge(std::move(_rt), std::move(tmp)), std::move(x));
+            x->son = nullptr;
+            x = merge(x, tmp);
         }
+        _rt = merge(_rt, x);
+    }
+    T pop() {
+        auto old_rt = _rt;
+        _rt = merges(old_rt->son);
+        _sz--;
+        auto res = std::move(old_rt->val);
+        delNode(old_rt);
+        return res;
+    }
+    T erase(point_iterator it) {
+        auto x = extract(it.node);
+        _rt = merge(_rt, merges(x->son));
+        _sz--;
+        auto res = std::move(x->val);
+        delNode(x);
+        return res;
     }
     void clear() {
-        _rt.reset(nullptr);
+        rdelNode(_rt);
+        _rt = nullptr;
         _sz = 0;
     }
 
