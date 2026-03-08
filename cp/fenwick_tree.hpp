@@ -27,7 +27,7 @@ template <typename T, typename PlusOp = std::plus<T>,
     }
 class FenwickTree {
 public:
-    FenwickTree(): _t{}, _plus{}, _zero{} {}
+    FenwickTree() = default;
     FenwickTree(usize n, PlusOp plus = {}, MinusOp minus = {},
                 ZeroFn zero = {}):
         _t(n), _plus{plus}, _minus{minus}, _zero{zero} {}

@@ -1,16 +1,11 @@
-#include <iostream>
-#include <string_view>
+#include <map>
 
-template <size_t N>
-struct FixedString {
-    const char* data;
-    consteval FixedString(const char (&str)[N]): data(str) {}
-    constexpr auto view() const { return std::string_view{data, N - 1}; }
-};
+#ifdef DADALZY
+int test = 1;  // 如果这段代码在 VSCode 里是亮起的（未被灰显），说明 .clangd
+               // 成功加载了。
+#endif
 
-template <FixedString S>
-void func() {
-    std::cout << S.view() << '\n';
+int main() {
+    std::map<int, int> mp();
+    return 0;
 }
-
-int main() { func<"abc">(); }
