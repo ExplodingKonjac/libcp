@@ -21,9 +21,9 @@ struct ZeroFn {
 template <typename T, typename PlusOp = std::plus<T>,
           typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>>
     requires requires(T x, T y, PlusOp plus, MinusOp minus, ZeroFn zero) {
-        { plus(x, y) } -> std::same_as<T>;
-        { minus(x, y) } -> std::same_as<T>;
-        { zero() } -> std::same_as<T>;
+        { std::invoke(plus, x, y) } -> std::same_as<T>;
+        { std::invoke(minus, x, y) } -> std::same_as<T>;
+        { std::invoke(zero) } -> std::same_as<T>;
     }
 class FenwickTree {
 public:

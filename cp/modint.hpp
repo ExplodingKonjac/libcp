@@ -24,8 +24,8 @@ struct MontInfo {
     }(P);
     u32 R = (1ull << 32) % P, R2 = (u64)R * R % P, R3 = (u64)R2 * R % P;
 
-    C u32 toMont(u32 x) const { return mul(x, R2); }
-    C u32 fromMont(u32 x) const { return x = redc(x), x < P ? x : x - P; }
+    C u32 to_mont(u32 x) const { return mul(x, R2); }
+    C u32 from_mont(u32 x) const { return x = redc(x), x < P ? x : x - P; }
     C u32 redc(u64 t) const { return (t + u64(u32(t) * P_INV) * P) >> 32; }
     C u32 add(u32 x, u32 y) const { return x += y, x >= P2 ? x - P2 : x; }
     C u32 sub(u32 x, u32 y) const { return x < y ? x + P2 - y : x - y; }
@@ -42,16 +42,16 @@ template <typename D>
 class ModintBase {
 public:
     C ModintBase(): _val{0} {}
-    C ModintBase(i32 x): _val{m.toMont(x + (1 << 31) / m.P * m.P)} {}
-    C ModintBase(u32 x): _val{m.toMont(x)} {}
-    C ModintBase(i64 x): _val{m.toMont(x % m.P + m.P)} {}
-    C ModintBase(u64 x): _val{m.toMont(x % m.P)} {}
+    C ModintBase(i32 x): _val{m.to_mont(x + (1 << 31) / m.P * m.P)} {}
+    C ModintBase(u32 x): _val{m.to_mont(x)} {}
+    C ModintBase(i64 x): _val{m.to_mont(x % m.P + m.P)} {}
+    C ModintBase(u64 x): _val{m.to_mont(x % m.P)} {}
     C bool operator==(D other) const {
         u32 delta = _val >= other._val ? _val - other._val : other._val - _val;
         return delta == 0 || delta == m.P;
     }
     C bool operator!=(D other) const { return !(*this == other); }
-    C u32 operator()() const { return m.fromMont(_val); }
+    C u32 operator()() const { return m.from_mont(_val); }
     C D inv() const { return D(0, m.inv(_val)); }
     C D strict() const { return D(0, _val < m.P ? _val : _val - m.P); }
     C u32 raw() const { return _val; }
@@ -108,17 +108,17 @@ struct DModint: public detail::ModintBase<DModint> {
     inline static detail::MontInfo mont{998244353};
     using detail::ModintBase<DModint>::ModintBase;
 
-    static void setMod(u32 P) {
+    static void set_mod(u32 P) {
         if (P == 0 || P >= (1 << 30))
             throw std::out_of_range("P must be in [0, 2^{30})");
         mont = detail::MontInfo{P};
     }
-    static u32 getMod() { return mont.P; }
+    static u32 get_mod() { return mont.P; }
 };
 
 template <modint T, std::integral U>
-C T qpow(T x, U y) {
-    if (y < 0) return qpow(x.inv(), std::make_signed_t<U>(-y));
+C T pow(T x, U y) {
+    if (y < 0) return pow(x.inv(), std::make_signed_t<U>(-y));
     T res{1};
     for (; y; y >>= 1, x = x * x)
         if (y & 1) res = res * x;
@@ -127,7 +127,7 @@ C T qpow(T x, U y) {
 
 template <modint T>
 C int legendre(T x) {
-    auto r = qpow(x, (x.mont.P - 1) / 2)();
+    auto r = pow(x, (x.mont.P - 1) / 2)();
     return r == x.mont.P - 1 ? -1 : r;
 }
 

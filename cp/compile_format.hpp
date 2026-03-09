@@ -54,7 +54,7 @@ struct Replacement {
 template <FixedString S, typename... Args>
 struct CompiledFormatString {
     template <size_t Pos, size_t AutoIndex>
-    static consteval auto parseArgIdx() {
+    static consteval auto parse_arg_idx() {
         size_t pos = Pos;
         size_t arg_id = 0;
         size_t auto_index = AutoIndex;
@@ -73,7 +73,7 @@ struct CompiledFormatString {
     }
 
     template <size_t Pos, size_t AutoIndex, size_t ArgId>
-    static consteval auto parseFmtSpec() {
+    static consteval auto parse_fmt_spec() {
         using T = tuple_element_t<ArgId, tuple<Args...>>;
         size_t pos = Pos;
         size_t auto_index = AutoIndex;
@@ -99,9 +99,9 @@ struct CompiledFormatString {
                     make_tuple(Literal{fmt.substr(Pos, posl - Pos + 1)}),
                     compile<posl + 2, AutoIndex>());
             } else {
-                constexpr auto r1 = parseArgIdx<posl + 1, AutoIndex>();
+                constexpr auto r1 = parse_arg_idx<posl + 1, AutoIndex>();
                 constexpr auto r2 =
-                    parseFmtSpec<get<0>(r1), get<1>(r1), get<2>(r1)>();
+                    parse_fmt_spec<get<0>(r1), get<1>(r1), get<2>(r1)>();
                 if constexpr (get<0>(r2) >= fmt.size() ||
                               fmt[get<0>(r2)] != '}') {
                     throw format_error("unclosed replacement");

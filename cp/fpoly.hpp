@@ -162,7 +162,7 @@ struct PolyUtils {
         for (u32 g = 2; g < P; g++) {
             bool ok = true;
             for (auto i: divs) {
-                if (qpow(Mint{g}, phi / i) == Mint{1}) {
+                if (pow(Mint{g}, phi / i) == Mint{1}) {
                     ok = false;
                     break;
                 }
@@ -182,7 +182,7 @@ struct PolyUtils {
             for (int i = 1; i < k; i++) a[i] = a[i - 1] * x;
         }
         constexpr _DFTInfo() {
-            Mint prd = qpow(G, (P - 1) >> LG_MAXN), iprd = prd.inv();
+            Mint prd = pow(G, (P - 1) >> LG_MAXN), iprd = prd.inv();
             for (size_t i = LG_MAXN; ~i; i--) {
                 rt[i] = prd, irt[i] = iprd;
                 prd *= prd, iprd *= iprd;
