@@ -14,8 +14,8 @@ namespace cp
 
 template <typename T, typename Compare = std::less<T>,
           typename Alloc = std::allocator<T>>
-    requires requires(T x, T y, Compare cmp) {
-        { std::invoke(cmp, x, y) } -> std::same_as<bool>;
+    requires requires(T x, Compare cmp) {
+        { cmp(x, x) } -> std::same_as<bool>;
         typename std::allocator_traits<Alloc>;
     }
 class PairingHeap {
@@ -123,16 +123,15 @@ private:
         return x;
     }
 
-    Node* _rt;
-    usize _sz;
-    Compare _cmp;
-    mutable NodeAlloc _alloc;
+    Node* _rt{nullptr};
+    usize _sz{0};
+    Compare _cmp{};
+    mutable NodeAlloc _alloc{};
 
 public:
     using point_iterator = Iter;
 
-    PairingHeap(): _rt{}, _sz{}, _cmp{}, _alloc{} {}
-    PairingHeap(PairingHeap&& other):
+    PairingHeap(PairingHeap&& other) noexcept:
         _rt{std::exchange(other._rt, nullptr)},
         _sz{std::exchange(other._sz, 0)},
         _cmp(std::move(other._cmp)),
@@ -142,7 +141,7 @@ public:
         _sz{other._sz},
         _cmp(other._cmp),
         _alloc(other._alloc) {}
-    auto& operator=(PairingHeap&& other) {
+    auto& operator=(PairingHeap&& other) noexcept {
         if (this != &other) {
             rdel_node(_rt);
             _rt = std::exchange(other._rt, nullptr);

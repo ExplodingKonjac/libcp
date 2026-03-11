@@ -1,6 +1,7 @@
 #pragma once
 #include <concepts>
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include "def.hpp"
@@ -19,17 +20,18 @@ struct ZeroFn {
 }  // namespace detail
 
 template <typename T, typename PlusOp = std::plus<T>,
-          typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>>
-    requires requires(T x, T y, PlusOp plus, MinusOp minus, ZeroFn zero) {
-        { std::invoke(plus, x, y) } -> std::same_as<T>;
-        { std::invoke(minus, x, y) } -> std::same_as<T>;
-        { std::invoke(zero) } -> std::same_as<T>;
+          typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>,
+          typename Alloc = std::allocator<T>>
+    requires requires(T x, PlusOp plus, MinusOp minus, ZeroFn zero) {
+        { plus(x, x) } -> std::same_as<T>;
+        { minus(x, x) } -> std::same_as<T>;
+        { zero() } -> std::same_as<T>;
+        typename std::allocator_traits<Alloc>;
     }
 class FenwickTree {
 public:
-    FenwickTree() = default;
-    FenwickTree(usize n, PlusOp plus = {}, MinusOp minus = {},
-                ZeroFn zero = {}):
+    explicit FenwickTree(usize n, PlusOp plus = {}, MinusOp minus = {},
+                         ZeroFn zero = {}):
         _t(n), _plus{plus}, _minus{minus}, _zero{zero} {}
 
     void add(usize p, T x) {
@@ -62,10 +64,10 @@ private:
         for (; p < _t.size(); p += p & (-p)) res = f(res, _t[p]);
     }
 
-    std::vector<T> _t;
-    PlusOp _plus;
-    MinusOp _minus;
-    ZeroFn _zero;
+    std::vector<T, Alloc> _t{};
+    PlusOp _plus{};
+    MinusOp _minus{};
+    ZeroFn _zero{};
 };
 
 }  // namespace cp
