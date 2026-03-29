@@ -288,6 +288,113 @@ void test_move_assign() {
     std::cout << "OK\n";
 }
 
+void test_copy_construct() {
+    std::cout << "test_copy_construct... ";
+    FlatHashMap<int, int> src;
+    src.try_emplace(1, 10);
+    src.try_emplace(2, 20);
+    src.try_emplace(3, 30);
+
+    FlatHashMap<int, int> dst(src);
+    assert(dst.size() == 3);
+    assert(*dst.get(1) == 10);
+    assert(*dst.get(2) == 20);
+    assert(*dst.get(3) == 30);
+
+    // Source unchanged
+    assert(src.size() == 3);
+    assert(*src.get(1) == 10);
+
+    std::cout << "OK\n";
+}
+
+void test_copy_construct_large() {
+    std::cout << "test_copy_construct_large... ";
+    // Large enough to have gone through multiple rehashes
+    FlatHashMap<int, int> src;
+    const int N = 200;
+    for (int i = 0; i < N; i++) {
+        src.try_emplace(i, i * 5);
+    }
+
+    FlatHashMap<int, int> dst(src);
+    assert(dst.size() == (size_t)N);
+
+    // Verify every element was copied
+    for (int i = 0; i < N; i++) {
+        int* p = dst.get(i);
+        assert(p != nullptr);
+        assert(*p == i * 5);
+    }
+
+    // Verify iteration count matches
+    size_t counted = 0;
+    for (auto it = dst.begin(); it != dst.end(); ++it) {
+        counted++;
+    }
+    assert(counted == dst.size());
+
+    std::cout << "OK\n";
+}
+
+void test_copy_construct_empty() {
+    std::cout << "test_copy_construct_empty... ";
+    FlatHashMap<int, int> src;
+    FlatHashMap<int, int> dst(src);
+    assert(dst.empty());
+    assert(dst.begin() == dst.end());
+    assert(dst.get(0) == nullptr);
+
+    // Dest should be usable
+    dst.try_emplace(1, 10);
+    assert(*dst.get(1) == 10);
+
+    std::cout << "OK\n";
+}
+
+void test_copy_assign() {
+    std::cout << "test_copy_assign... ";
+    FlatHashMap<int, int> src;
+    src.try_emplace(1, 10);
+    src.try_emplace(2, 20);
+
+    FlatHashMap<int, int> dst;
+    dst.try_emplace(99, 99);
+
+    dst = src;
+    assert(dst.size() == 2);
+    assert(*dst.get(1) == 10);
+    assert(*dst.get(2) == 20);
+    assert(dst.get(99) == nullptr);  // old data gone
+
+    // Source unchanged
+    assert(src.size() == 2);
+
+    std::cout << "OK\n";
+}
+
+void test_copy_independence() {
+    std::cout << "test_copy_independence... ";
+    FlatHashMap<int, int> src;
+    src.try_emplace(1, 10);
+    src.try_emplace(2, 20);
+
+    FlatHashMap<int, int> dst(src);
+
+    // Mutate source — copy should be independent
+    src.erase(1);
+    src.try_emplace(3, 30);
+    assert(src.get(1) == nullptr);
+    assert(*dst.get(1) == 10);  // copy still has key 1
+    assert(dst.get(3) == nullptr);  // copy doesn't have key 3
+
+    // Mutate copy — source should be independent
+    *dst.get(2) = 999;
+    assert(*src.get(2) == 20);  // source unchanged
+
+    std::cout << "OK\n";
+}
+
 void test_rehash_preserves_data() {
     std::cout << "test_rehash_preserves_data... ";
     FlatHashMap<int, int> map;
@@ -529,6 +636,11 @@ void test_all_correctness() {
     test_empty_iteration();
     test_move_construct();
     test_move_assign();
+    test_copy_construct();
+    test_copy_construct_large();
+    test_copy_construct_empty();
+    test_copy_assign();
+    test_copy_independence();
     test_rehash_preserves_data();
     test_erase_then_heavy_insert();
     test_hash_collision_handling();

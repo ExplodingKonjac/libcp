@@ -14,14 +14,15 @@ namespace detail
 
 template <typename T>
 struct ZeroFn {
-    static auto operator()() { return T{}; };
+    constexpr auto operator()() const { return T{}; }
 };
 
 }  // namespace detail
 
-template <typename T, typename PlusOp = std::plus<T>,
-          typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>,
-          typename Alloc = std::allocator<T>>
+template <
+    typename T, typename PlusOp = std::plus<T>,
+    typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>,
+    typename Alloc = std::allocator<T>>
     requires requires(T x, PlusOp plus, MinusOp minus, ZeroFn zero) {
         { plus(x, x) } -> std::same_as<T>;
         { minus(x, x) } -> std::same_as<T>;
@@ -30,10 +31,12 @@ template <typename T, typename PlusOp = std::plus<T>,
     }
 class FenwickTree {
 public:
-    explicit FenwickTree(usize n, PlusOp plus = {}, MinusOp minus = {},
-                         ZeroFn zero = {}):
-        _t(n), _plus{plus}, _minus{minus}, _zero{zero} {}
+    explicit FenwickTree(
+        usize n, PlusOp plus = {}, MinusOp minus = {}, ZeroFn zero = {}
+    ):
+        _t(n, zero()), _plus{plus}, _minus{minus}, _zero{zero} {}
 
+    usize size() const { return _t.size(); }
     void add(usize p, T x) {
         _t[0] = _plus(_t[0], x);
         for (; p; p -= p & (-p)) _t[p] = _plus(_t[p], x);
@@ -65,9 +68,9 @@ private:
     }
 
     std::vector<T, Alloc> _t{};
-    PlusOp _plus{};
-    MinusOp _minus{};
-    ZeroFn _zero{};
+    [[no_unique_address]] PlusOp _plus{};
+    [[no_unique_address]] MinusOp _minus{};
+    [[no_unique_address]] ZeroFn _zero{};
 };
 
 }  // namespace cp

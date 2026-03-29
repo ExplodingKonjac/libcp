@@ -118,18 +118,23 @@ private:
         return HashValue{u8(raw_hash & 0x7F), (raw_hash >> 7) & _capacity};
     }
 
+    void realloc(usize cap) {
+        _capacity = cap;
+        auto ptr = reinterpret_cast<std::byte*>(
+            BlockAllocTraits::allocate(_block_alloc, block_num(cap))
+        );
+        _data = reinterpret_cast<Slot*>(ptr);
+        _ctrl = reinterpret_cast<u8*>(ptr + sizeof(Slot) * cap);
+    }
+
     void rehash(usize new_cap) {
         auto old_data = _data;
         auto old_ctrl = _ctrl;
         auto old_cap = _capacity;
 
-        auto raw = BlockAllocTraits::allocate(_block_alloc, block_num(new_cap));
-        auto ptr = reinterpret_cast<std::byte*>(raw);
-        _capacity = new_cap;
+        realloc(new_cap);
         _size = 0;
         _growth_left = _capacity * 7 / 8;
-        _data = reinterpret_cast<Slot*>(ptr);
-        _ctrl = reinterpret_cast<u8*>(ptr + sizeof(Slot) * new_cap);
         std::memset(_ctrl, Empty, new_cap + 16);
         _ctrl[new_cap] = Sentinel;
 
@@ -162,10 +167,10 @@ private:
         auto v_d = _mm_set1_epi8(Deleted);
         usize insert_idx = npos;
         for (usize i = hsh.p;; i = (i + 16) & _capacity) {
-            auto v_ctrl = _mm_loadu_si128((const __m128i*)(_ctrl + i));
+            auto v = _mm_loadu_si128((const __m128i*)(_ctrl + i));
             if constexpr (!on_init) {
                 // check match place
-                u16 m_h = _mm_movemask_epi8(_mm_cmpeq_epi8(v_h, v_ctrl));
+                u16 m_h = _mm_movemask_epi8(_mm_cmpeq_epi8(v_h, v));
                 for (; m_h != 0; m_h &= (m_h - 1)) {
                     auto offset = std::countr_zero(m_h);
                     usize idx = (i + offset) & _capacity;
@@ -173,7 +178,7 @@ private:
                 }
                 // check available insert index
                 if (insert_idx == npos) {
-                    u16 m_d = _mm_movemask_epi8(_mm_cmpeq_epi8(v_d, v_ctrl));
+                    u16 m_d = _mm_movemask_epi8(_mm_cmpeq_epi8(v_d, v));
                     if (m_d != 0) {
                         auto offset = std::countr_zero(m_d);
                         insert_idx = (i + offset) & _capacity;
@@ -181,7 +186,7 @@ private:
                 }
             }
             // check empty index
-            u16 m_e = _mm_movemask_epi8(_mm_cmpeq_epi8(v_e, v_ctrl));
+            u16 m_e = _mm_movemask_epi8(_mm_cmpeq_epi8(v_e, v));
             if (m_e != 0) {
                 if constexpr (need_insert_idx) {
                     if (insert_idx != npos) return {false, insert_idx};
@@ -248,12 +253,36 @@ public:
         _block_alloc(alloc),
         _slot_alloc(alloc) {}
     FlatHashMap(FlatHashMap&& other) noexcept { swap(other); }
-    FlatHashMap(const FlatHashMap& other) = delete;
+    FlatHashMap(const FlatHashMap& other):
+        _hash(other._hash),
+        _eq(other._eq),
+        _block_alloc(other._block_alloc),
+        _slot_alloc(other._slot_alloc) {
+        if (!other._data) return;
+
+        realloc(other._capacity);
+        _size = other._size;
+        _growth_left = other._growth_left;
+
+        std::memcpy(_ctrl, other._ctrl, _capacity + 16);
+        for (usize i = 0; i < _capacity; i += 16) {
+            auto v = _mm_loadu_si128((const __m128i*)(_ctrl + i));
+            for (u16 m = ~_mm_movemask_epi8(v); m > 0; m &= (m - 1)) {
+                auto idx = i + std::countr_zero(m);
+                SlotAllocTraits::construct(
+                    _slot_alloc, _data + idx, other._data[idx]
+                );
+            }
+        }
+    }
     auto& operator=(FlatHashMap&& other) noexcept {
-        swap(other);
+        if (this != &other) swap(other);
         return *this;
     }
-    auto& operator=(const FlatHashMap& other) = delete;
+    auto& operator=(const FlatHashMap& other) {
+        if (this != &other) FlatHashMap(other).swap(*this);
+        return *this;
+    }
 
     ~FlatHashMap() {
         if (_data) {
@@ -369,6 +398,7 @@ public:
 
     bool empty() const noexcept { return _size == 0; }
     usize size() const noexcept { return _size; }
+    void clear() { FlatHashMap().swap(*this); }
 };
 #pragma GCC pop_options
 
