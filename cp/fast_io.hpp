@@ -172,7 +172,7 @@ public:
             if constexpr (I == sizeof...(Args)) {
                 return std::tuple(std::forward<decltype(args)>(args)...);
             } else {
-                auto val = scan<std::tuple_element_t<I, std::tuple<Args...>>>();
+                auto val = this->scan<std::tuple_element_t<I, std::tuple<Args...>>>();
                 if (!val) return std::nullopt;
                 return self(self, std::forward<decltype(args)>(args)...,
                             std::move(val).value());

@@ -1,13 +1,10 @@
-#include <bit>
-#include <vector>
-
 #include "cp/fast_io.hpp"
 #include "cp/fpoly.hpp"
 
 using cp::qin, cp::qout;
 
 constexpr int MOD = 998244353;
-using Poly = cp::FPoly<MOD, (1 << 17)>;
+using Poly = cp::FPoly<MOD>;
 
 int main() {
     auto [n, m] = qin.scan<int, int>().value();

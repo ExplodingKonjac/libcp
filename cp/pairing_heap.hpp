@@ -131,6 +131,7 @@ private:
 public:
     using point_iterator = Iter;
 
+    PairingHeap() = default;
     PairingHeap(PairingHeap&& other) noexcept:
         _rt{std::exchange(other._rt, nullptr)},
         _sz{std::exchange(other._sz, 0)},
