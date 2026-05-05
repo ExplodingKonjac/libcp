@@ -116,16 +116,20 @@ struct PolyUtils {
     static constexpr m256i vset1(u32 x) {
         return (m256i)__v8su{x, x, x, x, x, x, x, x};
     }
-    static constexpr m256i vsetr(u32 v0, u32 v1, u32 v2, u32 v3, u32 v4, u32 v5,
-                                 u32 v6, u32 v7) {
+    static constexpr m256i vsetr(
+        u32 v0, u32 v1, u32 v2, u32 v3, u32 v4, u32 v5, u32 v6, u32 v7
+    ) {
         return (m256i)__v8su{v0, v1, v2, v3, v4, v5, v6, v7};
     }
     static constexpr m256i vset1(Mint x) { return vset1(x.strict().raw()); }
-    static constexpr m256i vsetr(Mint v0, Mint v1, Mint v2, Mint v3, Mint v4,
-                                 Mint v5, Mint v6, Mint v7) {
-        return vsetr(v0.strict().raw(), v1.strict().raw(), v2.strict().raw(),
-                     v3.strict().raw(), v4.strict().raw(), v5.strict().raw(),
-                     v6.strict().raw(), v7.strict().raw());
+    static constexpr m256i vsetr(
+        Mint v0, Mint v1, Mint v2, Mint v3, Mint v4, Mint v5, Mint v6, Mint v7
+    ) {
+        return vsetr(
+            v0.strict().raw(), v1.strict().raw(), v2.strict().raw(),
+            v3.strict().raw(), v4.strict().raw(), v5.strict().raw(),
+            v6.strict().raw(), v7.strict().raw()
+        );
     }
     template <int imm>
     static m256i vshuffle(m256i a) {
@@ -527,8 +531,9 @@ struct PolyUtils {
         size_t len = std::bit_ceil(len_f);
         auto h = Pool::allocate(len), t1 = Pool::allocate(len),
              t2 = Pool::allocate(len), t3 = Pool::allocate(len);
-        out[0] = out0.transform([](auto x) { return std::min(x(), P - x()); })
-                     .value();
+        out[0] = out0.transform(
+                         [](auto x) { return std::min(x(), P - x()); }
+        ).value();
         h[0] = out[0].inv();
         for (size_t k = 1, k2 = 2; k < len; k = k2, k2 <<= 1) {
             copy(f, std::min(k2, len_f), t1, k2), DIF(t1, k2);
@@ -552,18 +557,19 @@ concept init_friendly_type =
     std::same_as<T, u32> || std::same_as<T, i32> || std::same_as<T, Mint>;
 
 template <typename R, typename Mint>
-concept can_fast_init = std::ranges::contiguous_range<R> &&
-                        init_friendly_type<std::ranges::range_value_t<R>, Mint>;
+concept can_fast_init = std::ranges::contiguous_range<R>
+    && init_friendly_type<std::ranges::range_value_t<R>, Mint>;
 
 }  // namespace detail
 
 template <u32 P>
 class FPoly {
-private:
+public:
     using U = detail::PolyUtils<P>;
     using Mint = U::Mint;
     using Pool = U::Pool;
 
+private:
     size_t _len = 0;
     Pool::pointer_type _data{};
 
@@ -595,9 +601,9 @@ public:
         }
     }
     template <std::ranges::input_range R>
-        requires std::convertible_to<std::ranges::range_value_t<R>, Mint> &&
-                 (!detail::can_fast_init<R, Mint>) &&
-                 (!std::same_as<std::remove_cvref_t<R>, FPoly>)
+        requires std::convertible_to<std::ranges::range_value_t<R>, Mint>
+        && (!detail::can_fast_init<R, Mint>)
+        && (!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
         if constexpr (std::ranges::sized_range<R>) {
             reserve(std::ranges::size(r));
@@ -689,9 +695,6 @@ public:
 
 #define Poly FPoly<Q>
 #define U Poly::U
-
-#define Poly FPoly<Q>
-#define U Poly::U
 template <u32 Q>
 Poly integrate(Poly f) {
     f.resize(f.size() + 1);
@@ -739,8 +742,10 @@ Poly sqrt(const Poly& f) {
         auto tmp = U::Pool::allocate(f.size());
         U::copy(f.data() + k, f.size() - k, tmp, f.size());
         U::polysqrt(tmp, f.size(), res.data());
-        std::memmove(res.data() + k / 2, res.data(),
-                     (res.size() - k / 2) * sizeof(typename Poly::Mint));
+        std::memmove(
+            res.data() + k / 2, res.data(),
+            (res.size() - k / 2) * sizeof(typename Poly::Mint)
+        );
         U::clear(res.data(), k / 2);
     }
     return res;
