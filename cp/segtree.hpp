@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 
 #include "def.hpp"
 
@@ -37,16 +38,22 @@ public:
             );
         }
     }
-    void modify(usize p, SemiGroup v) {
-        if (p >= n_) throw std::out_of_range("index exceed [0, n)");
-        t_[m_ + p] = v;
-        for (usize i = (m_ + p) >> 1; i; i >>= 1) {
-            t_[i] = mul_(t_[i << 1], t_[i << 1 | 1]);
-        }
+    template <typename Func>
+        requires std::convertible_to<
+            std::invoke_result_t<Func, SemiGroup>, SemiGroup>
+    bool update(usize p, Func f) noexcept {
+        if (p >= n_) return false;
+        return modify(p, f(t_[m_ + p]));
     }
-    SemiGroup query(usize l, usize r) const {
-        if (l >= r) throw std::invalid_argument("empty query interval");
-        if (r > n_) throw std::out_of_range("index exceed [0, n)");
+    bool modify(usize p, SemiGroup v) noexcept {
+        if (p >= n_) return false;
+        t_[m_ + p] = v;
+        for (usize i = (m_ + p) >> 1; i; i >>= 1)
+            t_[i] = mul_(t_[i << 1], t_[i << 1 | 1]);
+        return true;
+    }
+    std::optional<SemiGroup> query(usize l, usize r) const noexcept {
+        if (l >= r || r > n_) return std::nullopt;
         std::optional<SemiGroup> resl, resr;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
@@ -55,7 +62,7 @@ public:
             if (r & 1) r--, resr = resr ? mul_(t_[r], *resr) : t_[r];
         }
 #pragma GCC diagnostic pop
-        return !resl ? *resr : !resr ? *resl : mul_(*resl, *resr);
+        return !resl ? resr : !resr ? resl : mul_(*resl, *resr);
     }
     SemiGroup all() const { return t_[1]; }
 

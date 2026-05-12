@@ -20,16 +20,13 @@ using usize = std::size_t;
 using f32 = float;
 using f64 = double;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wliteral-suffix"
 #define DEF_I(t) \
-    t operator""_##t(unsigned long long x) { return (t)x; }
+    inline t operator""_##t(unsigned long long x) { return (t)x; }
 #define DEF_F(t) \
-    t operator""_##t(long double x) { return (t)x; }
+    inline t operator""_##t(long double x) { return (t)x; }
 DEF_I(i8) DEF_I(i16) DEF_I(i32) DEF_I(i64) DEF_I(i128) DEF_I(isize)
 DEF_I(u8) DEF_I(u16) DEF_I(u32) DEF_I(u64) DEF_I(u128) DEF_I(usize)
 DEF_F(f32) DEF_F(f64)
 #undef DEF_I
 #undef DEF_F
-#pragma GCC diagnostic pop
 }  // namespace cp::inline defs
