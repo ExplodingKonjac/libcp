@@ -172,10 +172,13 @@ public:
             if constexpr (I == sizeof...(Args)) {
                 return std::tuple(std::forward<decltype(args)>(args)...);
             } else {
-                auto val = this->scan<std::tuple_element_t<I, std::tuple<Args...>>>();
+                auto val =
+                    this->scan<std::tuple_element_t<I, std::tuple<Args...>>>();
                 if (!val) return std::nullopt;
-                return self(self, std::forward<decltype(args)>(args)...,
-                            std::move(val).value());
+                return self(
+                    self, std::forward<decltype(args)>(args)...,
+                    std::move(val).value()
+                );
             }
         };
         return helper(helper);
@@ -215,6 +218,7 @@ public:
 
     void flush() {
         fwrite(_buf, 1, _pos - _buf, _target);
+        fflush(_target);
         _pos = _buf;
     }
 
