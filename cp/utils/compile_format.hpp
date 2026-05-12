@@ -97,25 +97,31 @@ struct CompiledFormatString {
             if constexpr (posl + 1 < fmt.size() && fmt[posl + 1] == '{') {
                 return tuple_cat(
                     make_tuple(Literal{fmt.substr(Pos, posl - Pos + 1)}),
-                    compile<posl + 2, AutoIndex>());
+                    compile<posl + 2, AutoIndex>()
+                );
             } else {
                 constexpr auto r1 = parse_arg_idx<posl + 1, AutoIndex>();
                 constexpr auto r2 =
                     parse_fmt_spec<get<0>(r1), get<1>(r1), get<2>(r1)>();
-                if constexpr (get<0>(r2) >= fmt.size() ||
-                              fmt[get<0>(r2)] != '}') {
+                if constexpr (
+                    get<0>(r2) >= fmt.size() || fmt[get<0>(r2)] != '}'
+                ) {
                     throw format_error("unclosed replacement");
                 }
                 return tuple_cat(
-                    make_tuple(Literal{fmt.substr(Pos, posl - Pos)},
-                               Replacement{get<2>(r1), get<2>(r2)}),
-                    compile<get<0>(r2) + 1, get<1>(r2)>());
+                    make_tuple(
+                        Literal{fmt.substr(Pos, posl - Pos)},
+                        Replacement{get<2>(r1), get<2>(r2)}
+                    ),
+                    compile<get<0>(r2) + 1, get<1>(r2)>()
+                );
             }
         } else {
             if constexpr (posr + 1 < fmt.size() && fmt[posr + 1] == '}') {
                 return tuple_cat(
                     make_tuple(Literal{fmt.substr(Pos, posr - Pos + 1)}),
-                    compile<posr + 2, AutoIndex>());
+                    compile<posr + 2, AutoIndex>()
+                );
             } else {
                 throw format_error("unexpected '}'");
             }
@@ -169,8 +175,10 @@ inline constexpr auto fmt_string = [] {
 template <FixedString S, typename... Args>
 inline auto format_to(auto out, FormatString<S>, Args&&... args) {
     using Compiled = detail::CompiledFormatString<S, remove_cvref_t<Args>...>;
-    format_to(out, detail::fmt_string<sizeof...(Args)>.data(), args...,
-              detail::Executor<Compiled, Args...>{{args...}});
+    format_to(
+        out, detail::fmt_string<sizeof...(Args)>.data(), args...,
+        detail::Executor<Compiled, Args...>{{args...}}
+    );
 }
 
 template <FixedString S, typename... Args>
