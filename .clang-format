@@ -1,0 +1,40 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+
+IndentCaseLabels: false
+AccessModifierOffset: -4
+
+IndentWidth: 4
+TabWidth: 4
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterNamespace: true
+
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeRangeBasedForLoopColon: false
+
+BreakConstructorInitializers: AfterColon
+
+BreakAfterOpenBracketFunction: true
+BreakBeforeCloseBracketFunction: true
+BreakAfterOpenBracketIf: true
+BreakBeforeCloseBracketIf: true
+BreakAfterOpenBracketLoop: true
+BreakBeforeCloseBracketLoop: true
+BreakAfterOpenBracketSwitch: true
+BreakBeforeCloseBracketSwitch: true
+
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+
+BreakBeforeBinaryOperators: NonAssignment
+BreakBinaryOperations: OnePerLine
+AlignOperands: DontAlign
+AlignAfterOpenBracket: true
+
+Standard: c++20

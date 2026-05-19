@@ -14,5 +14,3 @@
 
 # config files
 .vscode
-.clang-format
-.clangd
