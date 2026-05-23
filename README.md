@@ -31,6 +31,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/hash_map.hpp`](cp/hash_map.hpp) | 高性能扁平哈希表 |
 | [`cp/pairing_heap.hpp`](cp/pairing_heap.hpp) | 配对堆 |
+| [`cp/bitset.hpp`](cp/bitset.hpp) | 高性能位集（AVX2 优化 bitset） |
 
 ---
 
@@ -199,6 +200,39 @@ int mx = heap.pop();         // 弹出最大值（默认 max-heap）
 ```
 
 对应 Compare `cp::PairingHeap<int, std::greater<>>` 则为小根堆。
+
+---
+
+### `cp/bitset.hpp` - 位集
+
+实现位集（Bitset），以 AVX2 指令集进行优化，支持一组高效的位运算操作：
+
+- 按位与 / 或 / 异或 / 集合差（反向与非）/ 左移 / 右移
+- 单点 / 区间 / 整体设为 1 / 设为 0 / 取反
+- Find first set / unset
+- 集合关系比较，子集 / 真子集 / 包含 / 真包含
+- popcount
+
+**优化特性**：
+
+- 使用 AVX2 指令集加速大部分操作，每次处理 $4$ 个字，即 $256$-bits。
+- 利用表达式模板（Expression Template）优化运算嵌套，优雅而高效地实现循环融合的功能。
+- 速度可达 `std::bitset` 的两倍（popcnt，shift）至四倍（运算嵌套）。
+
+> **注意**：由于表达式模板的特性，请不要在包含 `cp::Bitset` 的表达式中使用 `auto` 关键字，除非你明确知道你在干什么。错误地使用 `auto` 关键字可能带来悬垂引用问题。
+
+```cpp
+cp::Bitset<50> a, b, c;
+a.set();      // 整体设为 1
+a.unset(4);   // 单点设为 0
+b.flip(1, 3); // 区间 [1, 1+3) 取反
+c = a ^ b;    // 按位异或
+c -= a;       // 集合差，即“在 c 中且不在 a 中的元素”
+size_t cnt = c.popcnt();        // 求 1 的个数
+size_t pos = c.findFirstSet(2); // 求 [2, 50) 中第一个 1 的位置
+bool supset = a > b;    // 判断 a 真包含 b
+bool subseteq = c <= b; // 判断 c 是 b 的子集
+```
 
 ## 构建测试
 
