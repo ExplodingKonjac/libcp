@@ -553,12 +553,12 @@ struct PolyUtils {
 };
 
 template <typename T, typename Mint>
-concept init_friendly_type =
+concept InitFriendlyType =
     std::same_as<T, u32> || std::same_as<T, i32> || std::same_as<T, Mint>;
 
 template <typename R, typename Mint>
-concept can_fast_init = std::ranges::contiguous_range<R>
-    && init_friendly_type<std::ranges::range_value_t<R>, Mint>;
+concept CanFastInit = std::ranges::contiguous_range<R>
+    && InitFriendlyType<std::ranges::range_value_t<R>, Mint>;
 
 }  // namespace detail
 
@@ -581,7 +581,7 @@ public:
         _len{n}, _data{Pool::allocate(n)} {
         if (!no_init) U::clear(_data, n);
     }
-    template <detail::can_fast_init<Mint> R>
+    template <detail::CanFastInit<Mint> R>
         requires(!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r): FPoly(std::ranges::size(r), true) {
         using T = std::ranges::range_value_t<R>;
@@ -602,7 +602,7 @@ public:
     }
     template <std::ranges::input_range R>
         requires std::convertible_to<std::ranges::range_value_t<R>, Mint>
-        && (!detail::can_fast_init<R, Mint>)
+        && (!detail::CanFastInit<R, Mint>)
         && (!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
         if constexpr (std::ranges::sized_range<R>) {

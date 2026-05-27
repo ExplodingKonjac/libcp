@@ -26,6 +26,7 @@ BreakAfterOpenBracketLoop: true
 BreakBeforeCloseBracketLoop: true
 BreakAfterOpenBracketSwitch: true
 BreakBeforeCloseBracketSwitch: true
+BreakBeforeTemplateCloser: true
 
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLambdasOnASingleLine: All
@@ -36,5 +37,9 @@ BreakBeforeBinaryOperators: NonAssignment
 BreakBinaryOperations: OnePerLine
 AlignOperands: DontAlign
 AlignAfterOpenBracket: true
+
+BinPackParameters: OnePerLine
+
+PenaltyBreakScopeResolution: 1000000
 
 Standard: c++20

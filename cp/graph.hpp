@@ -16,15 +16,17 @@ private:
 
     template <typename R>
     static auto out_view(auto& g, usize u) {
-        auto f = [](auto& v) { return std::pair<usize, R>(v.first, v.second); };
+        auto f = [](auto& v) -> std::pair<const usize, R> {
+            return {v.first, v.second};
+        };
         return g[u] | std::views::transform(f);
     }
     template <typename R>
     static auto edges_view(auto& g) {
         auto f = [](auto&& t) {
             auto& [i, row] = t;
-            auto f = [i](auto& v) {
-                return std::tuple<usize, usize, R>(i, v.first, v.second);
+            auto f = [i](auto& v) -> std::tuple<const usize, const usize, R> {
+                return {i, v.first, v.second};
             };
             return row | std::views::transform(f);
         };
@@ -71,10 +73,11 @@ public:
     auto out(usize u) const { return std::views::as_const(_g[u]); }
     auto edges() const {
         auto f = [](auto&& t) {
-            auto f = [i = std::get<0>(t)](auto& v) {
-                return std::tuple<usize, usize>(i, v);
+            auto& [i, row] = t;
+            auto f = [i](auto& v) -> std::pair<const usize, const usize> {
+                return {i, v};
             };
-            return std::get<1>(t) | std::views::transform(f);
+            return row | std::views::transform(f);
         };
         return _g
             | std::views::enumerate

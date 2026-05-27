@@ -1,4 +1,7 @@
 #include <iostream>
+#include <numeric>
+#include <random>
+#include <vector>
 
 #include "cp/segtree.hpp"
 
@@ -213,6 +216,145 @@ void test_modify_returns_false_on_out_of_range() {
     }
 }
 
+void test_randomized_large_sum_queries() {
+    constexpr usize n = 4096;
+    constexpr int operations = 20000;
+    std::mt19937 rng(20260527);
+    std::uniform_int_distribution<int> value_dist(-1000, 1000);
+    std::uniform_int_distribution<usize> index_dist(0, n - 1);
+    std::bernoulli_distribution update_dist(0.45);
+
+    std::vector<int> values(n);
+    for (auto& value: values) value = value_dist(rng);
+
+    SegTree seg(n, [&](usize i) { return values[i]; }, std::plus<int>{});
+
+    for (int step = 0; step < operations; ++step) {
+        if (update_dist(rng)) {
+            usize index = index_dist(rng);
+            int value = value_dist(rng);
+            values[index] = value;
+            if (!seg.modify(index, value)) {
+                std::cerr
+                    << "test_randomized_large_sum_queries failed: modify("
+                    << index
+                    << ", "
+                    << value
+                    << ") returned false at step "
+                    << step
+                    << "\n";
+                exit(1);
+            }
+            continue;
+        }
+
+        usize l = index_dist(rng);
+        usize r = index_dist(rng);
+        if (l > r) std::swap(l, r);
+        ++r;
+
+        int expected = std::accumulate(
+            values.begin() + static_cast<std::ptrdiff_t>(l),
+            values.begin() + static_cast<std::ptrdiff_t>(r), 0
+        );
+        auto actual = seg.query(l, r);
+        if (!actual || *actual != expected) {
+            std::cerr
+                << "test_randomized_large_sum_queries failed at step "
+                << step
+                << " for query("
+                << l
+                << ", "
+                << r
+                << "): expected "
+                << expected
+                << ", got "
+                << (actual ? std::to_string(*actual) : "nullopt")
+                << "\n";
+            exit(1);
+        }
+    }
+
+    int total_expected = std::accumulate(values.begin(), values.end(), 0);
+    auto total_actual = seg.query(0, n);
+    if (!total_actual
+        || *total_actual
+        != total_expected
+        || seg.all()
+        != total_expected) {
+        std::cerr
+            << "test_randomized_large_sum_queries final check failed: expected "
+            << total_expected
+            << ", got query="
+            << (total_actual ? std::to_string(*total_actual) : "nullopt")
+            << ", all="
+            << seg.all()
+            << "\n";
+        exit(1);
+    }
+}
+
+void test_randomized_large_min_queries() {
+    constexpr usize n = 2048;
+    constexpr int operations = 12000;
+    std::mt19937 rng(31415926);
+    std::uniform_int_distribution<int> value_dist(-5000, 5000);
+    std::uniform_int_distribution<usize> index_dist(0, n - 1);
+    std::bernoulli_distribution update_dist(0.4);
+
+    std::vector<int> values(n);
+    for (auto& value: values) value = value_dist(rng);
+
+    auto min_op = [](int a, int b) { return std::min(a, b); };
+    SegTree seg(n, [&](usize i) { return values[i]; }, min_op);
+
+    for (int step = 0; step < operations; ++step) {
+        if (update_dist(rng)) {
+            usize index = index_dist(rng);
+            int value = value_dist(rng);
+            values[index] = value;
+            if (!seg.modify(index, value)) {
+                std::cerr
+                    << "test_randomized_large_min_queries failed: modify("
+                    << index
+                    << ", "
+                    << value
+                    << ") returned false at step "
+                    << step
+                    << "\n";
+                exit(1);
+            }
+            continue;
+        }
+
+        usize l = index_dist(rng);
+        usize r = index_dist(rng);
+        if (l > r) std::swap(l, r);
+        ++r;
+
+        int expected = *std::min_element(
+            values.begin() + static_cast<std::ptrdiff_t>(l),
+            values.begin() + static_cast<std::ptrdiff_t>(r)
+        );
+        auto actual = seg.query(l, r);
+        if (!actual || *actual != expected) {
+            std::cerr
+                << "test_randomized_large_min_queries failed at step "
+                << step
+                << " for query("
+                << l
+                << ", "
+                << r
+                << "): expected "
+                << expected
+                << ", got "
+                << (actual ? std::to_string(*actual) : "nullopt")
+                << "\n";
+            exit(1);
+        }
+    }
+}
+
 int main() {
     test_basic_sum();
     test_modify_updates();
@@ -225,6 +367,8 @@ int main() {
     test_all();
     test_query_returns_nullopt_on_invalid_range();
     test_modify_returns_false_on_out_of_range();
+    test_randomized_large_sum_queries();
+    test_randomized_large_min_queries();
     std::cout << "All tests passed!" << std::endl;
     return 0;
 }

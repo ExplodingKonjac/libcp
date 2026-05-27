@@ -94,7 +94,7 @@ private:
 }  // namespace detail
 
 template <typename T>
-concept modint = std::derived_from<T, detail::ModintBase<T>>;
+concept Modint = std::derived_from<T, detail::ModintBase<T>>;
 
 template <u32 P>
 struct SModint: detail::ModintBase<SModint<P>> {
@@ -116,7 +116,7 @@ struct DModint: public detail::ModintBase<DModint> {
     static u32 get_mod() { return mont.P; }
 };
 
-template <modint T, std::integral U>
+template <Modint T, std::integral U>
 C T pow(T x, U y) {
     if (y < 0) return pow(x.inv(), std::make_signed_t<U>(-y));
     T res{1};
@@ -125,13 +125,13 @@ C T pow(T x, U y) {
     return res;
 }
 
-template <modint T>
+template <Modint T>
 C int legendre(T x) {
     auto r = pow(x, (x.mont.P - 1) / 2)();
     return r == x.mont.P - 1 ? -1 : r;
 }
 
-template <modint T>
+template <Modint T>
 C std::optional<T> sqrt(T x) {
     static std::default_random_engine rng(std::random_device{}());
     if (x == T{0}) return x;
