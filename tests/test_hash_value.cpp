@@ -142,6 +142,23 @@ void test_multiple_mods() {
     assert(v10 == (i64(M1 - 1) * (M1 - 1)) % M2);
 }
 
+void test_componentwise_construct() {
+    constexpr i32 M1 = 998244353;
+    constexpr i32 M2 = 1000000007;
+    constexpr i32 M3 = 1000000009;
+
+    HashValue<M1, M2, M3> a(1, -2, 1000000011LL);
+    auto [v1, v2, v3] = a.tuple();
+    assert(v1 == 1);
+    assert(v2 == M2 - 2);
+    assert(v3 == 2);
+
+    HashValue<M1, M2> b(M1 + 5LL, M2 + 7LL);
+    auto [v4, v5] = b.tuple();
+    assert(v4 == 5);
+    assert(v5 == 7);
+}
+
 void test_three_mods() {
     HashValue<998244353, 1000000007, 1000000009> a(123456789);
     auto [v1, v2, v3] = a.tuple();
@@ -201,6 +218,19 @@ void test_negative_integral() {
     assert(v2 == 0);
 }
 
+void test_inverse() {
+    HashValue<1000000007> a(3);
+    auto ai = a.inv();
+    assert(a * ai == HashValue<1000000007>(1));
+
+    constexpr i32 M1 = 998244353;
+    constexpr i32 M2 = 1000000007;
+    HashValue<M1, M2> b(2, 3);
+    auto bi = b.inv();
+    assert((b * bi == HashValue<M1, M2>(1)));
+    assert((bi.tuple() == std::tuple((M1 + 1) / 2, 333333336)));
+}
+
 int main() {
     test_default_construct();
     test_integral_construct();
@@ -210,12 +240,14 @@ int main() {
     test_compound_assign();
     test_comparison();
     test_multiple_mods();
+    test_componentwise_construct();
     test_three_mods();
     test_chained_operations();
     test_commutativity();
     test_associativity();
     test_identity();
     test_negative_integral();
+    test_inverse();
 
     std::cout << "All tests passed.\n";
     return 0;
