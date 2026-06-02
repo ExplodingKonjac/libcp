@@ -223,15 +223,15 @@ int mx = heap.pop();         // 弹出最大值（默认 max-heap）
 
 ```cpp
 cp::Bitset<50> a, b, c;
-a.set();      // 整体设为 1
-a.unset(4);   // 单点设为 0
-b.flip(1, 3); // 区间 [1, 1+3) 取反
-c = a ^ b;    // 按位异或
-c -= a;       // 集合差，即“在 c 中且不在 a 中的元素”
-size_t cnt = c.popcnt();        // 求 1 的个数
-size_t pos = c.findFirstSet(2); // 求 [2, 50) 中第一个 1 的位置
-bool supset = a > b;    // 判断 a 真包含 b
-bool subseteq = c <= b; // 判断 c 是 b 的子集
+a.set_all();                       // 整体设为 1
+a.unset_bit(4);                    // 单点设为 0
+b.flip_range(1, 3);                // 区间 [1, 1+3) 取反
+c = a ^ b;                         // 按位异或
+c -= a;                            // 集合差，即“在 c 中且不在 a 中的元素”
+size_t cnt = c.popcnt();           // 求 1 的个数
+size_t pos = c.find_first_set(2);  // 求 [2, 50) 中第一个 1 的位置
+bool supset = a > b;               // 判断 a 真包含 b
+bool subseteq = c <= b;            // 判断 c 是 b 的子集
 ```
 
 ## 构建测试
