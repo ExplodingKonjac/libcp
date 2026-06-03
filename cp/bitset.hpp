@@ -1,7 +1,12 @@
 #pragma once
 #include <immintrin.h>
-#include <stdint.h>
-#include <string.h>
+
+#include <climits>
+#include <compare>
+#include <concepts>
+#include <cstring>
+#include <type_traits>
+#include <utility>
 
 #include "def.hpp"
 
@@ -10,124 +15,91 @@
 
 namespace cp
 {
+
 namespace details
 {
 
 template <typename E>
-struct Expression {
-    const E& operator()() const { return static_cast<const E&>(*this); }
-};
-
-template <typename E>
-struct BitsetFlip: Expression<BitsetFlip<E>> {
-    const E& e_;
-
-    BitsetFlip(const E& e): e_{e} {}
-
-    __m256i block_at(usize i) const {
-        return _mm256_xor_si256(e_.block_at(i), _mm256_set1_epi64x(-1));
-    }
-};
-
-template <typename E>
-struct BitsetNot: Expression<BitsetNot<E>> {
-    const E& e_;
-
-    BitsetNot(const E& e): e_{e} {}
-
+struct BitsetNot {
+    E&& e_;
     __m256i block_at(usize i) const {
         return _mm256_xor_si256(e_.block_at(i), _mm256_set1_epi64x(-1));
     }
 };
 
 template <typename XE, typename YE>
-struct BitsetAnd: Expression<BitsetAnd<XE, YE>> {
-    const XE& xe_;
-    const YE& ye_;
-
-    BitsetAnd(const XE& xe, const YE& ye): xe_{xe}, ye_{ye} {}
-
+struct BitsetAnd {
+    XE&& xe_;
+    YE&& ye_;
     __m256i block_at(usize i) const {
         return _mm256_and_si256(ye_.block_at(i), xe_.block_at(i));
     }
 };
 
 template <typename XE, typename YE>
-struct BitsetOr: Expression<BitsetOr<XE, YE>> {
-    const XE& xe_;
-    const YE& ye_;
-
-    BitsetOr(const XE& xe, const YE& ye): xe_{xe}, ye_{ye} {}
-
+struct BitsetOr {
+    XE&& xe_;
+    YE&& ye_;
     __m256i block_at(usize i) const {
         return _mm256_or_si256(ye_.block_at(i), xe_.block_at(i));
     }
 };
 
 template <typename XE, typename YE>
-struct BitsetXor: Expression<BitsetXor<XE, YE>> {
-    const XE& xe_;
-    const YE& ye_;
-
-    BitsetXor(const XE& xe, const YE& ye): xe_{xe}, ye_{ye} {}
-
+struct BitsetXor {
+    XE&& xe_;
+    YE&& ye_;
     __m256i block_at(usize i) const {
         return _mm256_xor_si256(ye_.block_at(i), xe_.block_at(i));
     }
 };
 
 template <typename XE, typename YE>
-struct BitsetAnt: Expression<BitsetAnt<XE, YE>> {
-    const XE& xe_;
-    const YE& ye_;
-
-    BitsetAnt(const XE& xe, const YE& ye): xe_{xe}, ye_{ye} {}
-
+struct BitsetAnt {
+    XE&& xe_;
+    YE&& ye_;
     __m256i block_at(usize i) const {
         return _mm256_andnot_si256(ye_.block_at(i), xe_.block_at(i));
     }
 };
 
-template <typename E>
-BitsetFlip<E> operator~(const Expression<E>& e) {
-    return BitsetFlip<E>(e());
-}
-
-template <typename E>
-BitsetNot<E> operator!(const Expression<E>& e) {
-    return BitsetNot<E>(e());
-}
-
-template <typename XE, typename YE>
-BitsetAnd<XE, YE> operator&(
-    const Expression<XE>& xe, const Expression<YE>& ye
-) {
-    return BitsetAnd<XE, YE>(xe(), ye());
-}
-
-template <typename XE, typename YE>
-BitsetOr<XE, YE> operator|(const Expression<XE>& xe, const Expression<YE>& ye) {
-    return BitsetOr<XE, YE>(xe(), ye());
-}
-
-template <typename XE, typename YE>
-BitsetXor<XE, YE> operator^(
-    const Expression<XE>& xe, const Expression<YE>& ye
-) {
-    return BitsetXor<XE, YE>(xe(), ye());
-}
-
-template <typename XE, typename YE>
-BitsetAnt<XE, YE> operator-(
-    const Expression<XE>& xe, const Expression<YE>& ye
-) {
-    return BitsetAnt<XE, YE>(xe(), ye());
-}
-
 }  // namespace details
 
+template <typename E>
+concept BitsetExpr =
+    requires(const std::remove_reference_t<E>& e, usize i) { e.block_at(i); };
+
+template <BitsetExpr E>
+inline auto operator~(E&& e) {
+    return details::BitsetNot<E>{std::forward<E>(e)};
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+inline auto operator&(XE&& xe, YE&& ye) {
+    return details::BitsetAnd<XE, YE>{std::forward<XE>(xe),
+                                      std::forward<YE>(ye)};
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+inline auto operator|(XE&& xe, YE&& ye) {
+    return details::BitsetOr<XE, YE>{std::forward<XE>(xe),
+                                     std::forward<YE>(ye)};
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+inline auto operator^(XE&& xe, YE&& ye) {
+    return details::BitsetXor<XE, YE>{std::forward<XE>(xe),
+                                      std::forward<YE>(ye)};
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+inline auto operator-(XE&& xe, YE&& ye) {
+    return details::BitsetAnt<XE, YE>{std::forward<XE>(xe),
+                                      std::forward<YE>(ye)};
+}
+
 template <usize SIZE>
-class Bitset: public details::Expression<Bitset<SIZE>> {
+class Bitset {
 protected:
     typedef u64 Word;
     typedef __m256i Block;
@@ -180,18 +152,16 @@ public:
     Bitset(const Bitset&) = default;
     Bitset(Bitset&&) = default;
 
-    template <typename E>
-    Bitset(const details::Expression<E>& e) {
-        for (usize i = 0; i != BLOCK_COUNT; ++i) block_set(i, e().block_at(i));
+    Bitset(BitsetExpr auto&& e) {
+        for (usize i = 0; i != BLOCK_COUNT; ++i) block_set(i, e.block_at(i));
         trim();
     }
 
     Bitset& operator=(const Bitset&) = default;
     Bitset& operator=(Bitset&&) = default;
 
-    template <typename E>
-    Bitset& operator=(const details::Expression<E>& e) {
-        for (usize i = 0; i != BLOCK_COUNT; ++i) block_set(i, e().block_at(i));
+    Bitset& operator=(BitsetExpr auto&& e) {
+        for (usize i = 0; i != BLOCK_COUNT; ++i) block_set(i, e.block_at(i));
         trim();
         return *this;
     }
@@ -344,34 +314,30 @@ public:
         trim();
     }
 
-    template <typename E>
-    Bitset& operator&=(const details::Expression<E>& e) {
+    Bitset& operator&=(BitsetExpr auto&& e) {
         for (usize i = 0; i != BLOCK_COUNT; ++i)
-            block_set(i, _mm256_and_si256(block_at(i), e().block_at(i)));
+            block_set(i, _mm256_and_si256(block_at(i), e.block_at(i)));
         trim();
         return *this;
     }
 
-    template <typename E>
-    Bitset& operator|=(const details::Expression<E>& e) {
+    Bitset& operator|=(BitsetExpr auto&& e) {
         for (usize i = 0; i != BLOCK_COUNT; ++i)
-            block_set(i, _mm256_or_si256(block_at(i), e().block_at(i)));
+            block_set(i, _mm256_or_si256(block_at(i), e.block_at(i)));
         trim();
         return *this;
     }
 
-    template <typename E>
-    Bitset& operator^=(const details::Expression<E>& e) {
+    Bitset& operator^=(BitsetExpr auto&& e) {
         for (usize i = 0; i != BLOCK_COUNT; ++i)
-            block_set(i, _mm256_xor_si256(block_at(i), e().block_at(i)));
+            block_set(i, _mm256_xor_si256(block_at(i), e.block_at(i)));
         trim();
         return *this;
     }
 
-    template <typename E>
-    Bitset& operator-=(const details::Expression<E>& e) {
+    Bitset& operator-=(BitsetExpr auto&& e) {
         for (usize i = 0; i != BLOCK_COUNT; ++i)
-            block_set(i, _mm256_andnot_si256(e().block_at(i), block_at(i)));
+            block_set(i, _mm256_andnot_si256(e.block_at(i), block_at(i)));
         trim();
         return *this;
     }
@@ -385,43 +351,21 @@ public:
     }
 
     friend bool operator!=(const Bitset& A, const Bitset& B) {
+        return !(A == B);
+    }
+
+    friend std::partial_ordering operator<=>(const Bitset& A, const Bitset& B) {
+        bool a_extra = false, b_extra = false;
         for (usize i = 0; i != BLOCK_COUNT; ++i) {
-            Block bxa = _mm256_xor_si256(B.block_at(i), A.block_at(i));
-            if (!_mm256_testz_si256(bxa, bxa)) return true;
+            Block a = A.block_at(i);
+            Block b = B.block_at(i);
+            a_extra |= !_mm256_testc_si256(b, a);
+            b_extra |= !_mm256_testc_si256(a, b);
+            if (a_extra && b_extra) return std::partial_ordering::unordered;
         }
-        return false;
-    }
-
-    friend bool operator<=(const Bitset& A, const Bitset& B) {
-        for (usize i = 0; i != BLOCK_COUNT; ++i)
-            if (!_mm256_testc_si256(B.block_at(i), A.block_at(i))) return false;
-        return true;
-    }
-
-    friend bool operator>=(const Bitset& A, const Bitset& B) {
-        for (usize i = 0; i != BLOCK_COUNT; ++i)
-            if (!_mm256_testc_si256(A.block_at(i), B.block_at(i))) return false;
-        return true;
-    }
-
-    friend bool operator<(const Bitset& A, const Bitset& B) {
-        bool different = false;
-        for (usize i = 0; i != BLOCK_COUNT; ++i) {
-            Block a = A.block_at(i), b = B.block_at(i);
-            if (!_mm256_testc_si256(b, a)) return false;
-            different |= !_mm256_testc_si256(a, b);
-        }
-        return different;
-    }
-
-    friend bool operator>(const Bitset& A, const Bitset& B) {
-        bool different = false;
-        for (usize i = 0; i != BLOCK_COUNT; ++i) {
-            Block a = A.block_at(i), b = B.block_at(i);
-            if (!_mm256_testc_si256(a, b)) return false;
-            different |= !_mm256_testc_si256(b, a);
-        }
-        return different;
+        return a_extra ? std::partial_ordering::greater
+            : b_extra  ? std::partial_ordering::less
+                       : std::partial_ordering::equivalent;
     }
 
     usize find_first_set(usize position) const {
