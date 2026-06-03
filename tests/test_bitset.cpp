@@ -46,7 +46,6 @@ template <usize N>
 void assert_matches(const Bitset<N>& bitset, const Bits<N>& expected) {
     for (usize i = 0; i != N; ++i) {
         assert(bitset[i] == expected[i]);
-        assert(bitset(i) == expected[i]);
     }
     assert(bitset.count() == count_bits(expected));
     assert(bitset.popcnt() == count_bits(expected));
@@ -54,7 +53,6 @@ void assert_matches(const Bitset<N>& bitset, const Bits<N>& expected) {
     assert(bitset.none() == (count_bits(expected) == 0));
     assert(bitset.all() == (count_bits(expected) == N));
     assert(!bitset[N]);
-    assert(!bitset(N));
 }
 
 template <usize N>
@@ -380,6 +378,39 @@ void test_comparisons() {
     std::cout << "OK\n";
 }
 
+void test_stored_expression_lifetime() {
+    std::cout << "test_stored_expression_lifetime... ";
+
+    Bitset<80> a;
+    Bitset<80> b;
+    Bitset<80> c;
+
+    a.set_bit(2);
+    a.set_bit(65);
+    b.set_bit(3);
+    b.set_bit(65);
+    c.set_bit(65);
+    c.set_bit(70);
+
+    auto nested = (a | b) & c;
+    Bitset<80> expected_nested = (a | b) & c;
+    assert(nested == expected_nested);
+
+    Bitset<80> materialized_nested = nested;
+    assert(materialized_nested == expected_nested);
+
+    auto temporary_bitset_expr = ~Bitset<80>{};
+    Bitset<80> all_bits = temporary_bitset_expr;
+    assert(all_bits.all());
+    assert(temporary_bitset_expr == all_bits);
+
+    auto mixed_temporary_expr = (Bitset<80>{} | a) ^ (b & c);
+    Bitset<80> expected_mixed = (Bitset<80>{} | a) ^ (b & c);
+    assert(mixed_temporary_expr == expected_mixed);
+
+    std::cout << "OK\n";
+}
+
 int main() {
     test_default_and_single_bit_operations();
     test_all_operations_and_trimmed_tail();
@@ -388,6 +419,7 @@ int main() {
     test_find_first_operations();
     test_shifts();
     test_comparisons();
+    test_stored_expression_lifetime();
     std::cout << "All bitset tests passed!\n";
     return 0;
 }

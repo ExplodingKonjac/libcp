@@ -23,15 +23,36 @@ inline constexpr usize expr_bit_size_v = std::remove_cvref_t<E>::BIT_SIZE;
 template <typename E>
 inline constexpr usize expr_block_count_v = std::remove_cvref_t<E>::BLOCK_COUNT;
 
+template <typename E>
+using BitsetExprStorage = std::conditional_t<
+    std::is_lvalue_reference_v<E>,
+    E,
+    std::remove_cvref_t<E>
+>;
+
 template <typename XE, typename YE>
 concept SameBitsetExprSize = expr_bit_size_v<XE> == expr_bit_size_v<YE>;
+
+inline __m256i bitset_mask(usize bits) {
+    constexpr usize WORD_SIZE = sizeof(u64) * CHAR_BIT;
+    constexpr usize BLOCK_SIZE = sizeof(__m256i) / sizeof(u64);
+    bits %= sizeof(__m256i) * CHAR_BIT;
+    if (!bits) return _mm256_set1_epi8(-1);
+    u64 words[BLOCK_SIZE] = {};
+    for (usize i = 0; i != BLOCK_SIZE && bits; ++i) {
+        usize take = bits < WORD_SIZE ? bits : WORD_SIZE;
+        words[i] = take == WORD_SIZE ? ~0ULL : (1ULL << take) - 1;
+        bits -= take;
+    }
+    return _mm256_loadu_si256((const __m256i*)words);
+}
 
 template <typename E>
 struct BitsetNot {
     static constexpr usize BIT_SIZE = expr_bit_size_v<E>;
     static constexpr usize BLOCK_COUNT = expr_block_count_v<E>;
 
-    E&& e_;
+    BitsetExprStorage<E> e_;
     __m256i block_at(usize i) const {
         return _mm256_xor_si256(e_.block_at(i), _mm256_set1_epi64x(-1));
     }
@@ -43,8 +64,8 @@ struct BitsetAnd {
     static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
     static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
 
-    XE&& xe_;
-    YE&& ye_;
+    BitsetExprStorage<XE> xe_;
+    BitsetExprStorage<YE> ye_;
     __m256i block_at(usize i) const {
         return _mm256_and_si256(ye_.block_at(i), xe_.block_at(i));
     }
@@ -56,8 +77,8 @@ struct BitsetOr {
     static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
     static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
 
-    XE&& xe_;
-    YE&& ye_;
+    BitsetExprStorage<XE> xe_;
+    BitsetExprStorage<YE> ye_;
     __m256i block_at(usize i) const {
         return _mm256_or_si256(ye_.block_at(i), xe_.block_at(i));
     }
@@ -69,8 +90,8 @@ struct BitsetXor {
     static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
     static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
 
-    XE&& xe_;
-    YE&& ye_;
+    BitsetExprStorage<XE> xe_;
+    BitsetExprStorage<YE> ye_;
     __m256i block_at(usize i) const {
         return _mm256_xor_si256(ye_.block_at(i), xe_.block_at(i));
     }
@@ -82,8 +103,8 @@ struct BitsetAnt {
     static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
     static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
 
-    XE&& xe_;
-    YE&& ye_;
+    BitsetExprStorage<XE> xe_;
+    BitsetExprStorage<YE> ye_;
     __m256i block_at(usize i) const {
         return _mm256_andnot_si256(ye_.block_at(i), xe_.block_at(i));
     }
@@ -136,6 +157,10 @@ template <BitsetExpr XE, BitsetExpr YE>
 inline bool operator==(XE&& xe, YE&& ye) {
     for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
         auto bxa = _mm256_xor_si256(ye.block_at(i), xe.block_at(i));
+        if (i + 1 == details::expr_block_count_v<XE>)
+            bxa = _mm256_and_si256(
+                bxa, details::bitset_mask(details::expr_bit_size_v<XE>)
+            );
         if (!_mm256_testz_si256(bxa, bxa)) return false;
     }
     return true;
@@ -153,6 +178,11 @@ inline std::partial_ordering operator<=>(XE&& xe, YE&& ye) {
     bool x_extra = false, y_extra = false;
     for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
         auto x = xe.block_at(i), y = ye.block_at(i);
+        if (i + 1 == details::expr_block_count_v<XE>) {
+            auto mask = details::bitset_mask(details::expr_bit_size_v<XE>);
+            x = _mm256_and_si256(x, mask);
+            y = _mm256_and_si256(y, mask);
+        }
         x_extra |= !_mm256_testc_si256(y, x);
         y_extra |= !_mm256_testc_si256(x, y);
         if (x_extra && y_extra) return std::partial_ordering::unordered;
@@ -233,11 +263,6 @@ public:
     }
 
     bool operator[](usize position) const {
-        if (position >= SIZE) return false;
-        return data_[position / WORD_SIZE] >> position % WORD_SIZE & 1;
-    }
-
-    bool operator()(usize position) const {
         if (position >= SIZE) return false;
         return data_[position / WORD_SIZE] >> position % WORD_SIZE & 1;
     }
