@@ -3,7 +3,6 @@
 
 #include <climits>
 #include <compare>
-#include <concepts>
 #include <cstring>
 #include <type_traits>
 #include <utility>
@@ -20,7 +19,18 @@ namespace details
 {
 
 template <typename E>
+inline constexpr usize expr_bit_size_v = std::remove_cvref_t<E>::BIT_SIZE;
+template <typename E>
+inline constexpr usize expr_block_count_v = std::remove_cvref_t<E>::BLOCK_COUNT;
+
+template <typename XE, typename YE>
+concept SameBitsetExprSize = expr_bit_size_v<XE> == expr_bit_size_v<YE>;
+
+template <typename E>
 struct BitsetNot {
+    static constexpr usize BIT_SIZE = expr_bit_size_v<E>;
+    static constexpr usize BLOCK_COUNT = expr_block_count_v<E>;
+
     E&& e_;
     __m256i block_at(usize i) const {
         return _mm256_xor_si256(e_.block_at(i), _mm256_set1_epi64x(-1));
@@ -29,6 +39,10 @@ struct BitsetNot {
 
 template <typename XE, typename YE>
 struct BitsetAnd {
+    static_assert(SameBitsetExprSize<XE, YE>);
+    static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
+    static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
+
     XE&& xe_;
     YE&& ye_;
     __m256i block_at(usize i) const {
@@ -38,6 +52,10 @@ struct BitsetAnd {
 
 template <typename XE, typename YE>
 struct BitsetOr {
+    static_assert(SameBitsetExprSize<XE, YE>);
+    static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
+    static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
+
     XE&& xe_;
     YE&& ye_;
     __m256i block_at(usize i) const {
@@ -47,6 +65,10 @@ struct BitsetOr {
 
 template <typename XE, typename YE>
 struct BitsetXor {
+    static_assert(SameBitsetExprSize<XE, YE>);
+    static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
+    static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
+
     XE&& xe_;
     YE&& ye_;
     __m256i block_at(usize i) const {
@@ -56,6 +78,10 @@ struct BitsetXor {
 
 template <typename XE, typename YE>
 struct BitsetAnt {
+    static_assert(SameBitsetExprSize<XE, YE>);
+    static constexpr usize BIT_SIZE = expr_bit_size_v<XE>;
+    static constexpr usize BLOCK_COUNT = expr_block_count_v<XE>;
+
     XE&& xe_;
     YE&& ye_;
     __m256i block_at(usize i) const {
@@ -66,8 +92,11 @@ struct BitsetAnt {
 }  // namespace details
 
 template <typename E>
-concept BitsetExpr =
-    requires(const std::remove_reference_t<E>& e, usize i) { e.block_at(i); };
+concept BitsetExpr = requires(const std::remove_reference_t<E>& e, usize i) {
+    e.block_at(i);
+    details::expr_bit_size_v<E>;
+    details::expr_block_count_v<E>;
+};
 
 template <BitsetExpr E>
 inline auto operator~(E&& e) {
@@ -75,40 +104,77 @@ inline auto operator~(E&& e) {
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
 inline auto operator&(XE&& xe, YE&& ye) {
     return details::BitsetAnd<XE, YE>{std::forward<XE>(xe),
                                       std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
 inline auto operator|(XE&& xe, YE&& ye) {
     return details::BitsetOr<XE, YE>{std::forward<XE>(xe),
                                      std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
 inline auto operator^(XE&& xe, YE&& ye) {
     return details::BitsetXor<XE, YE>{std::forward<XE>(xe),
                                       std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
 inline auto operator-(XE&& xe, YE&& ye) {
     return details::BitsetAnt<XE, YE>{std::forward<XE>(xe),
                                       std::forward<YE>(ye)};
 }
 
+template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
+inline bool operator==(XE&& xe, YE&& ye) {
+    for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
+        auto bxa = _mm256_xor_si256(ye.block_at(i), xe.block_at(i));
+        if (!_mm256_testz_si256(bxa, bxa)) return false;
+    }
+    return true;
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
+inline bool operator!=(XE&& xe, YE&& ye) {
+    return !(xe == ye);
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+    requires details::SameBitsetExprSize<XE, YE>
+inline std::partial_ordering operator<=>(XE&& xe, YE&& ye) {
+    bool x_extra = false, y_extra = false;
+    for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
+        auto x = xe.block_at(i), y = ye.block_at(i);
+        x_extra |= !_mm256_testc_si256(y, x);
+        y_extra |= !_mm256_testc_si256(x, y);
+        if (x_extra && y_extra) return std::partial_ordering::unordered;
+    }
+    return x_extra ? std::partial_ordering::greater
+        : y_extra  ? std::partial_ordering::less
+                   : std::partial_ordering::equivalent;
+}
+
 template <usize SIZE>
 class Bitset {
-protected:
-    typedef u64 Word;
-    typedef __m256i Block;
+    using Word = u64;
+    using Block = __m256i;
 
+public:
+    static constexpr usize BIT_SIZE = SIZE;
     static const usize WORD_SIZE = sizeof(Word) * CHAR_BIT;
     static const usize BLOCK_SIZE = sizeof(Block) / sizeof(Word);
     static const usize WORD_COUNT = (SIZE + WORD_SIZE - 1) / WORD_SIZE;
     static const usize BLOCK_COUNT = (WORD_COUNT + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
+private:
     alignas(Block) Word data_[BLOCK_COUNT * BLOCK_SIZE]{};
 
 public:
@@ -340,32 +406,6 @@ public:
             block_set(i, _mm256_andnot_si256(e.block_at(i), block_at(i)));
         trim();
         return *this;
-    }
-
-    friend bool operator==(const Bitset& A, const Bitset& B) {
-        for (usize i = 0; i != BLOCK_COUNT; ++i) {
-            Block bxa = _mm256_xor_si256(B.block_at(i), A.block_at(i));
-            if (!_mm256_testz_si256(bxa, bxa)) return false;
-        }
-        return true;
-    }
-
-    friend bool operator!=(const Bitset& A, const Bitset& B) {
-        return !(A == B);
-    }
-
-    friend std::partial_ordering operator<=>(const Bitset& A, const Bitset& B) {
-        bool a_extra = false, b_extra = false;
-        for (usize i = 0; i != BLOCK_COUNT; ++i) {
-            Block a = A.block_at(i);
-            Block b = B.block_at(i);
-            a_extra |= !_mm256_testc_si256(b, a);
-            b_extra |= !_mm256_testc_si256(a, b);
-            if (a_extra && b_extra) return std::partial_ordering::unordered;
-        }
-        return a_extra ? std::partial_ordering::greater
-            : b_extra  ? std::partial_ordering::less
-                       : std::partial_ordering::equivalent;
     }
 
     usize find_first_set(usize position) const {

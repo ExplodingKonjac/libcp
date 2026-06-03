@@ -1,12 +1,35 @@
 #include <array>
 #include <cassert>
 #include <compare>
+#include <concepts>
 #include <iostream>
+#include <utility>
 
 #include "cp/bitset.hpp"
 
 using cp::Bitset;
 using cp::usize;
+
+template <typename X, typename Y>
+concept HasBitsetComparisons = requires(X&& x, Y&& y) {
+    { std::forward<X>(x) == std::forward<Y>(y) } -> std::same_as<bool>;
+    { std::forward<X>(x) != std::forward<Y>(y) } -> std::same_as<bool>;
+    {
+        std::forward<X>(x) <=> std::forward<Y>(y)
+    } -> std::same_as<std::partial_ordering>;
+};
+
+using BitsetExpr80 = decltype(~std::declval<Bitset<80>&>());
+using BinaryBitsetExpr80 =
+    decltype(std::declval<Bitset<80>&>() | std::declval<Bitset<80>&>());
+
+static_assert(cp::BitsetExpr<Bitset<80>&>);
+static_assert(cp::BitsetExpr<BitsetExpr80>);
+static_assert(cp::BitsetExpr<BinaryBitsetExpr80>);
+static_assert(HasBitsetComparisons<Bitset<80>&, Bitset<80>&>);
+static_assert(HasBitsetComparisons<Bitset<80>&, BitsetExpr80>);
+static_assert(HasBitsetComparisons<BinaryBitsetExpr80, BinaryBitsetExpr80>);
+static_assert(!HasBitsetComparisons<Bitset<80>&, Bitset<81>&>);
 
 template <usize N>
 using Bits = std::array<bool, N>;
@@ -328,6 +351,31 @@ void test_comparisons() {
     assert((superset <=> subset) == std::partial_ordering::greater);
     assert((subset <=> subset) == std::partial_ordering::equivalent);
     assert((superset <=> overlap) == std::partial_ordering::unordered);
+
+    Bitset<80> intersection = subset & overlap;
+    Bitset<80> union_bits = subset | overlap;
+    Bitset<80> left_only = subset - overlap;
+    Bitset<80> right_only = overlap - subset;
+
+    assert(union_bits == (subset | overlap));
+    assert((subset | overlap) == union_bits);
+    assert((subset | overlap) == (overlap | subset));
+    assert((subset & overlap) == intersection);
+    assert((subset & overlap) != (subset ^ overlap));
+    assert(union_bits != (subset & overlap));
+
+    assert((subset & overlap) < subset);
+    assert(((subset & overlap) <=> subset) == std::partial_ordering::less);
+    assert(((subset | overlap) <=> subset) == std::partial_ordering::greater);
+    assert(
+        ((subset | overlap) <=> (overlap | subset))
+        == std::partial_ordering::equivalent
+    );
+    assert(
+        ((subset - overlap) <=> (overlap - subset))
+        == std::partial_ordering::unordered
+    );
+    assert(left_only != right_only);
 
     std::cout << "OK\n";
 }
