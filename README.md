@@ -29,6 +29,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fpoly.hpp`](cp/fpoly.hpp) | 多项式运算（AVX2 加速 NTT） |
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
+| [`cp/geometry.hpp`](cp/geometry.hpp) | 二维向量与基础计算几何 |
 | [`cp/hash_map.hpp`](cp/hash_map.hpp) | 高性能扁平哈希表 |
 | [`cp/pairing_heap.hpp`](cp/pairing_heap.hpp) | 配对堆 |
 | [`cp/bitset.hpp`](cp/bitset.hpp) | 高性能位集（AVX2 优化 bitset） |
@@ -162,6 +163,41 @@ for (auto [to, weight] : gw.out(u)) { ... }
 
 ---
 
+### `cp/geometry.hpp` — 二维计算几何
+
+提供泛型二维向量/点 `Vec2<T>`（`Point2<T>` 为同类型别名），以及直线
+`Line2<T>`、线段 `Segment2<T>`、圆 `Circle2<T>`。支持向量运算、方向判断、
+投影/反射、距离、包含关系和直线/线段/圆之间的交点计算；不包含多边形和凸包算法。
+
+```cpp
+#include "cp/geometry.hpp"
+
+cp::Point2<cp::i64> a{0, 0}, b{4, 0}, p{2, 3};
+auto segment = cp::Segment2<cp::i64>{a, b};
+auto nearest = cp::closest_point(p, segment);  // Point2<long double>{2, 0}
+auto d = cp::distance(p, segment);             // 3.0L
+
+cp::Circle2<double> circle{{0, 0}, 5};
+auto hits = cp::intersection(
+    cp::Line2<double>{{0, 0}, {1, 0}}, circle
+);  // (-5, 0), (5, 0)
+```
+
+数值规则：
+
+- 坐标类型必须是有符号整数或浮点数；混合坐标类型需显式 `cast<U>()`。
+- `i8`/`i16` 中间结果提升到 `i64`，`i32`/`i64` 提升到 `i128`；整数交点坐标和距离提升到 `long double`。
+- 当 `i64` 运算的数学结果超出 `i128` 时，宽整数结果饱和到 `i128` 边界，以避免有符号溢出；此时不再保证精确值。
+- 浮点几何判断使用可显式传入的 `GeometryTolerance<T>`，默认同时使用绝对与相对容差（`float` 为 `1e-5`、`double` 为 `1e-9`、`long double` 为 `1e-12`）。
+- `Line2<T>::through(a, b)` 要求整数端点差可由 `T` 表示；调试构建会检查此前置条件。直接使用点和方向构造可避免该转换。
+- 零长线段和零半径圆有效；零方向直线和负半径圆无效。对无效元素调用几何算法属于前置条件错误。
+
+交点结果使用无动态分配的定长结构，并通过 `LineIntersectionKind`、
+`SegmentIntersectionKind` 和 `PointIntersectionKind` 区分无交点、单点、重叠、
+双交点或重合。
+
+---
+
 ### `cp/hash_map.hpp` — 扁平哈希表
 
 高性能开放寻址哈希表 `FlatHashMap`，类似 Swiss Table / Abseil `flat_hash_map` 设计。
@@ -262,6 +298,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
 | `tests/test_fenwick.cpp` | 树状数组正确性 |
 | `tests/test_graph.cpp` | 图容器正确性 |
+| `tests/test_geometry.cpp` | 二维向量、基础元素、距离与交点正确性 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
 | `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |
