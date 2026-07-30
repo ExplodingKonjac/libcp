@@ -177,6 +177,8 @@ cp::Point2<cp::i64> a{0, 0}, b{4, 0}, p{2, 3};
 auto line = cp::Line2<cp::i64>::through(a, b);
 auto projected = cp::project(p, line);         // Point2<long double>{2, 0}
 bool between = cp::on_segment(a, b, {2, 0});   // true
+int sign = cp::sgn(-3.0);                      // -1
+int order = cp::cmp(1.0, 1.0 + 5e-10);        // 0
 
 cp::Circle2<double> circle{{0, 0}, 5};
 auto hits = cp::intersection(

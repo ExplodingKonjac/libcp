@@ -37,13 +37,6 @@ consteval T default_geometry_tolerance() {
     return (T)1e-12L;
 }
 
-template <GeometryScalar T>
-constexpr geometry_wide_t<T> wide_add(
-    geometry_wide_t<T> a, geometry_wide_t<T> b
-) {
-    return a + b;
-}
-
 }  // namespace detail
 
 template <std::floating_point T>
@@ -56,6 +49,18 @@ template <std::floating_point T>
 constexpr bool almost_equal(T a, T b, GeometryTolerance<T> eps = {}) {
     T s = std::max<T>({T{1}, std::abs(a), std::abs(b)});
     return std::abs(a - b) <= eps.absolute + eps.relative * s;
+}
+
+template <GeometryScalar T>
+constexpr int cmp(T a, T b, GeometryTolerance<geometry_real_t<T>> eps = {}) {
+    if constexpr (std::floating_point<T>)
+        if (almost_equal(a, b, eps)) return 0;
+    return (a > b) - (a < b);
+}
+
+template <GeometryScalar T>
+constexpr int sgn(T x, GeometryTolerance<geometry_real_t<T>> eps = {}) {
+    return cmp(x, T{}, eps);
 }
 
 template <GeometryScalar T>
@@ -143,16 +148,6 @@ geometry_real_t<T> distance(Point2<T> a, Point2<T> b) {
 }
 
 template <GeometryScalar T>
-constexpr Vec2<T> perp_ccw(Vec2<T> a) {
-    return {-a.y, a.x};
-}
-
-template <GeometryScalar T>
-constexpr Vec2<T> perp_cw(Vec2<T> a) {
-    return {a.y, -a.x};
-}
-
-template <GeometryScalar T>
 geometry_real_t<T> angle(Vec2<T> a) {
     using R = geometry_real_t<T>;
     return std::atan2((R)a.y, (R)a.x);
@@ -208,15 +203,6 @@ template <GeometryScalar T>
 using tolerance_t = GeometryTolerance<geometry_real_t<T>>;
 
 template <GeometryScalar T>
-constexpr int sgn(
-    geometry_wide_t<T> x, geometry_wide_t<T> s, tolerance_t<T> eps
-) {
-    if constexpr (std::floating_point<T>)
-        if (std::abs(x) <= eps.absolute + eps.relative * s) return 0;
-    return (x > 0) - (x < 0);
-}
-
-template <GeometryScalar T>
 constexpr int det_sgn(
     geometry_wide_t<T> ax,
     geometry_wide_t<T> ay,
@@ -225,10 +211,9 @@ constexpr int det_sgn(
     tolerance_t<T> eps
 ) {
     using W = geometry_wide_t<T>;
-    W x = ax * by, y = ay * bx, s = W{1};
-    if constexpr (std::floating_point<T>)
-        s = std::max<W>({W{1}, std::abs(x), std::abs(y)});
-    return sgn<T>(x - y, s, eps);
+    W x = ax * by, y = ay * bx;
+    if constexpr (std::floating_point<T>) return cmp(x, y, eps);
+    return (x > y) - (x < y);
 }
 
 template <GeometryScalar T>
@@ -237,22 +222,6 @@ constexpr int line_side(Line2<T> l, Point2<T> p, tolerance_t<T> eps) {
     W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
     W a = (W)l.direction.x, b = (W)l.direction.y;
     return det_sgn<T>(a, b, x, y, eps);
-}
-
-template <GeometryScalar T>
-constexpr bool between(T x, T a, T b, tolerance_t<T> eps) {
-    if (a > b) std::swap(a, b);
-    if constexpr (std::floating_point<T>) {
-        T s = std::max<T>({T{1}, std::abs(x), std::abs(a), std::abs(b)});
-        T e = eps.absolute + eps.relative * s;
-        return a - e <= x && x <= b + e;
-    }
-    return a <= x && x <= b;
-}
-
-template <std::floating_point T>
-constexpr int cmp(T a, T b, GeometryTolerance<T> eps) {
-    return almost_equal(a, b, eps) ? 0 : a < b ? -1 : 1;
 }
 
 }  // namespace detail
@@ -286,10 +255,8 @@ constexpr bool perpendicular(
     assert(a.is_valid() && b.is_valid());
     W x = (W)a.direction.x * (W)b.direction.x;
     W y = (W)a.direction.y * (W)b.direction.y;
-    W s = W{1};
-    if constexpr (std::floating_point<T>)
-        s = std::max<W>({W{1}, std::abs(x), std::abs(y)});
-    return detail::sgn<T>(x + y, s, eps) == 0;
+    if constexpr (std::floating_point<T>) return cmp(x, -y, eps) == 0;
+    return x + y == 0;
 }
 
 template <GeometryScalar T>
@@ -307,9 +274,17 @@ constexpr bool on_segment(
     Point2<T> p,
     GeometryTolerance<geometry_real_t<T>> eps = {}
 ) {
-    return orientation(a, b, p, eps) == 0 &&
-        detail::between(p.x, a.x, b.x, eps) &&
-        detail::between(p.y, a.y, b.y, eps);
+    if (orientation(a, b, p, eps)) return false;
+    auto in = [&](T x, T l, T r) {
+        if (l > r) std::swap(l, r);
+        if constexpr (std::floating_point<T>) {
+            T s = std::max<T>({T{1}, std::abs(x), std::abs(l), std::abs(r)});
+            T e = eps.absolute + eps.relative * s;
+            return l - e <= x && x <= r + e;
+        }
+        return l <= x && x <= r;
+    };
+    return in(p.x, a.x, b.x) && in(p.y, a.y, b.y);
 }
 
 template <GeometryScalar T>
@@ -416,7 +391,7 @@ PointIntersection2<geometry_real_t<T>> intersection(
     auto o = c.center.template cast<R>(), p = project(c.center, l);
     auto d = l.direction.template cast<R>();
     R r = (R)c.radius, x = distance(o, p);
-    int s = detail::cmp(x, r, eps);
+    int s = cmp(x, r, eps);
     if (s > 0) return {};
     if (!s) return {PointIntersectionKind::one, {p, {}}};
     R h = std::sqrt(std::max<R>(R{}, r * r - x * x));
@@ -434,20 +409,19 @@ PointIntersection2<geometry_real_t<T>> intersection(
     R x = (R)a.radius, y = (R)b.radius;
     auto d = q - p;
     R d2 = dot(d, d), z = std::sqrt(d2);
-    if (!detail::cmp(z, R{}, eps)) {
-        if (detail::cmp(x, y, eps)) return {};
-        if (!detail::cmp(x, R{}, eps))
-            return {PointIntersectionKind::one, {p, {}}};
+    if (!cmp(z, R{}, eps)) {
+        if (cmp(x, y, eps)) return {};
+        if (!cmp(x, R{}, eps)) return {PointIntersectionKind::one, {p, {}}};
         return {PointIntersectionKind::coincident, {}};
     }
     R sum = x + y, dif = std::abs(x - y);
-    if (detail::cmp(z, sum, eps) > 0 || detail::cmp(z, dif, eps) < 0) return {};
+    if (cmp(z, sum, eps) > 0 || cmp(z, dif, eps) < 0) return {};
     R t = (x * x - y * y + d2) / (R{2} * z);
     auto m = p + d * (t / z);
-    if (!detail::cmp(z, sum, eps) || !detail::cmp(z, dif, eps))
+    if (!cmp(z, sum, eps) || !cmp(z, dif, eps))
         return {PointIntersectionKind::one, {m, {}}};
     R h = std::sqrt(std::max<R>(R{}, x * x - t * t));
-    auto v = perp_ccw(d) * (h / z);
+    auto v = Vec2{-d.y, d.x} * (h / z);
     return {PointIntersectionKind::two, {m + v, m - v}};
 }
 

@@ -55,6 +55,12 @@ static_assert(constexpr_vector_test() == Vec2<int>{6, 4});
 static_assert(Vec2<int>{3, 4}.cast<long double>() == Vec2<long double>{3, 4});
 static_assert(dot(Vec2<int>{2, 3}, Vec2<int>{4, 5}) == 23);
 static_assert(cross(Vec2<int>{2, 3}, Vec2<int>{4, 5}) == -2);
+static_assert(sgn(-7) == -1);
+static_assert(sgn(0) == 0);
+static_assert(sgn(7) == 1);
+static_assert(cmp(2, 3) == -1);
+static_assert(cmp(3, 3) == 0);
+static_assert(cmp(4, 3) == 1);
 static_assert(
     orientation(Point2<int>{0, 0}, Point2<int>{2, 0}, Point2<int>{1, 1}) == 1
 );
@@ -118,6 +124,14 @@ void test_tolerance() {
     assert(almost_equal(
         1'000'000'000.0, 1'000'000'000.5, GeometryTolerance<double>{1e-12, 1e-9}
     ));
+    assert(sgn(5e-10) == 0);
+    assert(sgn(1e-5) == 1);
+    assert(cmp(1.0, 1.0 + 5e-10) == 0);
+    assert(cmp(1.0, 1.0 + 1e-5) == -1);
+    assert(
+        cmp(1'000'000'000.0, 1'000'000'000.5,
+            GeometryTolerance<double>{1e-12, 1e-9}) == 0
+    );
     assert(
         almost_equal(Vec2<double>{1, 2}, Vec2<double>{1 + 5e-10, 2 - 5e-10})
     );
