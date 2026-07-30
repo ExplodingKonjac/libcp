@@ -30,6 +30,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/geometry.hpp`](cp/geometry.hpp) | 二维向量与基础计算几何 |
+| [`cp/polygon.hpp`](cp/polygon.hpp) | 多边形与凸几何算法 |
 | [`cp/hash_map.hpp`](cp/hash_map.hpp) | 高性能扁平哈希表 |
 | [`cp/pairing_heap.hpp`](cp/pairing_heap.hpp) | 配对堆 |
 | [`cp/bitset.hpp`](cp/bitset.hpp) | 高性能位集（AVX2 优化 bitset） |
@@ -167,7 +168,8 @@ for (auto [to, weight] : gw.out(u)) { ... }
 
 提供泛型二维向量/点 `Vec2<T>`（`Point2<T>` 为同类型别名），以及直线
 `Line2<T>`、线段 `Segment2<T>`、圆 `Circle2<T>`。支持向量运算、方向判断、
-投影/反射、距离、包含关系和直线/线段/圆之间的交点计算；不包含多边形和凸包算法。
+投影/反射、距离、包含关系和直线/线段/圆之间的交点计算。多边形与凸几何算法位于
+`cp/polygon.hpp`。
 
 ```cpp
 #include "cp/geometry.hpp"
@@ -195,6 +197,29 @@ auto hits = cp::intersection(
 交点结果使用无动态分配的定长结构，并通过 `LineIntersectionKind`、
 `SegmentIntersectionKind` 和 `PointIntersectionKind` 区分无交点、单点、重叠、
 双交点或重合。
+
+---
+
+### `cp/polygon.hpp` — 多边形与凸几何
+
+提供逆时针存储的 `Polygon<T>`、面积、凸性和点与多边形的位置关系，以及上下凸壳、
+完整凸包、凸多边形 Minkowski 和与半平面交。点的位置由
+`PointPolygonRelation::{outside,boundary,inside}` 区分。
+
+```cpp
+#include "cp/polygon.hpp"
+
+cp::Polygon<int> polygon{
+    std::vector<cp::Point2<int>>{{0, 0}, {4, 0}, {4, 3}, {0, 3}}
+};
+auto area = polygon.area();                   // 12.0L
+auto where = polygon.relation({2, 1});        // inside
+auto hull = cp::convex_hull(polygon.vertices());
+```
+
+半平面由有向直线表示，直线左侧为可行区域。
+`half_plane_intersection()` 仅在交集为非退化有界多边形时返回结果；空集、无界区域、
+点或线段均返回 `std::nullopt`。`minkowski_sum()` 要求输入多边形为凸多边形。
 
 ---
 
@@ -299,6 +324,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_fenwick.cpp` | 树状数组正确性 |
 | `tests/test_graph.cpp` | 图容器正确性 |
 | `tests/test_geometry.cpp` | 二维向量、基础元素、距离与交点正确性 |
+| `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
 | `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |

@@ -33,8 +33,8 @@ AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 
-BreakBeforeBinaryOperators: NonAssignment
-BreakBinaryOperations: OnePerLine
+# BreakBeforeBinaryOperators: NonAssignment
+BreakBinaryOperations: RespectPrecedence
 AlignOperands: DontAlign
 AlignAfterOpenBracket: true
 
