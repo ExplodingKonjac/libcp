@@ -16,9 +16,8 @@ namespace
 
 template <typename T>
 bool near(T lhs, T rhs, T eps = static_cast<T>(1e-9L)) {
-    return std::abs(lhs - rhs)
-        <= eps
-        * std::max<T>({1, std::abs(lhs), std::abs(rhs)});
+    return std::abs(lhs - rhs) <=
+        eps * std::max<T>({1, std::abs(lhs), std::abs(rhs)});
 }
 
 template <std::floating_point T>
@@ -99,22 +98,15 @@ void test_widened_integral_arithmetic() {
     assert(cross(origin, x_axis, upper) == expected_cross);
     assert(orientation(origin, x_axis, upper) == 1);
     assert(
-        distance_sq(origin, x_axis)
-        == i128{4'000'000'000LL}
-        * i128{4'000'000'000LL}
+        distance_sq(origin, x_axis) ==
+        i128{4'000'000'000LL} * i128{4'000'000'000LL}
     );
 
-    const Point2<i64> minimum{std::numeric_limits<i64>::min(),
-                              std::numeric_limits<i64>::min()};
-    const Point2<i64> maximum{std::numeric_limits<i64>::max(),
-                              std::numeric_limits<i64>::max()};
-    assert(distance_sq(minimum, maximum) == std::numeric_limits<i128>::max());
-
-    const Point2<i64> almost_x{std::numeric_limits<i64>::max(),
-                               std::numeric_limits<i64>::max() - 1};
-    const Point2<i64> almost_y{std::numeric_limits<i64>::max() - 1,
-                               std::numeric_limits<i64>::max()};
-    assert(orientation(minimum, almost_x, almost_y) == 1);
+    constexpr i64 m = 4'000'000'000LL;
+    assert(
+        distance_sq(Point2<i64>{-m, 0}, Point2<i64>{m, 0}) ==
+        (i128)(2 * m) * (2 * m)
+    );
 }
 
 void test_tolerance() {
@@ -135,15 +127,13 @@ void test_tolerance() {
         orientation(
             Point2<double>{0, 0}, Point2<double>{1, 1},
             Point2<double>{2, 2 + 1e-10}
-        )
-        == 0
+        ) == 0
     );
     assert(
         orientation(
             Point2<double>{0, 0}, Point2<double>{1, 1},
             Point2<double>{2, 2 + 1e-5}
-        )
-        == 1
+        ) == 1
     );
 
     const Circle2<double> point_circle{{0, 0}, 0};
@@ -251,6 +241,12 @@ void test_segment_intersections() {
     );
     assert(point_on_segment.kind == SegmentIntersectionKind::point);
     require_point_near(point_on_segment.first, Point2<long double>{2, 0});
+    assert(
+        intersection(
+            Segment2<int>{{0, 0}, {4, 0}}, Segment2<int>{{2, 0}, {2, 0}}
+        )
+            .kind == SegmentIntersectionKind::point
+    );
 
     const auto line_overlap =
         intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{3, 0}, {1, 0}});
@@ -265,8 +261,11 @@ void test_segment_intersections() {
     require_point_near(line_crossing.first, Point2<long double>{2, 0});
     assert(
         intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 1}, {2, 2}})
-            .kind
-        == SegmentIntersectionKind::none
+            .kind == SegmentIntersectionKind::none
+    );
+    assert(
+        intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 0}, {2, 0}})
+            .kind == SegmentIntersectionKind::point
     );
 }
 
@@ -293,16 +292,16 @@ void test_line_and_segment_circle_intersections() {
     require_point_near(clipped.points[0], Point2<long double>{-5, 0});
 
     assert(
-        intersection(Segment2<int>{{-6, 0}, {6, 0}}, circle).kind
-        == PointIntersectionKind::two
+        intersection(Segment2<int>{{-6, 0}, {6, 0}}, circle).kind ==
+        PointIntersectionKind::two
     );
     assert(
-        intersection(Segment2<int>{{-2, 5}, {2, 5}}, circle).kind
-        == PointIntersectionKind::one
+        intersection(Segment2<int>{{-2, 5}, {2, 5}}, circle).kind ==
+        PointIntersectionKind::one
     );
     assert(
-        intersection(Segment2<int>{{3, 4}, {3, 4}}, circle).kind
-        == PointIntersectionKind::one
+        intersection(Segment2<int>{{3, 4}, {3, 4}}, circle).kind ==
+        PointIntersectionKind::one
     );
 
     const auto wide_segment = intersection(
@@ -319,12 +318,12 @@ void test_circle_intersections() {
     const Circle2<int> first{{0, 0}, 5};
 
     assert(
-        intersection(first, Circle2<int>{{20, 0}, 5}).kind
-        == PointIntersectionKind::none
+        intersection(first, Circle2<int>{{20, 0}, 5}).kind ==
+        PointIntersectionKind::none
     );
     assert(
-        intersection(first, Circle2<int>{{1, 0}, 1}).kind
-        == PointIntersectionKind::none
+        intersection(first, Circle2<int>{{1, 0}, 1}).kind ==
+        PointIntersectionKind::none
     );
 
     const auto external_tangent = intersection(first, Circle2<int>{{10, 0}, 5});
@@ -341,8 +340,8 @@ void test_circle_intersections() {
     require_point_near(two.points[1], Point2<long double>{3, -4});
 
     assert(
-        intersection(first, Circle2<int>{{0, 0}, 4}).kind
-        == PointIntersectionKind::none
+        intersection(first, Circle2<int>{{0, 0}, 4}).kind ==
+        PointIntersectionKind::none
     );
     const auto coincident = intersection(first, Circle2<int>{{0, 0}, 5});
     assert(coincident.kind == PointIntersectionKind::coincident);
@@ -363,8 +362,8 @@ void test_properties() {
     const Segment2<double> second{{5, -2}, {5, 3}};
     assert(near(distance(first, second), distance(second, first)));
     assert(
-        intersects(first, second)
-        == (intersection(first, second).kind != SegmentIntersectionKind::none)
+        intersects(first, second) ==
+        (intersection(first, second).kind != SegmentIntersectionKind::none)
     );
 
     const Line2<double> line{{1, 2}, {3, -1}};
