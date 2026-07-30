@@ -47,9 +47,9 @@ g++ -I. -std=c++23 -O2 -Wall tests/test_graph.cpp -o /tmp/test_graph
 # Run the compiled test
 /tmp/test_graph
 
-# Build and run the 2D geometry suite
-g++ -I. -std=c++23 -O2 -Wall -Wextra tests/test_geometry.cpp -o /tmp/test_geometry
-/tmp/test_geometry
+# Build and run one part of the split 2D geometry suite
+g++ -I. -std=c++23 -O2 -Wall -Wextra tests/test_circle.cpp -o /tmp/test_circle
+/tmp/test_circle
 
 # Debug with sanitizers
 g++ -I. -std=c++23 -g -Wall -Wno-unused-result \
@@ -66,6 +66,7 @@ clang-format -i cp/graph.hpp
 ## Project Map
 
 - `cp/` — public headers for core algorithms and data structures.
+- `cp/geometry/` — independently includable circle and polygon extensions built on `cp/geometry.hpp`.
 - `cp/utils/` — supporting concepts, compile-time formatting, hashing, and lambda-expression helpers.
 - `tests/` — independent component tests, stress tests, benchmarks, and algorithm programs; `tests/cp` links back to `cp/`.
 - `.vscode/` — per-file compile/debug integration for VS Code.

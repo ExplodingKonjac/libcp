@@ -16,7 +16,7 @@ Active header-library development with a newly completed generic 2D geometry com
 - [x] Supporting compile-time formatting, multi-mod hash values, and placeholder lambda expressions.
 - [x] Standalone component tests and several stress/benchmark programs.
 - [x] Prefix-based header installation script.
-- [x] Generic 2D vectors, lines, segments, circles, predicates, metrics, and allocation-free intersections.
+- [x] Generic 2D vectors, lines, circles, polygons, predicates, metrics, allocation-free intersections, and minimum enclosing circles.
 
 ## In Progress
 
@@ -42,8 +42,11 @@ Active header-library development with a newly completed generic 2D geometry com
 
 ## Recent Work
 
-- Added `cp/geometry.hpp` with widened integral arithmetic, floating tolerance policies, and typed intersection results.
-- Added geometry tests covering compile-time contracts, extreme integer inputs, primitives, distances, and intersections under GCC, Clang, and sanitizers.
+- Split foundational, circle, and polygon geometry into independently includable headers, replacing the former top-level `cp/polygon.hpp`.
+- Removed the dedicated segment type while retaining point-on-segment predicates, and made `sgn`/`cmp` public.
+- Standardized floating geometry on a macro-configurable global absolute epsilon.
+- Added geometry tests covering compile-time contracts, extreme integer inputs, primitives, distances, intersections, convex geometry, and minimum enclosing circles.
+- Fixed `FastOutput` so strings at least as large as its buffer are written safely.
 - Fixed rvalue lifetime behavior in expression templates.
 - Extended `Bitset` equality and three-way comparison to expression operands.
 - Added and refined `Bitset` tests and style.

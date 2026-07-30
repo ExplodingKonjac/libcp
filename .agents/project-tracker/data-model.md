@@ -20,8 +20,9 @@ N/A for persistent data: this header-only algorithm library has no database, sch
 | `PairingHeap` | Linked heap nodes with child/sibling relationships | Allocator-owned nodes and stable point iterators |
 | `Bitset<SIZE>` | Fixed aligned array of machine words | AVX2 operations and expression evaluation |
 | `FPoly<P>` | Coefficient range backed by aligned pooled allocation | Transient formal polynomial state |
-| Geometry primitives | Two coordinates, point/direction or endpoints, and center/radius | Value-semantic, allocation-free 2D objects |
+| Geometry primitives | Two coordinates, point/direction, or center/radius | Value-semantic, allocation-free vectors, lines, and circles |
 | Geometry intersections | Kind enum plus zero, one, or two fixed point payloads | Represents point, overlap, and coincidence outcomes without persistence |
+| `Polygon<T>` | Counterclockwise vertex vector | Process-local polygon value used by hull, Minkowski-sum, and half-plane algorithms |
 
 ## Relationships
 
@@ -32,6 +33,7 @@ N/A for persistent data: this header-only algorithm library has no database, sch
 | `LazySegTree` | lazy tag | 1:0..1 per tree node | Pending actions are composed until pushed |
 | `FPoly` | coefficient | 1:N | A polynomial owns a logical coefficient sequence |
 | `FlatHashMap` | slot/control byte | 1:N | Each capacity position has metadata and optional storage |
+| `Polygon<T>` | vertex | 1:N | A polygon owns its ordered boundary vertices |
 
 ## Schema Migrations
 

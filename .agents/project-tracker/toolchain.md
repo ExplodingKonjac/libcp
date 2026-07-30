@@ -47,7 +47,17 @@ g++ -I. -std=c++23 -O2 -Wall tests/test_bitset.cpp -o /tmp/test_bitset
 /tmp/test_bitset
 ```
 
-The geometry suite is additionally verified with `-Wextra -Werror` under both GCC and Clang, with an ASan/UBSan/LSan build. Its measured header coverage is 91.69% of lines and 83.79% of branches.
+The geometry suite is split across foundational, epsilon-configuration, circle, and polygon executables:
+
+```bash
+for name in geometry geometry_epsilon circle polygon; do
+  g++ -I. -std=c++23 -O2 -Wall -Wextra -Werror \
+    "tests/test_${name}.cpp" -o "/tmp/test_${name}"
+  "/tmp/test_${name}"
+done
+```
+
+The suite should also be checked under both GCC and Clang and with ASan/UBSan/LSan. Coverage tooling and a coverage target are not configured.
 
 Some programs are benchmarks or judge-style programs and may require input or substantial runtime. Treat each test source according to its `main()` behavior rather than assuming a uniform suite.
 

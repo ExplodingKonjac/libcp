@@ -21,7 +21,7 @@ There is no single application `main()` or compiled library entry point. A typic
 
 ### Fast I/O
 
-`FastInput` checks whether stdin is a non-empty regular file. If so, it maps the file for zero-copy traversal; otherwise it uses a 64 KiB stdio buffer. Typed scanning returns `std::optional`, while `FastOutput` buffers writes and uses `to_chars`/formatting helpers.
+`FastInput` checks whether stdin is a non-empty regular file. If so, it maps the file for zero-copy traversal; otherwise it uses a 64 KiB stdio buffer. Typed scanning returns `std::optional`, while `FastOutput` buffers writes and uses `to_chars`/formatting helpers. Strings at least as large as the output buffer are flushed and written directly so they cannot overrun the fixed buffer.
 
 ### Modular Arithmetic and Polynomials
 
@@ -36,7 +36,7 @@ There is no single application `main()` or compiled library entry point. A typic
 
 ### 2D Geometry
 
-`cp/geometry.hpp` provides value-semantic vector, line, segment, and circle templates. Signed integral predicates widen to `i64` or `i128`; determinant calculation uses sign/magnitude products to preserve cancellation, while results beyond `i128` saturate rather than invoking signed-overflow UB. Floating predicates use explicit absolute-plus-relative `GeometryTolerance` values. Intersections return fixed-size typed payloads and allocate no memory.
+`cp/geometry.hpp` provides value-semantic vectors and lines, `cp/geometry/circle.hpp` owns circle operations, and `cp/geometry/polygon.hpp` owns polygon and convex-geometry algorithms. Signed integral predicates widen to `i64` or `i128`; results outside the widened type are unsupported. Floating predicates use the global absolute `geometry_eps`, configured project-wide with `CP_GEOMETRY_EPS`. Intersections return fixed-size typed payloads; `circle_from` constructs a promoted-real circle from three points, and `minimum_enclosing_circle` uses randomized incremental expected-linear construction.
 
 ## Error Handling Strategy
 
@@ -51,7 +51,7 @@ There is no single application `main()` or compiled library entry point. A typic
 | Test level | Location | What it covers |
 |------------|----------|----------------|
 | Unit/component | `tests/test_bitset.cpp`, `test_graph.cpp`, `test_hash_value.cpp`, `test_utils_lambda.cpp`, etc. | Public operations, edge cases, comparisons, and type behavior |
-| Geometry | `tests/test_geometry.cpp` | Compile-time contracts, numeric limits, primitives, metrics, tolerance behavior, and all intersection families |
+| Geometry | `tests/test_geometry.cpp`, `test_geometry_epsilon.cpp`, `test_circle.cpp`, `test_polygon.cpp` | Compile-time contracts, numeric limits, global tolerance behavior, primitives, intersections, minimum enclosing circles, and convex geometry |
 | Stress/reference | `tests/test_hash_map.cpp`, `test_pairing_heap.cpp`, segment-tree tests | Randomized operations and comparison with simpler/reference containers |
 | Algorithm/integration | `tests/test_dft_new.cpp`, `test_radix2.cpp`, `test_radix4.cpp`, `test_luogu.cpp` | Polynomial/NTT paths and contest-style integration |
 | I/O/benchmark | `tests/test_fastio.cpp`, `test_io.cpp` | Throughput and accelerated input/output modes |
@@ -63,4 +63,4 @@ There is no single application `main()` or compiled library entry point. A typic
 - The polynomial aligned pool reduces repeated allocation but makes capacity/lifetime behavior important.
 - Hash-map performance depends on control-byte invariants, load-factor growth, and allocator correctness.
 - Sanitizers are valuable for ownership bugs but change timing and should not be used for benchmark conclusions.
-- Full-range `i64` geometry may exceed `i128`; wide results saturate at the representable boundary and README documents the resulting loss of exactness.
+- Full-range `i64` geometry may exceed `i128`; results outside the widened intermediate type are unsupported rather than silently saturated.

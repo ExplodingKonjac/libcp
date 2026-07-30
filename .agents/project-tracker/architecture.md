@@ -45,7 +45,9 @@ The project is a collection of independently includable headers. There is no run
 | `cp/segtree.hpp` | Iterative semigroup segment tree | `SegTree` |
 | `cp/lazy_segtree.hpp` | Range-action segment tree | `LazySegTree` |
 | `cp/graph.hpp` | Weighted/unweighted directed adjacency lists | `Graph<E>`, `Graph<void>` |
-| `cp/geometry.hpp` | Generic 2D vectors, primitives, predicates, metrics, and intersections | `Vec2<T>`, `Line2<T>`, `Segment2<T>`, `Circle2<T>` |
+| `cp/geometry.hpp` | Generic 2D vectors, lines, predicates, metrics, and line intersections | `Vec2<T>`, `Point2<T>`, `Line2<T>`, `geometry_eps` |
+| `cp/geometry/circle.hpp` | Circle construction, predicates, distances, intersections, and minimum enclosing circles | `Circle2<T>`, `circle_from`, `minimum_enclosing_circle` |
+| `cp/geometry/polygon.hpp` | Polygon representation and convex-geometry algorithms | `Polygon<T>`, `convex_hull`, `minkowski_sum`, `half_plane_intersection` |
 | `cp/hash_map.hpp` | SIMD-probed open-addressing map | `FlatHashMap` |
 | `cp/pairing_heap.hpp` | Meldable heap with point handles | `PairingHeap` |
 | `cp/bitset.hpp` | Fixed-size SIMD bitset and fused expressions | `Bitset<SIZE>`, expression concepts/operators |
@@ -58,7 +60,7 @@ The project is a collection of independently includable headers. There is no run
 3. Runtime input may flow through `qin`, into an in-memory algorithm/data structure, then through `qout`.
 4. Polynomial operations allocate/reuse aligned coefficient buffers, transform them with NTT butterflies, apply Montgomery pointwise arithmetic, and transform back.
 5. Data structures keep all state in the consumer process; nothing is persisted or sent over a network.
-6. Geometry consumers perform exact widened integral predicates or tolerance-aware floating calculations and receive allocation-free intersection result objects.
+6. Geometry consumers perform exact widened integral predicates or floating calculations using the macro-configurable global absolute epsilon and receive allocation-free intersection result objects.
 
 ## Design Patterns
 

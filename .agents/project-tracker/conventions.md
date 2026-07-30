@@ -39,7 +39,7 @@ sources:
 - Keep the library header-only: definitions exposed by headers must be templates, class members, `constexpr`, or safely `inline` where the ODR requires it.
 - Put public APIs in `namespace cp`; hide helpers in `cp::detail` or `cp::details` unless they are intentionally exported.
 - Preserve compile-time constraints and explicit precondition checks around modulus sizes, expression sizes, and callable policies.
-- Geometry predicates must widen before subtraction/multiplication, keep floating tolerances dimensionally consistent, and avoid signed-overflow UB.
+- Geometry predicates must widen before subtraction/multiplication, use the shared absolute `geometry_eps` for floating comparisons, and avoid signed-overflow UB.
 - Avoid unnecessary allocations and abstraction overhead in hot paths; performance is a primary design goal.
 - Keep component headers independently includable and include their direct dependencies.
 - **Forbidden**: silently adding third-party dependencies, platform assumptions beyond those documented, or a linked runtime requirement without an explicit architecture decision.
@@ -50,6 +50,7 @@ sources:
 | What | Where | Notes |
 |------|-------|-------|
 | Public source | `cp/*.hpp` | Major reusable modules |
+| Geometry extensions | `cp/geometry/*.hpp` | Circle and polygon modules built on the foundational geometry header |
 | Supporting source | `cp/utils/*.hpp` | Cross-module concepts and expression/format helpers |
 | Tests and benchmarks | `tests/*.cpp` | One standalone executable per scenario/component |
 | Tool configuration | Repository root and `.vscode/` | clangd, clang-format, compile/debug tasks |
@@ -58,7 +59,7 @@ sources:
 ## Import / Module Conventions
 
 - Prefer quoted includes for project headers and angle brackets for standard/system headers.
-- Within `cp/`, sibling headers often use relative includes such as `"def.hpp"`; utility headers used from the repository root may use `"cp/def.hpp"`.
+- Within `cp/`, sibling headers often use relative includes such as `"def.hpp"`; nested geometry headers include their foundation as `"../geometry.hpp"`, while utility headers used from the repository root may use `"cp/def.hpp"`.
 - Public visibility is explicit through namespace placement; there are no C++20 module units or umbrella header.
 - Avoid circular header dependencies. Keep the observed dependency direction from base aliases/concepts toward higher-level structures.
 

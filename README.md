@@ -30,7 +30,8 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/geometry.hpp`](cp/geometry.hpp) | 二维向量与基础计算几何 |
-| [`cp/polygon.hpp`](cp/polygon.hpp) | 多边形与凸几何算法 |
+| [`cp/geometry/circle.hpp`](cp/geometry/circle.hpp) | 圆、圆交点与最小覆盖圆 |
+| [`cp/geometry/polygon.hpp`](cp/geometry/polygon.hpp) | 多边形与凸几何算法 |
 | [`cp/hash_map.hpp`](cp/hash_map.hpp) | 高性能扁平哈希表 |
 | [`cp/pairing_heap.hpp`](cp/pairing_heap.hpp) | 配对堆 |
 | [`cp/bitset.hpp`](cp/bitset.hpp) | 高性能位集（AVX2 优化 bitset） |
@@ -166,9 +167,9 @@ for (auto [to, weight] : gw.out(u)) { ... }
 
 ### `cp/geometry.hpp` — 二维计算几何
 
-提供泛型二维向量/点 `Vec2<T>`（`Point2<T>` 为同类型别名），以及直线
-`Line2<T>`、圆 `Circle2<T>`。支持向量运算、方向判断、投影/反射、距离、包含关系
-和直线/圆之间的交点计算。多边形与凸几何算法位于 `cp/polygon.hpp`。
+提供泛型二维向量/点 `Vec2<T>`（`Point2<T>` 为同类型别名）与直线 `Line2<T>`。
+支持向量运算、方向判断、投影/反射、距离和直线交点计算。圆与多边形算法分别位于
+`cp/geometry/circle.hpp` 和 `cp/geometry/polygon.hpp`。
 
 ```cpp
 #include "cp/geometry.hpp"
@@ -179,11 +180,6 @@ auto projected = cp::project(p, line);         // Point2<long double>{2, 0}
 bool between = cp::on_segment(a, b, {2, 0});   // true
 int sign = cp::sgn(-3.0);                      // -1
 int order = cp::cmp(1.0, 1.0 + 5e-10);        // 0
-
-cp::Circle2<double> circle{{0, 0}, 5};
-auto hits = cp::intersection(
-    cp::Line2<double>{{0, 0}, {1, 0}}, circle
-);  // (-5, 0), (5, 0)
 ```
 
 数值规则：
@@ -191,23 +187,59 @@ auto hits = cp::intersection(
 - 坐标类型必须是有符号整数或浮点数；混合坐标类型需显式 `cast<U>()`。
 - `i8`/`i16` 中间结果提升到 `i64`，`i32`/`i64` 提升到 `i128`；整数交点坐标和距离提升到 `long double`。
 - 整数运算会提升到 `geometry_wide_t<T>`；若数学结果超出该类型的表示范围，则行为不受支持。
-- 浮点几何判断使用可显式传入的 `GeometryTolerance<T>`，默认同时使用绝对与相对容差（`float` 为 `1e-5`、`double` 为 `1e-9`、`long double` 为 `1e-12`）。
+- 所有浮点几何判断统一使用绝对容差 `cp::geometry_eps`，默认值为 `1e-9L`。
 - `Line2<T>::through(a, b)` 要求整数端点差可由 `T` 表示；调试构建会检查此前置条件。直接使用点和方向构造可避免该转换。
-- 零半径圆有效；零方向直线和负半径圆无效。对无效元素调用几何算法属于前置条件错误。
+- 零方向直线无效。对无效元素调用几何算法属于前置条件错误。
 
-交点结果使用无动态分配的定长结构，并通过 `LineIntersectionKind`、
-`PointIntersectionKind` 区分无交点、单点、双交点或重合。
+可在包含任何几何头文件前通过宏修改整个程序的容差；所有翻译单元必须使用相同配置：
+
+```cpp
+#define CP_GEOMETRY_EPS 1e-7L
+#include "cp/geometry.hpp"
+```
+
+直线交点结果使用无动态分配的 `LineIntersection2`，并通过
+`LineIntersectionKind` 区分无交点、单点或重合。
 
 ---
 
-### `cp/polygon.hpp` — 多边形与凸几何
+### `cp/geometry/circle.hpp` — 圆与最小覆盖圆
+
+提供圆 `Circle2<T>`、点与圆的包含关系、点到圆/圆盘的距离、直线与圆及两个圆的交点，
+三点构造圆 `circle_from()`，以及期望线性时间的随机增量最小覆盖圆算法。空点集没有
+最小覆盖圆，返回 `std::nullopt`；整数坐标的构造结果使用 `long double`。
+
+```cpp
+#include "cp/geometry/circle.hpp"
+
+cp::Circle2<double> circle{{0, 0}, 5};
+auto hits = cp::intersection(
+    cp::Line2<double>{{0, 0}, {1, 0}}, circle
+);  // (-5, 0), (5, 0)
+
+auto circumcircle = cp::circle_from(
+    cp::Point2<int>{0, 0}, cp::Point2<int>{4, 0}, cp::Point2<int>{0, 3}
+);  // Circle2<long double>{{2, 1.5}, 2.5}
+
+auto cover = cp::minimum_enclosing_circle(
+    std::vector<cp::Point2<int>>{{0, 0}, {4, 0}, {0, 3}}
+);  // optional<Circle2<long double>>
+```
+
+三点不共线时，`circle_from()` 返回外接圆；三点共线时，返回由最远点对作为直径的圆。
+零半径圆有效，负半径圆无效。圆交点通过 `PointIntersectionKind` 区分无交点、单点、
+双交点或重合。
+
+---
+
+### `cp/geometry/polygon.hpp` — 多边形与凸几何
 
 提供逆时针存储的 `Polygon<T>`、面积、凸性和点与多边形的位置关系，以及上下凸壳、
 完整凸包、凸多边形 Minkowski 和与半平面交。点的位置由
 `PointPolygonRelation::{outside,boundary,inside}` 区分。
 
 ```cpp
-#include "cp/polygon.hpp"
+#include "cp/geometry/polygon.hpp"
 
 cp::Polygon<int> polygon{
     std::vector<cp::Point2<int>>{{0, 0}, {4, 0}, {4, 3}, {0, 3}}
@@ -323,7 +355,9 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
 | `tests/test_fenwick.cpp` | 树状数组正确性 |
 | `tests/test_graph.cpp` | 图容器正确性 |
-| `tests/test_geometry.cpp` | 二维向量、基础元素、距离与交点正确性 |
+| `tests/test_geometry.cpp` | 二维向量、直线、距离与直线交点正确性 |
+| `tests/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
+| `tests/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
 | `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "cp/polygon.hpp"
+#include "cp/geometry/polygon.hpp"
 
 using namespace cp;
 
@@ -110,10 +110,7 @@ void test_point_relation() {
 
     const Polygon<double> floating{
         std::vector<Point2<double>>{{0, 0}, {2, 0}, {2, 2}, {0, 2}}};
-    assert(
-        floating.relation({-5e-10, 1}, GeometryTolerance<double>{1e-9, 1e-9}) ==
-        PointPolygonRelation::boundary
-    );
+    assert(floating.relation({-4e-10, 1}) == PointPolygonRelation::boundary);
 }
 
 void test_convex_hull() {

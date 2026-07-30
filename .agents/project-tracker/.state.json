@@ -1,11 +1,16 @@
 {
   "files": {
     "INDEX.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         ".clang-format",
@@ -17,6 +22,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -29,10 +36,12 @@
         "cp/utils/lambda.hpp",
         "install.sh",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -40,18 +49,21 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "api.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878"
       },
       "matched_paths": [
         "README.md",
@@ -61,6 +73,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -72,14 +86,19 @@
         "cp/utils/hash_value.hpp",
         "cp/utils/lambda.hpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "architecture.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         "README.md",
@@ -89,6 +108,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -100,10 +121,12 @@
         "cp/utils/hash_value.hpp",
         "cp/utils/lambda.hpp",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -111,19 +134,25 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:16:23Z"
     },
     "conventions.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         ".clang-format",
@@ -135,6 +164,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -146,10 +177,12 @@
         "cp/utils/hash_value.hpp",
         "cp/utils/lambda.hpp",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -157,18 +190,24 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:16:23Z"
     },
     "data-model.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         "cp/bitset.hpp",
@@ -177,6 +216,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -188,10 +229,12 @@
         "cp/utils/hash_value.hpp",
         "cp/utils/lambda.hpp",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -199,18 +242,21 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "deployment.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878"
       },
       "matched_paths": [
         ".gitignore",
@@ -221,6 +267,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -233,14 +281,19 @@
         "cp/utils/lambda.hpp",
         "install.sh"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "implementation.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         "README.md",
@@ -250,6 +303,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -261,10 +316,12 @@
         "cp/utils/hash_value.hpp",
         "cp/utils/lambda.hpp",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -272,29 +329,37 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "progress.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        ".claude/CLAUDE.md": "missing",
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878",
+        "cp/polygon.hpp": "missing",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "stack.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "cp/geometry.hpp": "a40aba467c489861a171fa2ef5f1e8e596492c5fb614db7db2225b0f4fa2bc01"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "cp/geometry.hpp": "8cae956910f157df64abb4050d239248cd8e61b30ed0eedc4a2d81139b64acaf",
+        "cp/geometry/circle.hpp": "7dd6b4fb96da8ea99fbec91061b1a2e3db08984adba1f4fa447937eeb62a1db7",
+        "cp/geometry/polygon.hpp": "458f4294d77d2a37dda3cde87890712c645200ecaaf2947a027145e95e584878"
       },
       "matched_paths": [
         "README.md",
@@ -304,6 +369,8 @@
         "cp/fenwick_tree.hpp",
         "cp/fpoly.hpp",
         "cp/geometry.hpp",
+        "cp/geometry/circle.hpp",
+        "cp/geometry/polygon.hpp",
         "cp/graph.hpp",
         "cp/hash_map.hpp",
         "cp/lazy_segtree.hpp",
@@ -316,13 +383,16 @@
         "cp/utils/lambda.hpp",
         "install.sh"
       ],
-      "updated": "2026-07-18T05:33:20Z"
+      "updated": "2026-07-30T12:15:20Z"
     },
     "toolchain.md": {
-      "baseline": "8ef4e86bb80c6ac6472bc704f93d6ff35c58fc70",
+      "baseline": "3ed5ad172c326dcc5313c1c76118d09ede7400bb",
       "changed_fingerprints": {
-        "README.md": "7d957c07730418b7bf0baa0c507d9d793629067e694002d4b322d46b47b11f11",
-        "tests/test_geometry.cpp": "9a78bff1ad841700930d7130e222ffb04e094bf0328a644922fcb006e086d7cc"
+        "README.md": "01cb6ab97636960518f624c1e4a10a7c11b19a93b8ff76b21058122cefae3c19",
+        "tests/test_circle.cpp": "34bc9c3956712387063cdec11762e12ad34bf8b8b4231f6968170f42b0a9df5d",
+        "tests/test_geometry.cpp": "fea123384bea81ad2292509d6b5a2b59ca3f3cbe892fd4c2e8712115e0dc16f6",
+        "tests/test_geometry_epsilon.cpp": "52e749c926cb163cca3aee41653bb68f49f7e71e407228c0e5ad10ba71ece898",
+        "tests/test_polygon.cpp": "e8d40ef614decb16e3e06e36397374f49a168c3d51e96034c5ebac3741e651a3"
       },
       "matched_paths": [
         ".clang-format",
@@ -334,10 +404,12 @@
         "README.md",
         "install.sh",
         "tests/test_bitset.cpp",
+        "tests/test_circle.cpp",
         "tests/test_dft_new.cpp",
         "tests/test_fastio.cpp",
         "tests/test_fenwick.cpp",
         "tests/test_geometry.cpp",
+        "tests/test_geometry_epsilon.cpp",
         "tests/test_graph.cpp",
         "tests/test_hash_map.cpp",
         "tests/test_hash_value.cpp",
@@ -345,12 +417,13 @@
         "tests/test_lazy_segtree.cpp",
         "tests/test_luogu.cpp",
         "tests/test_pairing_heap.cpp",
+        "tests/test_polygon.cpp",
         "tests/test_radix2.cpp",
         "tests/test_radix4.cpp",
         "tests/test_segtree.cpp",
         "tests/test_utils_lambda.cpp"
       ],
-      "updated": "2026-07-18T05:39:16Z"
+      "updated": "2026-07-30T12:15:20Z"
     }
   },
   "version": 1

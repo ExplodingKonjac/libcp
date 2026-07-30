@@ -16,7 +16,7 @@ Consumers include individual files under `cp/` and use symbols in the `cp` names
 |-------------|---------------------------|
 | I/O | `FastInput`, `FastOutput`, `qin`, `qout` |
 | Math | `SModint`, `DModint`, `FPoly` |
-| Geometry | `Vec2`, `Point2`, `Line2`, `Segment2`, `Circle2`, predicate/metric/intersection overloads |
+| Geometry | `Vec2`, `Point2`, `Line2`, `Circle2`, `Polygon`, `geometry_eps`, predicate/metric/intersection overloads, `circle_from`, `minimum_enclosing_circle` |
 | Data structures | `FenwickTree`, `SegTree`, `LazySegTree`, `Graph`, `FlatHashMap`, `PairingHeap`, `Bitset` |
 | Utilities | fixed-width aliases, concepts, `HashValue`, placeholder expressions, compile-time formatting |
 

@@ -27,7 +27,7 @@ The library uses C++23 for concepts, ranges, formatting, and template-heavy comp
 | Linux/POSIX APIs | Host-provided | `mmap`, `fstat`, and file descriptors for the fast-input regular-file path |
 | x86 intrinsics | Compiler-provided | SSE2 control-byte probing and AVX2 bitset/NTT acceleration |
 
-The geometry component uses only portable C++23 standard-library facilities and the project-defined fixed-width aliases; it does not add a platform or third-party dependency.
+The foundational, circle, and polygon geometry headers use only portable C++23 standard-library facilities and the project-defined fixed-width aliases; they do not add a platform or third-party dependency.
 
 There are no third-party library dependencies. This choice makes individual headers easy to copy into contest solutions, at the cost of platform-specific optimized modules and no centralized dependency/version manifest.
 

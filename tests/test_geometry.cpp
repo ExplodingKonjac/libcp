@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cmath>
 #include <concepts>
@@ -80,8 +79,6 @@ void test_vector_arithmetic() {
     assert(distance_sq(a, b) == 26);
     assert(near(norm(a), 5.0L));
     assert(near(distance(a, b), std::sqrt(26.0L)));
-    assert(perp_ccw(a) == Vec2<i32>(-4, 3));
-    assert(perp_cw(a) == Vec2<i32>(4, -3));
     assert(near(angle(Vec2<double>{0, 1}), std::acos(-1.0) / 2));
 
     const auto rotated = rotate(Vec2<i32>{1, 0}, std::acos(-1.0L) / 2);
@@ -115,23 +112,16 @@ void test_widened_integral_arithmetic() {
 }
 
 void test_tolerance() {
-    const GeometryTolerance<double> defaults{};
-    assert(near(defaults.absolute, 1e-9));
-    assert(near(defaults.relative, 1e-9));
+    static_assert(geometry_eps == 1e-9L);
 
     assert(almost_equal(1.0, 1.0 + 5e-10));
     assert(!almost_equal(1.0, 1.0 + 5e-7));
-    assert(almost_equal(
-        1'000'000'000.0, 1'000'000'000.5, GeometryTolerance<double>{1e-12, 1e-9}
-    ));
+    assert(!almost_equal(1'000'000'000.0, 1'000'000'000.5));
     assert(sgn(5e-10) == 0);
     assert(sgn(1e-5) == 1);
     assert(cmp(1.0, 1.0 + 5e-10) == 0);
     assert(cmp(1.0, 1.0 + 1e-5) == -1);
-    assert(
-        cmp(1'000'000'000.0, 1'000'000'000.5,
-            GeometryTolerance<double>{1e-12, 1e-9}) == 0
-    );
+    assert(cmp(1'000'000'000.0, 1'000'000'000.5) == -1);
     assert(
         almost_equal(Vec2<double>{1, 2}, Vec2<double>{1 + 5e-10, 2 - 5e-10})
     );
@@ -148,19 +138,12 @@ void test_tolerance() {
             Point2<double>{2, 2 + 1e-5}
         ) == 1
     );
-
-    const Circle2<double> point_circle{{0, 0}, 0};
-    assert(!on_circle(point_circle, Point2<double>{1e-5, 0}));
-    assert(!contains(point_circle, Point2<double>{1e-5, 0}));
 }
 
 void test_primitives_and_predicates() {
     const auto line = Line2<int>::through({0, 0}, {4, 0});
     assert(line.is_valid());
     assert((!Line2<int>{{0, 0}, {0, 0}}.is_valid()));
-
-    assert((Circle2<double>{{0, 0}, 2}.is_valid()));
-    assert((!Circle2<double>{{0, 0}, -1}.is_valid()));
 
     assert(on_line(line, Point2<int>{2, 0}));
     assert(!on_line(line, Point2<int>{2, 1}));
@@ -175,12 +158,6 @@ void test_primitives_and_predicates() {
         Point2<double>{0, 0}, Point2<double>{2, 0}, Point2<double>{2 + 1e-5, 0}
     ));
 
-    const Circle2<int> circle{{0, 0}, 5};
-    assert(on_circle(circle, Point2<int>{3, 4}));
-    assert(contains(circle, Point2<int>{0, 0}));
-    assert(contains(circle, Point2<int>{3, 4}));
-    assert(!contains(circle, Point2<int>{6, 0}));
-
     assert(parallel(Line2<int>{{0, 0}, {1, 2}}, Line2<int>{{3, 4}, {-2, -4}}));
     assert(
         perpendicular(Line2<int>{{0, 0}, {1, 2}}, Line2<int>{{3, 4}, {-2, 1}})
@@ -192,12 +169,6 @@ void test_projection_and_distances() {
     require_point_near(project(Point2<int>{3, 4}, line), {3, 0});
     require_point_near(reflect(Point2<int>{3, 4}, line), {3, -4});
     assert(near(distance(Point2<int>{3, 4}, line), 4.0L));
-
-    const Circle2<int> circle{{0, 0}, 5};
-    assert(near(distance_to_circle(Point2<int>{0, 0}, circle), 5.0L));
-    assert(near(distance_to_circle(Point2<int>{3, 4}, circle), 0.0L));
-    assert(near(distance_to_disk(Point2<int>{0, 0}, circle), 0.0L));
-    assert(near(distance_to_disk(Point2<int>{8, 0}, circle), 3.0L));
 }
 
 void test_line_intersections() {
@@ -214,68 +185,6 @@ void test_line_intersections() {
         intersection(Line2<int>{{0, 0}, {1, 0}}, Line2<int>{{2, 0}, {-3, 0}});
     assert(coincident.kind == LineIntersectionKind::coincident);
     assert(intersects(Line2<int>{{0, 0}, {1, 0}}, Line2<int>{{2, 0}, {-3, 0}}));
-}
-
-void test_line_circle_intersections() {
-    const Circle2<int> circle{{0, 0}, 5};
-
-    const auto none = intersection(Line2<int>{{0, 6}, {1, 0}}, circle);
-    assert(none.kind == PointIntersectionKind::none);
-    assert(none.count() == 0);
-
-    const auto tangent = intersection(Line2<int>{{0, 5}, {1, 0}}, circle);
-    assert(tangent.kind == PointIntersectionKind::one);
-    assert(tangent.count() == 1);
-    require_point_near(tangent.points[0], Point2<long double>{0, 5});
-
-    const auto two = intersection(Line2<int>{{0, 0}, {1, 0}}, circle);
-    assert(two.kind == PointIntersectionKind::two);
-    assert(two.count() == 2);
-    require_point_near(two.points[0], Point2<long double>{-5, 0});
-    require_point_near(two.points[1], Point2<long double>{5, 0});
-}
-
-void test_circle_intersections() {
-    const Circle2<int> first{{0, 0}, 5};
-
-    assert(
-        intersection(first, Circle2<int>{{20, 0}, 5}).kind ==
-        PointIntersectionKind::none
-    );
-    assert(
-        intersection(first, Circle2<int>{{1, 0}, 1}).kind ==
-        PointIntersectionKind::none
-    );
-
-    const auto external_tangent = intersection(first, Circle2<int>{{10, 0}, 5});
-    assert(external_tangent.kind == PointIntersectionKind::one);
-    require_point_near(external_tangent.points[0], Point2<long double>{5, 0});
-
-    const auto internal_tangent = intersection(first, Circle2<int>{{3, 0}, 2});
-    assert(internal_tangent.kind == PointIntersectionKind::one);
-    require_point_near(internal_tangent.points[0], Point2<long double>{5, 0});
-
-    const auto two = intersection(first, Circle2<int>{{6, 0}, 5});
-    assert(two.kind == PointIntersectionKind::two);
-    require_point_near(two.points[0], Point2<long double>{3, 4});
-    require_point_near(two.points[1], Point2<long double>{3, -4});
-
-    assert(
-        intersection(first, Circle2<int>{{0, 0}, 4}).kind ==
-        PointIntersectionKind::none
-    );
-    const auto coincident = intersection(first, Circle2<int>{{0, 0}, 5});
-    assert(coincident.kind == PointIntersectionKind::coincident);
-    assert(coincident.count() == 0);
-
-    const auto same_point =
-        intersection(Circle2<int>{{2, 3}, 0}, Circle2<int>{{2, 3}, 0});
-    assert(same_point.kind == PointIntersectionKind::one);
-    require_point_near(same_point.points[0], Point2<long double>{2, 3});
-
-    const auto nearby =
-        intersection(Circle2<double>{{0, 0}, 1}, Circle2<double>{{1e-5, 0}, 1});
-    assert(nearby.kind == PointIntersectionKind::two);
 }
 
 void test_properties() {
@@ -301,8 +210,6 @@ int main() {
     test_primitives_and_predicates();
     test_projection_and_distances();
     test_line_intersections();
-    test_line_circle_intersections();
-    test_circle_intersections();
     test_properties();
     std::cout << "All geometry tests passed!\n";
 }
