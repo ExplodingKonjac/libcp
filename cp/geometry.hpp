@@ -70,23 +70,13 @@ struct Vec2 {
     }
     constexpr Vec2 operator+() const { return *this; }
     constexpr Vec2 operator-() const { return {-x, -y}; }
-    constexpr Vec2& operator+=(Vec2 a) {
-        x += a.x, y += a.y;
-        return *this;
-    }
-    constexpr Vec2& operator-=(Vec2 a) {
-        x -= a.x, y -= a.y;
-        return *this;
-    }
-    constexpr Vec2& operator*=(T k) {
-        x *= k, y *= k;
-        return *this;
-    }
+    constexpr Vec2& operator+=(Vec2 a) { return x += a.x, y += a.y, *this; }
+    constexpr Vec2& operator-=(Vec2 a) { return x -= a.x, y -= a.y, *this; }
+    constexpr Vec2& operator*=(T k) { return x *= k, y *= k, *this; }
     constexpr Vec2& operator/=(T k)
         requires std::floating_point<T>
     {
-        x /= k, y /= k;
-        return *this;
+        return x /= k, y /= k, *this;
     }
     friend constexpr Vec2 operator+(Vec2 a, Vec2 b) { return a += b; }
     friend constexpr Vec2 operator-(Vec2 a, Vec2 b) { return a -= b; }
@@ -205,13 +195,6 @@ struct Line2 {
 };
 
 template <GeometryScalar T>
-struct Segment2 {
-    Point2<T> first{};
-    Point2<T> second{};
-    constexpr bool is_degenerate() const { return first == second; }
-};
-
-template <GeometryScalar T>
 struct Circle2 {
     Point2<T> center{};
     T radius{};
@@ -319,11 +302,14 @@ constexpr bool on_line(
 
 template <GeometryScalar T>
 constexpr bool on_segment(
-    Segment2<T> s, Point2<T> p, GeometryTolerance<geometry_real_t<T>> eps = {}
+    Point2<T> a,
+    Point2<T> b,
+    Point2<T> p,
+    GeometryTolerance<geometry_real_t<T>> eps = {}
 ) {
-    return orientation(s.first, s.second, p, eps) == 0 &&
-        detail::between(p.x, s.first.x, s.second.x, eps) &&
-        detail::between(p.y, s.first.y, s.second.y, eps);
+    return orientation(a, b, p, eps) == 0 &&
+        detail::between(p.x, a.x, b.x, eps) &&
+        detail::between(p.y, a.y, b.y, eps);
 }
 
 template <GeometryScalar T>
@@ -365,26 +351,9 @@ Point2<geometry_real_t<T>> reflect(Point2<T> p, Line2<T> l) {
 }
 
 template <GeometryScalar T>
-Point2<geometry_real_t<T>> closest_point(Point2<T> p, Segment2<T> s) {
-    using R = geometry_real_t<T>;
-    auto a = s.first.template cast<R>(), b = s.second.template cast<R>();
-    auto d = b - a;
-    R z = dot(d, d);
-    if (z == R{}) return a;
-    R t = std::clamp(dot(p.template cast<R>() - a, d) / z, R{}, R{1});
-    return a + d * t;
-}
-
-template <GeometryScalar T>
 geometry_real_t<T> distance(Point2<T> p, Line2<T> l) {
     using R = geometry_real_t<T>;
     return distance(p.template cast<R>(), project(p, l));
-}
-
-template <GeometryScalar T>
-geometry_real_t<T> distance(Point2<T> p, Segment2<T> s) {
-    using R = geometry_real_t<T>;
-    return distance(p.template cast<R>(), closest_point(p, s));
 }
 
 template <GeometryScalar T>
@@ -402,21 +371,15 @@ geometry_real_t<T> distance_to_disk(Point2<T> p, Circle2<T> c) {
 }
 
 enum class LineIntersectionKind { none, point, coincident };
+
 template <std::floating_point T>
 struct LineIntersection2 {
     LineIntersectionKind kind{LineIntersectionKind::none};
     Point2<T> point{};
 };
 
-enum class SegmentIntersectionKind { none, point, overlap };
-template <std::floating_point T>
-struct SegmentIntersection2 {
-    SegmentIntersectionKind kind{SegmentIntersectionKind::none};
-    Point2<T> first{};
-    Point2<T> second{};
-};
-
 enum class PointIntersectionKind { none, one, two, coincident };
+
 template <std::floating_point T>
 struct PointIntersection2 {
     PointIntersectionKind kind{PointIntersectionKind::none};
@@ -445,57 +408,6 @@ LineIntersection2<geometry_real_t<T>> intersection(
 }
 
 template <GeometryScalar T>
-SegmentIntersection2<geometry_real_t<T>> intersection(
-    Line2<T> l, Segment2<T> s, GeometryTolerance<geometry_real_t<T>> eps = {}
-) {
-    using R = geometry_real_t<T>;
-    assert(l.is_valid());
-    auto p = s.first.template cast<R>(), q = s.second.template cast<R>();
-    if (p == q) {
-        if (!on_line(l, s.first, eps)) return {};
-        return {SegmentIntersectionKind::point, p, p};
-    }
-    auto r = intersection(
-        Line2<R>{l.point.template cast<R>(), l.direction.template cast<R>()},
-        Line2<R>{p, q - p}, eps
-    );
-    if (r.kind == LineIntersectionKind::none) return {};
-    if (r.kind == LineIntersectionKind::point) {
-        if (!on_segment(Segment2<R>{p, q}, r.point, eps)) return {};
-        return {SegmentIntersectionKind::point, r.point, r.point};
-    }
-    if (q < p) std::swap(p, q);
-    return {SegmentIntersectionKind::overlap, p, q};
-}
-
-template <GeometryScalar T>
-SegmentIntersection2<geometry_real_t<T>> intersection(
-    Segment2<T> a, Segment2<T> b, GeometryTolerance<geometry_real_t<T>> eps = {}
-) {
-    using R = geometry_real_t<T>;
-    Segment2<R> p{a.first.template cast<R>(), a.second.template cast<R>()};
-    Segment2<R> q{b.first.template cast<R>(), b.second.template cast<R>()};
-    if (p.is_degenerate()) {
-        if (!on_segment(q, p.first, eps)) return {};
-        return {SegmentIntersectionKind::point, p.first, p.first};
-    }
-    auto r = intersection(Line2<R>{p.first, p.second - p.first}, q, eps);
-    if (r.kind == SegmentIntersectionKind::none) return {};
-    if (r.kind == SegmentIntersectionKind::point) {
-        if (!on_segment(p, r.first, eps)) return {};
-        return r;
-    }
-    auto lo =
-        std::max(std::min(p.first, p.second), std::min(q.first, q.second));
-    auto hi =
-        std::min(std::max(p.first, p.second), std::max(q.first, q.second));
-    if (hi < lo && !almost_equal(lo, hi, eps)) return {};
-    return {almost_equal(lo, hi, eps) ? SegmentIntersectionKind::point
-                                      : SegmentIntersectionKind::overlap,
-            lo, hi};
-}
-
-template <GeometryScalar T>
 PointIntersection2<geometry_real_t<T>> intersection(
     Line2<T> l, Circle2<T> c, GeometryTolerance<geometry_real_t<T>> eps = {}
 ) {
@@ -510,32 +422,6 @@ PointIntersection2<geometry_real_t<T>> intersection(
     R h = std::sqrt(std::max<R>(R{}, r * r - x * x));
     d /= std::sqrt(dot(d, d));
     return {PointIntersectionKind::two, {p - d * h, p + d * h}};
-}
-
-template <GeometryScalar T>
-PointIntersection2<geometry_real_t<T>> intersection(
-    Segment2<T> s, Circle2<T> c, GeometryTolerance<geometry_real_t<T>> eps = {}
-) {
-    using R = geometry_real_t<T>;
-    assert(c.is_valid());
-    if (s.is_degenerate()) {
-        if (!on_circle(c, s.first, eps)) return {};
-        return {PointIntersectionKind::one, {s.first.template cast<R>(), {}}};
-    }
-    auto a = s.first.template cast<R>(), b = s.second.template cast<R>();
-    auto q = intersection(
-        Line2<R>{a, b - a},
-        Circle2<R>{c.center.template cast<R>(), (R)c.radius}, eps
-    );
-    PointIntersection2<R> res{};
-    Segment2<R> rs{a, b};
-    usize n = 0;
-    for (usize i = 0; i < q.count(); ++i)
-        if (on_segment(rs, q.points[i], eps)) res.points[n++] = q.points[i];
-    res.kind = n == 0 ? PointIntersectionKind::none
-        : n == 1      ? PointIntersectionKind::one
-                      : PointIntersectionKind::two;
-    return res;
 }
 
 template <GeometryScalar T>
@@ -569,16 +455,6 @@ template <typename Lhs, typename Rhs, typename... Args>
 bool intersects(Lhs a, Rhs b, Args... args) {
     return intersection(a, b, args...).kind !=
         decltype(intersection(a, b, args...)){}.kind;
-}
-
-template <GeometryScalar T>
-geometry_real_t<T> distance(
-    Segment2<T> a, Segment2<T> b, GeometryTolerance<geometry_real_t<T>> eps = {}
-) {
-    using R = geometry_real_t<T>;
-    if (intersects(a, b, eps)) return R{};
-    return std::min<R>({distance(a.first, b), distance(a.second, b),
-                        distance(b.first, a), distance(b.second, a)});
 }
 
 }  // namespace cp

@@ -4,7 +4,6 @@
 #include <cmath>
 #include <concepts>
 #include <iostream>
-#include <limits>
 #include <type_traits>
 
 #include "cp/geometry.hpp"
@@ -146,18 +145,21 @@ void test_primitives_and_predicates() {
     assert(line.is_valid());
     assert((!Line2<int>{{0, 0}, {0, 0}}.is_valid()));
 
-    const Segment2<int> segment{{0, 0}, {4, 0}};
-    assert(!segment.is_degenerate());
-    assert((Segment2<int>{{2, 2}, {2, 2}}.is_degenerate()));
-
     assert((Circle2<double>{{0, 0}, 2}.is_valid()));
     assert((!Circle2<double>{{0, 0}, -1}.is_valid()));
 
     assert(on_line(line, Point2<int>{2, 0}));
     assert(!on_line(line, Point2<int>{2, 1}));
-    assert(on_segment(segment, Point2<int>{0, 0}));
-    assert(on_segment(segment, Point2<int>{2, 0}));
-    assert(!on_segment(segment, Point2<int>{5, 0}));
+    assert(on_segment(Point2<int>{0, 0}, Point2<int>{4, 0}, {0, 0}));
+    assert(on_segment(Point2<int>{0, 0}, Point2<int>{4, 0}, {2, 0}));
+    assert(!on_segment(Point2<int>{0, 0}, Point2<int>{4, 0}, {5, 0}));
+    assert(!on_segment(Point2<int>{0, 0}, Point2<int>{4, 0}, {2, 1}));
+    assert(on_segment(
+        Point2<double>{0, 0}, Point2<double>{2, 0}, Point2<double>{2 + 5e-10, 0}
+    ));
+    assert(!on_segment(
+        Point2<double>{0, 0}, Point2<double>{2, 0}, Point2<double>{2 + 1e-5, 0}
+    ));
 
     const Circle2<int> circle{{0, 0}, 5};
     assert(on_circle(circle, Point2<int>{3, 4}));
@@ -176,16 +178,6 @@ void test_projection_and_distances() {
     require_point_near(project(Point2<int>{3, 4}, line), {3, 0});
     require_point_near(reflect(Point2<int>{3, 4}, line), {3, -4});
     assert(near(distance(Point2<int>{3, 4}, line), 4.0L));
-
-    const Segment2<int> segment{{0, 0}, {4, 0}};
-    require_point_near(closest_point(Point2<int>{2, 3}, segment), {2, 0});
-    require_point_near(closest_point(Point2<int>{-2, 3}, segment), {0, 0});
-    assert(near(distance(Point2<int>{2, 3}, segment), 3.0L));
-    assert(near(distance(Point2<int>{-2, 3}, segment), std::sqrt(13.0L)));
-
-    const Segment2<int> other{{6, -2}, {6, 2}};
-    assert(near(distance(segment, other), 2.0L));
-    assert(near(distance(segment, Segment2<int>{{2, -2}, {2, 2}}), 0.0L));
 
     const Circle2<int> circle{{0, 0}, 5};
     assert(near(distance_to_circle(Point2<int>{0, 0}, circle), 5.0L));
@@ -210,66 +202,7 @@ void test_line_intersections() {
     assert(intersects(Line2<int>{{0, 0}, {1, 0}}, Line2<int>{{2, 0}, {-3, 0}}));
 }
 
-void test_segment_intersections() {
-    const auto crossing = intersection(
-        Segment2<int>{{0, 0}, {4, 4}}, Segment2<int>{{0, 4}, {4, 0}}
-    );
-    assert(crossing.kind == SegmentIntersectionKind::point);
-    require_point_near(crossing.first, Point2<long double>{2, 2});
-    require_point_near(crossing.second, Point2<long double>{2, 2});
-
-    const auto touching = intersection(
-        Segment2<int>{{0, 0}, {2, 0}}, Segment2<int>{{2, 0}, {3, 1}}
-    );
-    assert(touching.kind == SegmentIntersectionKind::point);
-    require_point_near(touching.first, Point2<long double>{2, 0});
-
-    const auto overlap = intersection(
-        Segment2<int>{{4, 0}, {0, 0}}, Segment2<int>{{2, 0}, {6, 0}}
-    );
-    assert(overlap.kind == SegmentIntersectionKind::overlap);
-    require_point_near(overlap.first, Point2<long double>{2, 0});
-    require_point_near(overlap.second, Point2<long double>{4, 0});
-
-    const auto disjoint = intersection(
-        Segment2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 0}, {3, 0}}
-    );
-    assert(disjoint.kind == SegmentIntersectionKind::none);
-
-    const auto point_on_segment = intersection(
-        Segment2<int>{{2, 0}, {2, 0}}, Segment2<int>{{0, 0}, {4, 0}}
-    );
-    assert(point_on_segment.kind == SegmentIntersectionKind::point);
-    require_point_near(point_on_segment.first, Point2<long double>{2, 0});
-    assert(
-        intersection(
-            Segment2<int>{{0, 0}, {4, 0}}, Segment2<int>{{2, 0}, {2, 0}}
-        )
-            .kind == SegmentIntersectionKind::point
-    );
-
-    const auto line_overlap =
-        intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{3, 0}, {1, 0}});
-    assert(line_overlap.kind == SegmentIntersectionKind::overlap);
-    require_point_near(line_overlap.first, Point2<long double>{1, 0});
-    require_point_near(line_overlap.second, Point2<long double>{3, 0});
-
-    const auto line_crossing = intersection(
-        Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, -1}, {2, 1}}
-    );
-    assert(line_crossing.kind == SegmentIntersectionKind::point);
-    require_point_near(line_crossing.first, Point2<long double>{2, 0});
-    assert(
-        intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 1}, {2, 2}})
-            .kind == SegmentIntersectionKind::none
-    );
-    assert(
-        intersection(Line2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 0}, {2, 0}})
-            .kind == SegmentIntersectionKind::point
-    );
-}
-
-void test_line_and_segment_circle_intersections() {
+void test_line_circle_intersections() {
     const Circle2<int> circle{{0, 0}, 5};
 
     const auto none = intersection(Line2<int>{{0, 6}, {1, 0}}, circle);
@@ -286,32 +219,6 @@ void test_line_and_segment_circle_intersections() {
     assert(two.count() == 2);
     require_point_near(two.points[0], Point2<long double>{-5, 0});
     require_point_near(two.points[1], Point2<long double>{5, 0});
-
-    const auto clipped = intersection(Segment2<int>{{-6, 0}, {0, 0}}, circle);
-    assert(clipped.kind == PointIntersectionKind::one);
-    require_point_near(clipped.points[0], Point2<long double>{-5, 0});
-
-    assert(
-        intersection(Segment2<int>{{-6, 0}, {6, 0}}, circle).kind ==
-        PointIntersectionKind::two
-    );
-    assert(
-        intersection(Segment2<int>{{-2, 5}, {2, 5}}, circle).kind ==
-        PointIntersectionKind::one
-    );
-    assert(
-        intersection(Segment2<int>{{3, 4}, {3, 4}}, circle).kind ==
-        PointIntersectionKind::one
-    );
-
-    const auto wide_segment = intersection(
-        Segment2<i64>{{std::numeric_limits<i64>::min(), 0},
-                      {std::numeric_limits<i64>::max(), 0}},
-        Circle2<i64>{{0, 0}, 1}
-    );
-    assert(wide_segment.kind == PointIntersectionKind::two);
-    require_point_near(wide_segment.points[0], Point2<long double>{-1, 0});
-    require_point_near(wide_segment.points[1], Point2<long double>{1, 0});
 }
 
 void test_circle_intersections() {
@@ -358,14 +265,6 @@ void test_circle_intersections() {
 }
 
 void test_properties() {
-    const Segment2<double> first{{0, 0}, {4, 1}};
-    const Segment2<double> second{{5, -2}, {5, 3}};
-    assert(near(distance(first, second), distance(second, first)));
-    assert(
-        intersects(first, second) ==
-        (intersection(first, second).kind != SegmentIntersectionKind::none)
-    );
-
     const Line2<double> line{{1, 2}, {3, -1}};
     const Point2<double> point{4, 7};
     const auto projected = project(point, line);
@@ -388,8 +287,7 @@ int main() {
     test_primitives_and_predicates();
     test_projection_and_distances();
     test_line_intersections();
-    test_segment_intersections();
-    test_line_and_segment_circle_intersections();
+    test_line_circle_intersections();
     test_circle_intersections();
     test_properties();
     std::cout << "All geometry tests passed!\n";

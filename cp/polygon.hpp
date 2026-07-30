@@ -115,11 +115,11 @@ public:
 
     const std::vector<Point2<T>>& vertices() const { return p_; }
 
-    std::vector<Segment2<T>> edges() const {
-        std::vector<Segment2<T>> res;
+    std::vector<std::pair<Point2<T>, Vec2<T>>> edges() const {
+        std::vector<std::pair<Point2<T>, Vec2<T>>> res;
         res.reserve(p_.size());
         for (usize i = 0; i != p_.size(); ++i)
-            res.push_back({p_[i], p_[(i + 1) % p_.size()]});
+            res.push_back({p_[i], p_[(i + 1) % p_.size()] - p_[i]});
         return res;
     }
 
@@ -147,7 +147,7 @@ public:
     ) const {
         if (p_.empty()) return PointPolygonRelation::outside;
         for (usize i = 0; i != p_.size(); ++i)
-            if (on_segment({p_[i], p_[(i + 1) % p_.size()]}, q, eps))
+            if (on_segment(p_[i], p_[(i + 1) % p_.size()], q, eps))
                 return PointPolygonRelation::boundary;
         if (p_.size() < 3) return PointPolygonRelation::outside;
 

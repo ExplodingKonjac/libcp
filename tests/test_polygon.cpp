@@ -13,9 +13,8 @@ namespace
 
 template <typename T>
 bool near(T lhs, T rhs, T eps = static_cast<T>(1e-9L)) {
-    return std::abs(lhs - rhs)
-        <= eps
-        * std::max<T>({T{1}, std::abs(lhs), std::abs(rhs)});
+    return std::abs(lhs - rhs) <=
+        eps * std::max<T>({T{1}, std::abs(lhs), std::abs(rhs)});
 }
 
 template <typename T>
@@ -36,13 +35,14 @@ void test_polygon_basics() {
     assert(edges.size() == polygon.size());
     for (usize i = 0; i != polygon.size(); ++i) {
         assert(edges[i].first == polygon[i]);
-        assert(edges[i].second == polygon[(i + 1) % polygon.size()]);
+        assert(
+            edges[i].second == polygon[(i + 1) % polygon.size()] - polygon[i]
+        );
         assert(
             orientation(
                 polygon[i], polygon[(i + 1) % polygon.size()],
                 polygon[(i + 2) % polygon.size()]
-            )
-            >= 0
+            ) >= 0
         );
     }
 
@@ -53,10 +53,13 @@ void test_polygon_basics() {
 
     const Polygon<int> point{std::vector<Point2<int>>{{3, 4}}};
     assert(point.edges().size() == 1);
-    assert(point.edges()[0].is_degenerate());
+    assert(point.edges()[0].first == Point2<int>(3, 4));
+    assert(point.edges()[0].second == Vec2<int>());
 
-    const Polygon<int> segment{std::vector<Point2<int>>{{0, 0}, {2, 0}}};
-    assert(segment.edges().size() == 2);
+    const Polygon<int> two_points{std::vector<Point2<int>>{{0, 0}, {2, 0}}};
+    assert(two_points.edges().size() == 2);
+    assert(two_points.edges()[0].second == Vec2<int>(2, 0));
+    assert(two_points.edges()[1].second == Vec2<int>(-2, 0));
 
     const Polygon<double> triangle{
         std::vector<Point2<double>>{{0, 0}, {0.5, 0}, {0, 0.5}}};
@@ -108,8 +111,8 @@ void test_point_relation() {
     const Polygon<double> floating{
         std::vector<Point2<double>>{{0, 0}, {2, 0}, {2, 2}, {0, 2}}};
     assert(
-        floating.relation({-5e-10, 1}, GeometryTolerance<double>{1e-9, 1e-9})
-        == PointPolygonRelation::boundary
+        floating.relation({-5e-10, 1}, GeometryTolerance<double>{1e-9, 1e-9}) ==
+        PointPolygonRelation::boundary
     );
 }
 

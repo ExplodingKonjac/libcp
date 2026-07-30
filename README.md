@@ -167,17 +167,16 @@ for (auto [to, weight] : gw.out(u)) { ... }
 ### `cp/geometry.hpp` — 二维计算几何
 
 提供泛型二维向量/点 `Vec2<T>`（`Point2<T>` 为同类型别名），以及直线
-`Line2<T>`、线段 `Segment2<T>`、圆 `Circle2<T>`。支持向量运算、方向判断、
-投影/反射、距离、包含关系和直线/线段/圆之间的交点计算。多边形与凸几何算法位于
-`cp/polygon.hpp`。
+`Line2<T>`、圆 `Circle2<T>`。支持向量运算、方向判断、投影/反射、距离、包含关系
+和直线/圆之间的交点计算。多边形与凸几何算法位于 `cp/polygon.hpp`。
 
 ```cpp
 #include "cp/geometry.hpp"
 
 cp::Point2<cp::i64> a{0, 0}, b{4, 0}, p{2, 3};
-auto segment = cp::Segment2<cp::i64>{a, b};
-auto nearest = cp::closest_point(p, segment);  // Point2<long double>{2, 0}
-auto d = cp::distance(p, segment);             // 3.0L
+auto line = cp::Line2<cp::i64>::through(a, b);
+auto projected = cp::project(p, line);         // Point2<long double>{2, 0}
+bool between = cp::on_segment(a, b, {2, 0});   // true
 
 cp::Circle2<double> circle{{0, 0}, 5};
 auto hits = cp::intersection(
@@ -192,11 +191,10 @@ auto hits = cp::intersection(
 - 整数运算会提升到 `geometry_wide_t<T>`；若数学结果超出该类型的表示范围，则行为不受支持。
 - 浮点几何判断使用可显式传入的 `GeometryTolerance<T>`，默认同时使用绝对与相对容差（`float` 为 `1e-5`、`double` 为 `1e-9`、`long double` 为 `1e-12`）。
 - `Line2<T>::through(a, b)` 要求整数端点差可由 `T` 表示；调试构建会检查此前置条件。直接使用点和方向构造可避免该转换。
-- 零长线段和零半径圆有效；零方向直线和负半径圆无效。对无效元素调用几何算法属于前置条件错误。
+- 零半径圆有效；零方向直线和负半径圆无效。对无效元素调用几何算法属于前置条件错误。
 
 交点结果使用无动态分配的定长结构，并通过 `LineIntersectionKind`、
-`SegmentIntersectionKind` 和 `PointIntersectionKind` 区分无交点、单点、重叠、
-双交点或重合。
+`PointIntersectionKind` 区分无交点、单点、双交点或重合。
 
 ---
 
@@ -219,7 +217,7 @@ auto hull = cp::convex_hull(polygon.vertices());
 
 半平面由有向直线表示，直线左侧为可行区域。
 `half_plane_intersection()` 仅在交集为非退化有界多边形时返回结果；空集、无界区域、
-点或线段均返回 `std::nullopt`。`minkowski_sum()` 要求输入多边形为凸多边形。
+点或其他线性退化区域均返回 `std::nullopt`。`minkowski_sum()` 要求输入多边形为凸多边形。
 
 ---
 
