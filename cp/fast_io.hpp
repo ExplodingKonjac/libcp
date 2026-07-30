@@ -206,7 +206,7 @@ private:
     };
 
     void reserve(size_t size) {
-        if (_pos + size >= _end) flush();
+        if (size >= size_t(_end - _pos)) flush();
     }
 
 public:
@@ -240,6 +240,11 @@ public:
     template <std::convertible_to<std::string_view> T>
     void print(T&& x) {
         auto s = std::string_view(x);
+        if (s.size() >= OUT_BUF_SIZE) {
+            flush();
+            fwrite(s.data(), 1, s.size(), _target);
+            return;
+        }
         reserve(s.size());
         _pos = std::ranges::copy(s, _pos).out;
     }

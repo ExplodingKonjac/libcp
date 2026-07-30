@@ -1,27 +1,35 @@
+#include <cassert>
 #include <cstdio>
+#include <string>
 
 #include "cp/fast_io.hpp"
 
-using cp::qin, cp::qout;
+void test_string(size_t size) {
+    FILE* file = std::tmpfile();
+    assert(file);
 
-unsigned next() {
-    static unsigned seed = 114514;
-    seed ^= seed << 5;
-    seed ^= seed >> 13;
-    seed ^= seed << 17;
-    return seed;
+    std::string expected = "prefix:";
+    expected.append(size, 'x');
+    expected += ":suffix";
+    {
+        cp::FastOutput out(file);
+        out.print("prefix:");
+        out.print(std::string(size, 'x'));
+        out.print(":suffix");
+    }
+
+    std::rewind(file);
+    std::string actual(expected.size(), '\0');
+    assert(std::fread(actual.data(), 1, actual.size(), file) == actual.size());
+    assert(std::fgetc(file) == EOF);
+    assert(actual == expected);
+    std::fclose(file);
 }
 
 int main() {
-    freopen("input.in", "r", stdin);
-    int n = 50000000;
-    unsigned checksum = 0;
-    // for (int i = 0; i < n; i++) {
-    //     qout.println(next());
-    // }
-    for (int i = 0; i < n; i++) {
-        checksum ^= qin.scan<unsigned>().value();
-    }
-    qout.println(checksum);
+    test_string(cp::OUT_BUF_SIZE - 1);
+    test_string(cp::OUT_BUF_SIZE);
+    test_string(cp::OUT_BUF_SIZE + 1);
+    test_string(cp::OUT_BUF_SIZE * 2 + 17);
     return 0;
 }
