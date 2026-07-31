@@ -13,17 +13,9 @@
 namespace cp
 {
 
-enum class HullMode {
-    lower,
-    upper,
-    full,
-};
+enum class HullMode { lower, upper, full };
 
-enum class PointPolygonRelation {
-    outside,
-    boundary,
-    inside,
-};
+enum class PointPolygonRelation { outside, boundary, inside };
 
 namespace detail
 {
@@ -36,8 +28,8 @@ geometry_wide_t<T> area2(const std::vector<Point2<T>>& p) {
     return s;
 }
 
-template <GeometryScalar T>
-std::vector<Point2<T>> chain(const std::vector<Point2<T>>& p, bool up) {
+template <bool up, GeometryScalar T>
+std::vector<Point2<T>> chain(const std::vector<Point2<T>>& p) {
     std::vector<Point2<T>> res;
     res.reserve(p.size());
     const auto add = [&](Point2<T> q) {
@@ -48,7 +40,7 @@ std::vector<Point2<T>> chain(const std::vector<Point2<T>>& p, bool up) {
             res.pop_back();
         res.push_back(q);
     };
-    if (up) {
+    if constexpr (up) {
         for (auto i = p.rbegin(); i != p.rend(); ++i) add(*i);
         std::reverse(res.begin(), res.end());
     } else {
@@ -57,39 +49,9 @@ std::vector<Point2<T>> chain(const std::vector<Point2<T>>& p, bool up) {
     return res;
 }
 
-template <GeometryScalar T>
-int dir_cmp(Vec2<T> a, Vec2<T> b) {
-    const auto half = [](Vec2<T> v) {
-        return v.y < T{} || (v.y == T{} && v.x < T{});
-    };
-    if (half(a) != half(b)) return half(a) ? 1 : -1;
-    const int s = orientation(Point2<T>{}, a, b);
-    if (s != 0) return s > 0 ? -1 : 1;
-    return 0;
-}
-
 template <std::floating_point T>
 bool outside(Line2<T> l, Point2<T> p) {
     return line_side(l, p) < 0;
-}
-
-template <GeometryScalar T>
-std::vector<Vec2<T>> edge_dirs(std::vector<Point2<T>>& p) {
-    const auto s =
-        std::min_element(p.begin(), p.end(), [](Point2<T> a, Point2<T> b) {
-            return a.y < b.y || (a.y == b.y && a.x < b.x);
-        });
-    std::rotate(p.begin(), s, p.end());
-
-    std::vector<Vec2<T>> e;
-    e.reserve(p.size());
-    for (usize i = 0; i != p.size(); ++i) {
-        auto d = p[(i + 1) % p.size()] - p[i];
-        if (d == Vec2<T>{}) continue;
-        if (!e.empty() && dir_cmp(e.back(), d) == 0) e.back() += d;
-        else e.push_back(d);
-    }
-    return e;
 }
 
 }  // namespace detail
@@ -128,28 +90,26 @@ public:
 
     bool is_convex() const {
         if (p_.size() < 3) return true;
-        for (usize i = 0; i != p_.size(); ++i)
-            if (orientation(
-                    p_[i], p_[(i + 1) % p_.size()], p_[(i + 2) % p_.size()]
-                ) < 0)
+        usize n = p_.size();
+        for (usize i = 0; i < n; i++)
+            if (orientation(p_[i], p_[(i + 1) % n], p_[(i + 2) % n]) < 0)
                 return false;
         return true;
     }
 
     PointPolygonRelation relation(Point2<T> q) const {
         if (p_.empty()) return PointPolygonRelation::outside;
-        for (usize i = 0; i != p_.size(); ++i)
-            if (on_segment(p_[i], p_[(i + 1) % p_.size()], q))
-                return PointPolygonRelation::boundary;
-        if (p_.size() < 3) return PointPolygonRelation::outside;
-
+        if (p_.size() == 1)
+            return sgn(norm_sq(p_[0] - q)) ? PointPolygonRelation::outside
+                                           : PointPolygonRelation::boundary;
         bool in = false;
-        for (usize i = 0; i != p_.size(); ++i) {
+        for (usize i = 0; i < p_.size(); i++) {
             const auto a = p_[i], b = p_[(i + 1) % p_.size()];
             const int s = orientation(a, b, q);
             if ((a.y <= q.y && q.y < b.y && s > 0) ||
                 (b.y <= q.y && q.y < a.y && s < 0))
                 in = !in;
+            if (on_segment(a, b, q)) return PointPolygonRelation::boundary;
         }
         return in ? PointPolygonRelation::inside
                   : PointPolygonRelation::outside;
@@ -164,13 +124,13 @@ std::vector<Point2<T>> convex_hull(
     p.erase(std::unique(p.begin(), p.end()), p.end());
     if (p.size() <= 1) return p;
 
-    auto lo = detail::chain(p, false);
-    if (mode == HullMode::lower) return lo;
-    auto up = detail::chain(p, true);
-    if (mode == HullMode::upper) return up;
+    if (mode == HullMode::lower) return detail::chain<false>(p);
+    if (mode == HullMode::upper) return detail::chain<true>(p);
 
+    auto lo = detail::chain<false>(p);
+    auto up = detail::chain<true>(p);
     lo.reserve(lo.size() + up.size() - 2);
-    for (usize i = up.size() - 1; i-- > 1;) lo.push_back(up[i]);
+    for (usize i = up.size() - 1; i > 1; i--) lo.push_back(up[i - 1]);
     return lo;
 }
 
@@ -178,24 +138,31 @@ template <GeometryScalar T>
 Polygon<T> minkowski_sum(const Polygon<T>& a, const Polygon<T>& b) {
     assert(a.is_convex() && b.is_convex());
     if (a.size() == 0 || b.size() == 0) return {};
-    if (a.size() == 1 && b.size() == 1)
-        return Polygon<T>{std::vector<Point2<T>>{a[0] + b[0]}};
+    if (a.size() == 1 && b.size() == 1) return Polygon<T>{{a[0] + b[0]}};
 
-    auto p = a.vertices(), q = b.vertices();
-    const auto x = detail::edge_dirs(p);
-    const auto y = detail::edge_dirs(q);
-    usize i = 0, j = 0;
-    std::vector<Point2<T>> res{p[0] + q[0]};
-    while (i != x.size() || j != y.size()) {
-        const int c = i == x.size() ? 1
-            : j == y.size()         ? -1
-                                    : detail::dir_cmp(x[i], y[j]);
+    auto get_edges = [&](const std::vector<Vec2<T>>& p) {
+        usize s = std::min_element(p.begin(), p.end()) - p.begin();
+        std::vector<Vec2<T>> e;
+        e.reserve(p.size());
+        for (usize i = s; i + 1 < p.size(); i++) e.push_back(p[i + 1] - p[i]);
+        e.push_back(p[0] - p.back());
+        for (usize i = 0; i < s; i++) e.push_back(p[i + 1] - p[i]);
+        return std::pair{e, p[s]};
+    };
+    const auto [e1, p0] = get_edges(a.vertices());
+    const auto [e2, q0] = get_edges(b.vertices());
+
+    std::vector<Point2<T>> res{p0 + q0};
+    for (usize i = 0, j = 0; i != e1.size() || j != e2.size();) {
+        const auto c = i == e1.size() ? 1
+            : j == e2.size()          ? -1
+                                      : sgn(cross(e2[j], e1[i]));
         Vec2<T> d{};
-        if (c <= 0) d += x[i++];
-        if (c >= 0) d += y[j++];
+        if (c <= 0) d += e1[i++];
+        if (c >= 0) d += e2[j++];
         res.push_back(res.back() + d);
     }
-    res.pop_back();
+    if (res.size() > 1) res.pop_back();
     return Polygon<T>{std::move(res)};
 }
 
@@ -282,11 +249,11 @@ std::optional<Polygon<geometry_real_t<T>>> half_plane_intersection(
             return std::nullopt;
         const auto x = inter(q[i], q[(i + 1) % q.size()]);
         if (!x) return std::nullopt;
-        p.push_back(*x);
+        if (p.empty() || !almost_equal(p.back(), *x)) p.push_back(*x);
     }
-    Polygon<R> res{std::move(p)};
-    if (almost_equal(res.area(), R{})) return std::nullopt;
-    return res;
+    if (p.size() > 1 && almost_equal(p.front(), p.back())) p.pop_back();
+    if (p.size() < 3) return std::nullopt;
+    return Polygon{std::move(p)};
 }
 
 }  // namespace cp

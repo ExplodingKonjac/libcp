@@ -9,15 +9,15 @@
 
 #include "def.hpp"
 
-#ifndef CP_GEOMETRY_EPS
-#define CP_GEOMETRY_EPS 1e-9L
-#endif
-
 namespace cp
 {
 
+#ifdef CP_GEOMETRY_EPS
 inline constexpr long double geometry_eps = CP_GEOMETRY_EPS;
 static_assert(geometry_eps >= 0, "CP_GEOMETRY_EPS must be nonnegative");
+#else
+inline constexpr long double geometry_eps = 1e-9L;
+#endif
 
 template <typename T>
 concept GeometryScalar = (std::signed_integral<T> || std::floating_point<T>) &&
@@ -49,6 +49,7 @@ template <GeometryScalar T>
 constexpr int sgn(T x) {
     return cmp(x, T{});
 }
+constexpr int sgn(i128 x) { return x > 0 ? 1 : x < 0 ? -1 : 0; }
 
 template <GeometryScalar T>
 struct Vec2 {
@@ -157,6 +158,7 @@ template <GeometryScalar T>
 struct Line2 {
     Point2<T> point{};
     Vec2<T> direction{};
+
     static constexpr Line2 through(Point2<T> a, Point2<T> b) {
         if constexpr (std::floating_point<T>) return {a, b - a};
         using W = geometry_wide_t<T>;
@@ -188,15 +190,15 @@ constexpr int det_sgn(
     return (x > y) - (x < y);
 }
 
+}  // namespace detail
+
 template <GeometryScalar T>
 constexpr int line_side(Line2<T> l, Point2<T> p) {
     using W = geometry_wide_t<T>;
     W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
     W a = (W)l.direction.x, b = (W)l.direction.y;
-    return det_sgn<T>(a, b, x, y);
+    return detail::det_sgn<T>(a, b, x, y);
 }
-
-}  // namespace detail
 
 template <GeometryScalar T>
 constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
@@ -225,7 +227,7 @@ constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
 template <GeometryScalar T>
 constexpr bool on_line(Line2<T> l, Point2<T> p) {
     assert(l.is_valid());
-    return detail::line_side(l, p) == 0;
+    return line_side(l, p) == 0;
 }
 
 template <GeometryScalar T>

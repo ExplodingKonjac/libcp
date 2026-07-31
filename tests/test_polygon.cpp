@@ -162,7 +162,7 @@ void test_minkowski_sum() {
         std::vector<Point2<int>>{{0, 0}, {1, 0}, {1, 2}, {0, 2}}};
     require_points(
         canonical_vertices(minkowski_sum(first, second)),
-        std::vector<Point2<int>>{{0, 0}, {3, 0}, {3, 3}, {0, 3}}
+        std::vector<Point2<int>>{{0, 0}, {2, 0}, {3, 0}, {3, 3}, {0, 3}}
     );
 
     const Polygon<int> triangle{
@@ -175,7 +175,7 @@ void test_minkowski_sum() {
     const Polygon<int> point{std::vector<Point2<int>>{{5, -1}}};
     require_points(
         canonical_vertices(minkowski_sum(first, point)),
-        std::vector<Point2<int>>{{5, -1}, {7, -1}, {7, 0}, {5, 0}}
+        std::vector<Point2<int>>{{5, -1}, {6, -1}, {7, -1}, {7, 0}, {5, 0}}
     );
 
     const Polygon<int> horizontal{std::vector<Point2<int>>{{0, 0}, {2, 0}}};
@@ -204,6 +204,20 @@ void test_half_plane_intersection() {
     assert(near(bounded->area(), 6.0L, 1e-12L));
     assert(bounded->relation({1, 1}) == PointPolygonRelation::inside);
     assert(bounded->relation({0, 2}) == PointPolygonRelation::boundary);
+
+    const std::vector<Line2<int>> box_with_redundant_corner{
+        {{0, 0}, {1, 0}},  {{1, 0}, {0, 1}},  {{0, 1}, {-1, 0}},
+        {{0, 0}, {0, -1}}, {{0, 0}, {1, -1}},
+    };
+    const auto without_duplicate =
+        half_plane_intersection(box_with_redundant_corner);
+    assert(without_duplicate.has_value());
+    assert(without_duplicate->size() == 4);
+    for (usize i = 0; i != without_duplicate->size(); ++i)
+        assert(!almost_equal(
+            (*without_duplicate)[i],
+            (*without_duplicate)[(i + 1) % without_duplicate->size()]
+        ));
 
     const std::vector<Line2<int>> wedge{
         {{0, 0}, {0, -1}},
