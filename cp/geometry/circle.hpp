@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <numeric>
 #include <optional>
 #include <random>
 #include <vector>
@@ -77,8 +78,8 @@ PointIntersection2<geometry_real_t<T>> intersection(Line2<T> l, Circle2<T> c) {
     int s = cmp(x, r);
     if (s > 0) return {};
     if (!s) return {PointIntersectionKind::one, {p, {}}};
-    R h = std::sqrt(std::max<R>(R{}, r * r - x * x));
-    d /= std::sqrt(dot(d, d));
+    R h = std::sqrt(std::max<R>(R{}, r - x)) * std::sqrt(r + x);
+    d /= std::hypot(d.x, d.y);
     return {PointIntersectionKind::two, {p - d * h, p + d * h}};
 }
 
@@ -91,7 +92,7 @@ PointIntersection2<geometry_real_t<T>> intersection(
     auto p = a.center.template cast<R>(), q = b.center.template cast<R>();
     R x = (R)a.radius, y = (R)b.radius;
     auto d = q - p;
-    R d2 = dot(d, d), z = std::sqrt(d2);
+    R z = distance(p, q);
     if (!cmp(z, R{})) {
         if (cmp(x, y)) return {};
         if (!cmp(x, R{})) return {PointIntersectionKind::one, {p, {}}};
@@ -99,11 +100,12 @@ PointIntersection2<geometry_real_t<T>> intersection(
     }
     R sum = x + y, dif = std::abs(x - y);
     if (cmp(z, sum) > 0 || cmp(z, dif) < 0) return {};
-    R t = (x * x - y * y + d2) / (R{2} * z);
+    R t = ((x - y) * ((x + y) / z) + z) / R{2};
     auto m = p + d * (t / z);
     if (!cmp(z, sum) || !cmp(z, dif))
         return {PointIntersectionKind::one, {m, {}}};
-    R h = std::sqrt(std::max<R>(R{}, x * x - t * t));
+    R h =
+        std::sqrt(std::max<R>(R{}, x - t)) * std::sqrt(std::max<R>(R{}, x + t));
     auto v = Vec2{-d.y, d.x} * (h / z);
     return {PointIntersectionKind::two, {m + v, m - v}};
 }
@@ -113,7 +115,7 @@ namespace detail
 
 template <std::floating_point T>
 Circle2<T> circle_from_pair(Point2<T> a, Point2<T> b) {
-    const auto center = (a + b) / T{2};
+    const Point2<T> center{std::midpoint(a.x, b.x), std::midpoint(a.y, b.y)};
     return {center, distance(center, a)};
 }
 
@@ -126,22 +128,26 @@ Circle2<geometry_real_t<T>> circle_from(Point2<T> a, Point2<T> b, Point2<T> c) {
     const auto y = b.template cast<R>();
     const auto z = c.template cast<R>();
     const auto u = y - x, v = z - x;
-    const R d = R{2} * cross(u, v);
+    const R scale =
+        std::max({std::abs(u.x), std::abs(u.y), std::abs(v.x), std::abs(v.y)});
+    if (scale == R{}) return detail::circle_from_pair(x, y);
+    const auto su = u / scale, sv = v / scale;
+    const R d = R{2} * cross(su, sv);
     if (almost_equal(d, R{})) {
-        const R xy = distance_sq(x, y);
-        const R xz = distance_sq(x, z);
-        const R yz = distance_sq(y, z);
+        const R xy = distance(x, y);
+        const R xz = distance(x, z);
+        const R yz = distance(y, z);
         if (xy >= xz && xy >= yz) return detail::circle_from_pair(x, y);
         if (xz >= yz) return detail::circle_from_pair(x, z);
         return detail::circle_from_pair(y, z);
     }
 
-    const R u2 = norm_sq(u), v2 = norm_sq(v);
+    const R u2 = norm_sq(su), v2 = norm_sq(sv);
     const Point2<R> center = x +
         Vec2<R>{
-            (u2 * v.y - v2 * u.y) / d,
-            (u.x * v2 - v.x * u2) / d,
-        };
+            (u2 * sv.y - v2 * su.y) / d,
+            (su.x * v2 - sv.x * u2) / d,
+        } * scale;
     return {center, distance(center, x)};
 }
 

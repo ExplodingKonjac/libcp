@@ -23,8 +23,7 @@ namespace detail
 template <GeometryScalar T>
 geometry_wide_t<T> area2(const std::vector<Point2<T>>& p) {
     geometry_wide_t<T> s{};
-    for (usize i = 0; i != p.size(); ++i)
-        s += cross(p[i], p[(i + 1) % p.size()]);
+    for (usize i = 1; i + 1 < p.size(); ++i) s += cross(p[0], p[i], p[i + 1]);
     return s;
 }
 

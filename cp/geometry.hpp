@@ -125,12 +125,14 @@ constexpr geometry_wide_t<T> distance_sq(Point2<T> a, Point2<T> b) {
 
 template <GeometryScalar T>
 geometry_real_t<T> norm(Vec2<T> a) {
-    return std::sqrt((geometry_real_t<T>)norm_sq(a));
+    using R = geometry_real_t<T>;
+    return std::hypot((R)a.x, (R)a.y);
 }
 
 template <GeometryScalar T>
 geometry_real_t<T> distance(Point2<T> a, Point2<T> b) {
-    return std::sqrt((geometry_real_t<T>)distance_sq(a, b));
+    using R = geometry_real_t<T>;
+    return std::hypot((R)a.x - (R)b.x, (R)a.y - (R)b.y);
 }
 
 template <GeometryScalar T>
@@ -177,6 +179,18 @@ struct Line2 {
 namespace detail
 {
 
+template <std::floating_point T>
+constexpr T max_norm(T x, T y) {
+    return std::max(x < T{} ? -x : x, y < T{} ? -y : y);
+}
+
+template <std::floating_point T>
+constexpr int unit_det_sgn(T ax, T ay, T bx, T by) {
+    T an = max_norm(ax, ay), bn = max_norm(bx, by);
+    if (an == T{} || bn == T{}) return 0;
+    return sgn((ax / an) * (by / bn) - (ay / an) * (bx / bn));
+}
+
 template <GeometryScalar T>
 constexpr int det_sgn(
     geometry_wide_t<T> ax,
@@ -197,6 +211,10 @@ constexpr int line_side(Line2<T> l, Point2<T> p) {
     using W = geometry_wide_t<T>;
     W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
     W a = (W)l.direction.x, b = (W)l.direction.y;
+    if constexpr (std::floating_point<T>) {
+        W n = detail::max_norm(a, b);
+        return sgn((a / n) * y - (b / n) * x);
+    }
     return detail::det_sgn<T>(a, b, x, y);
 }
 
@@ -205,6 +223,8 @@ constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
     using W = geometry_wide_t<T>;
     W ax = (W)a.x - (W)o.x, ay = (W)a.y - (W)o.y;
     W bx = (W)b.x - (W)o.x, by = (W)b.y - (W)o.y;
+    if constexpr (std::floating_point<T>)
+        return detail::unit_det_sgn(ax, ay, bx, by);
     return detail::det_sgn<T>(ax, ay, bx, by);
 }
 
@@ -218,10 +238,16 @@ template <GeometryScalar T>
 constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
     using W = geometry_wide_t<T>;
     assert(a.is_valid() && b.is_valid());
-    W x = (W)a.direction.x * (W)b.direction.x;
-    W y = (W)a.direction.y * (W)b.direction.y;
-    if constexpr (std::floating_point<T>) return cmp(x, -y) == 0;
-    return x + y == 0;
+    if constexpr (std::floating_point<T>) {
+        W an = detail::max_norm(a.direction.x, a.direction.y);
+        W bn = detail::max_norm(b.direction.x, b.direction.y);
+        return sgn((a.direction.x / an) * (b.direction.x / bn) +
+                   (a.direction.y / an) * (b.direction.y / bn)) == 0;
+    } else {
+        return (W)a.direction.x * (W)b.direction.x +
+            (W)a.direction.y * (W)b.direction.y ==
+            0;
+    }
 }
 
 template <GeometryScalar T>
@@ -248,7 +274,8 @@ Point2<geometry_real_t<T>> project(Point2<T> p, Line2<T> l) {
     using R = geometry_real_t<T>;
     assert(l.is_valid());
     auto a = l.point.template cast<R>(), d = l.direction.template cast<R>();
-    return a + d * (dot(p.template cast<R>() - a, d) / dot(d, d));
+    d /= std::hypot(d.x, d.y);
+    return a + d * dot(p.template cast<R>() - a, d);
 }
 
 template <GeometryScalar T>
@@ -281,6 +308,8 @@ LineIntersection2<geometry_real_t<T>> intersection(Line2<T> a, Line2<T> b) {
                 {}};
     auto p = a.point.template cast<R>(), d = a.direction.template cast<R>();
     auto q = b.point.template cast<R>(), e = b.direction.template cast<R>();
+    d /= std::hypot(d.x, d.y);
+    e /= std::hypot(e.x, e.y);
     R t = cross(q - p, e) / cross(d, e);
     return {LineIntersectionKind::point, p + d * t};
 }

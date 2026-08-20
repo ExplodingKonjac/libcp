@@ -63,6 +63,17 @@ static_assert(cmp(4, 3) == 1);
 static_assert(
     orientation(Point2<int>{0, 0}, Point2<int>{2, 0}, Point2<int>{1, 1}) == 1
 );
+static_assert(
+    orientation(
+        Point2<double>{0, 0}, Point2<double>{1, 0}, Point2<double>{0, 1}
+    ) == 1
+);
+static_assert(
+    line_side(Line2<double>{{0, 0}, {1, 0}}, Point2<double>{0, 1}) == 1
+);
+static_assert(
+    perpendicular(Line2<double>{{0, 0}, {1, 0}}, Line2<double>{{0, 0}, {0, 1}})
+);
 
 void test_vector_arithmetic() {
     const Vec2<i32> a{3, 4};
@@ -79,6 +90,7 @@ void test_vector_arithmetic() {
     assert(distance_sq(a, b) == 26);
     assert(near(norm(a), 5.0L));
     assert(near(distance(a, b), std::sqrt(26.0L)));
+    assert(near(norm(Vec2<float>{1e20F, 1e20F}), std::sqrt(2.0F) * 1e20F));
     assert(near(angle(Vec2<double>{0, 1}), std::acos(-1.0) / 2));
 
     const auto rotated = rotate(Vec2<i32>{1, 0}, std::acos(-1.0L) / 2);
@@ -136,6 +148,17 @@ void test_tolerance() {
         orientation(
             Point2<double>{0, 0}, Point2<double>{1, 1},
             Point2<double>{2, 2 + 1e-5}
+        ) == 1
+    );
+    assert(
+        orientation(
+            Point2<double>{0, 0}, Point2<double>{1e-5, 0},
+            Point2<double>{0, 1e-5}
+        ) == 1
+    );
+    assert(
+        orientation(
+            Point2<double>{0, 0}, Point2<double>{1e5, 0}, Point2<double>{0, 1e5}
         ) == 1
     );
 }

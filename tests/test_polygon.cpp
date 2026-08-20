@@ -64,6 +64,15 @@ void test_polygon_basics() {
     const Polygon<double> triangle{
         std::vector<Point2<double>>{{0, 0}, {0.5, 0}, {0, 0.5}}};
     assert(near(triangle.area(), 0.125));
+
+    constexpr double offset = 1e15;
+    const Polygon<double> translated{
+        std::vector<Point2<double>>{{offset, offset},
+                                    {offset, offset + 3},
+                                    {offset + 4, offset + 3},
+                                    {offset + 4, offset}}};
+    assert(near(translated.area(), 12.0, 1e-12));
+    assert(orientation(translated[0], translated[1], translated[2]) > 0);
 }
 
 void test_convexity() {

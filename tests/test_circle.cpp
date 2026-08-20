@@ -112,6 +112,28 @@ void test_circle_intersections() {
     const auto nearby =
         intersection(Circle2<double>{{0, 0}, 1}, Circle2<double>{{1e-5, 0}, 1});
     assert(nearby.kind == PointIntersectionKind::two);
+
+    const double large_radius = 1e9;
+    const double larger_radius = large_radius + 1e-6;
+    const auto close_radii = intersection(
+        Circle2<double>{{0, 0}, larger_radius},
+        Circle2<double>{{1, 0}, large_radius}
+    );
+    const double expected_x = ((larger_radius - large_radius) *
+                                   ((larger_radius + large_radius) / 1.0) +
+                               1.0) /
+        2.0;
+    assert(close_radii.kind == PointIntersectionKind::two);
+    assert(near(close_radii.points[0].x, expected_x, 1e-12));
+
+    const auto huge = intersection(
+        Circle2<double>{{0, 0}, 1e155}, Circle2<double>{{1e155, 0}, 1e155}
+    );
+    assert(huge.kind == PointIntersectionKind::two);
+    assert(near(huge.points[0].x / 1e155, 0.5, 1e-12));
+    assert(
+        near(std::abs(huge.points[0].y) / 1e155, std::sqrt(3.0) / 2.0, 1e-12)
+    );
 }
 
 void test_circle_from_three_points() {
@@ -131,6 +153,19 @@ void test_circle_from_three_points() {
         circle_from(Point2<int>{-3, 2}, Point2<int>{5, 2}, Point2<int>{0, 2});
     require_point_near(collinear.center, Point2<long double>{1, 2});
     assert(near(collinear.radius, 4.0L));
+
+    const auto tiny = circle_from(
+        Point2<double>{0, 0}, Point2<double>{1e-5, 0}, Point2<double>{0, 1e-5}
+    );
+    assert(std::abs(tiny.center.x - 5e-6) <= 1e-15);
+    assert(std::abs(tiny.center.y - 5e-6) <= 1e-15);
+
+    const auto huge = circle_from(
+        Point2<double>{0, 0}, Point2<double>{1e155, 0}, Point2<double>{0, 1e155}
+    );
+    assert(near(huge.center.x / 1e155, 0.5, 1e-12));
+    assert(near(huge.center.y / 1e155, 0.5, 1e-12));
+    assert(near(huge.radius / 1e155, std::sqrt(0.5), 1e-12));
 }
 
 void test_minimum_enclosing_circle_degenerate_inputs() {
