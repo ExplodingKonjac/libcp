@@ -318,10 +318,14 @@ auto hull = cp::convex_hull(polygon.vertices());
 - **查找快速路径**：先匹配 hash 再比较 key，减少不必要比较
 - **删除标记**：使用 Deleted 标记而非 tombstone 压缩
 - 支持自定义 hash、相等比较器、分配器
+- `insert` / `emplace`：重复 key 时返回 `std::nullopt`，否则返回新元素迭代器
+- `try_insert` / `try_emplace`：重复 key 时保留原值并返回其迭代器
+- `try_insert_with`：仅在 key 不存在时调用工厂函数构造 value
 
 ```cpp
 cp::FlatHashMap<int, int> map;
-map.try_emplace(1, 100);                // 插入
+map.try_emplace(1, 100);                // 原地插入
+map.try_insert_with(3, [] { return 300; }); // 延迟构造 value
 if (auto* v = map.get(1)) { ... }       // 查找
 map.erase(1);                           // 删除
 for (auto& [k, v] : map) { ... }        // 遍历

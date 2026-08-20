@@ -36,9 +36,12 @@ alignas(16) inline const u8 default_ctrl[16]{
 #pragma GCC push_options
 #pragma GCC target("sse2")
 template <
-    typename Key, typename Mapped, typename Hash = std::hash<Key>,
+    typename Key,
+    typename Mapped,
+    typename Hash = std::hash<Key>,
     typename Eq = std::equal_to<Key>,
-    typename Alloc = std::allocator<std::pair<const Key, Mapped>>>
+    typename Alloc = std::allocator<std::pair<const Key, Mapped>>
+>
     requires requires(Key k, Hash hash, Eq eq) {
         { hash(k) } -> std::convertible_to<usize>;
         { eq(k, k) } -> std::convertible_to<bool>;
@@ -341,9 +344,8 @@ public:
         return const_iterator(_ctrl + idx, _data + idx);
     }
 
-    template <typename P>
-    std::optional<iterator> insert(P&& value) {
-        return emplace(std::forward<P>(value));
+    std::optional<iterator> insert(value_type value) {
+        return emplace(std::move(value));
     }
     template <typename... Args>
         requires std::constructible_from<value_type, Args&&...>
@@ -357,11 +359,12 @@ public:
         return iterator(_ctrl + idx, _data + idx);
     }
 
-    template <typename K, typename... Args>
-        requires std::constructible_from<Key, K&&> &&
-                 std::constructible_from<Mapped, Args&&...>
-    iterator try_emplace(K&& k, Args&&... args) {
-        Key key(std::forward<K>(k));
+    iterator try_insert(key_type key, value_type value) {
+        return try_emplace(std::move(key), std::move(value));
+    }
+    template <typename... Args>
+        requires std::constructible_from<Mapped, Args&&...>
+    iterator try_emplace(key_type key, Args&&... args) {
         try_rehash();
         auto hsh = do_hash(key);
         auto [fl, idx] = lookup<true, false>(hsh, key);
@@ -373,13 +376,11 @@ public:
             );
         return iterator(_ctrl + idx, _data + idx);
     }
-
-    template <typename K, typename Fn>
-        requires std::constructible_from<Key, K&&> && requires(Fn f) {
+    template <std::invocable<> Fn>
+        requires requires(Fn f) {
             { f() } -> std::convertible_to<Mapped>;
         }
-    iterator try_insert_with(K&& k, Fn f) {
-        Key key(std::forward<K>(k));
+    iterator try_insert_with(key_type key, Fn f) {
         try_rehash();
         auto hsh = do_hash(key);
         auto [fl, idx] = lookup<true, false>(hsh, key);
