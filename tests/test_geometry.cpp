@@ -210,6 +210,85 @@ void test_line_intersections() {
     assert(intersects(Line2<int>{{0, 0}, {1, 0}}, Line2<int>{{2, 0}, {-3, 0}}));
 }
 
+void test_segment_intersections() {
+    const auto crossing = intersection(
+        Segment2<int>{{0, 0}, {2, 2}}, Segment2<int>{{0, 2}, {2, 0}}
+    );
+    assert(crossing.kind == LineIntersectionKind::point);
+    require_point_near(crossing.point, Point2<long double>{1, 1});
+    assert(
+        intersection(
+            Segment2<int>{{0, 0}, {1, 0}}, Segment2<int>{{2, 0}, {3, 0}}
+        )
+            .kind == LineIntersectionKind::none
+    );
+    assert(
+        intersection(
+            Segment2<int>{{0, 0}, {3, 0}}, Segment2<int>{{2, 0}, {5, 0}}
+        )
+            .kind == LineIntersectionKind::coincident
+    );
+    assert(
+        intersection(
+            Segment2<int>{{0, 0}, {3, 0}}, Segment2<int>{{3, 0}, {5, 0}}
+        )
+            .kind == LineIntersectionKind::point
+    );
+    assert(
+        intersection(
+            Segment2<int>{{1, 1}, {1, 1}}, Segment2<int>{{0, 0}, {2, 2}}
+        )
+            .kind == LineIntersectionKind::point
+    );
+    assert(
+        intersection(
+            Segment2<int>{{3, 3}, {3, 3}}, Segment2<int>{{0, 0}, {2, 2}}
+        )
+            .kind == LineIntersectionKind::none
+    );
+    assert(
+        intersection(
+            Segment2<int>{{1, 1}, {1, 1}}, Segment2<int>{{1, 1}, {1, 1}}
+        )
+            .kind == LineIntersectionKind::point
+    );
+    assert(
+        intersection(
+            Segment2<int>{{1, 1}, {1, 1}}, Segment2<int>{{2, 2}, {2, 2}}
+        )
+            .kind == LineIntersectionKind::none
+    );
+    assert(
+        intersection(
+            Segment2<double>{{0, 0}, {0, 0}},
+            Segment2<double>{{5e-10, 0}, {5e-10, 0}}
+        )
+            .kind == LineIntersectionKind::point
+    );
+    assert(
+        intersection(
+            Segment2<int>{{0, 0}, {3, 0}}, Segment2<int>{{0, 0}, {3, 0}}
+        )
+            .kind == LineIntersectionKind::coincident
+    );
+    const auto translated = intersection(
+        Segment2<double>{{1e15, 1e15}, {1e15 + 4, 1e15}},
+        Segment2<double>{{1e15 + 2, 1e15 - 2}, {1e15 + 2, 1e15 + 2}}
+    );
+    assert(translated.kind == LineIntersectionKind::point);
+    require_point_near(translated.point, {1e15 + 2, 1e15}, 1e-9);
+    const auto huge_direction = intersection(
+        Line2<double>{{0, 0}, {1e155, 0}}, Line2<double>{{0, -1}, {0, 1e155}}
+    );
+    assert(huge_direction.kind == LineIntersectionKind::point);
+    require_point_near(huge_direction.point, {0, 0});
+    const auto tiny_direction = intersection(
+        Line2<double>{{0, 0}, {1e-155, 0}}, Line2<double>{{0, -1}, {0, 1e-155}}
+    );
+    assert(tiny_direction.kind == LineIntersectionKind::point);
+    require_point_near(tiny_direction.point, {0, 0});
+}
+
 void test_properties() {
     const Line2<double> line{{1, 2}, {3, -1}};
     const Point2<double> point{4, 7};
@@ -233,6 +312,7 @@ int main() {
     test_primitives_and_predicates();
     test_projection_and_distances();
     test_line_intersections();
+    test_segment_intersections();
     test_properties();
     std::cout << "All geometry tests passed!\n";
 }

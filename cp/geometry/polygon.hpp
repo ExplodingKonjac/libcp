@@ -70,11 +70,11 @@ public:
 
     const std::vector<Point2<T>>& vertices() const { return p_; }
 
-    std::vector<std::pair<Point2<T>, Vec2<T>>> edges() const {
-        std::vector<std::pair<Point2<T>, Vec2<T>>> res;
+    std::vector<Segment2<T>> edges() const {
+        std::vector<Segment2<T>> res;
         res.reserve(p_.size());
         for (usize i = 0; i != p_.size(); ++i)
-            res.push_back({p_[i], p_[(i + 1) % p_.size()] - p_[i]});
+            res.push_back({p_[i], p_[(i + 1) % p_.size()]});
         return res;
     }
 

@@ -34,10 +34,8 @@ void test_polygon_basics() {
     const auto edges = polygon.edges();
     assert(edges.size() == polygon.size());
     for (usize i = 0; i != polygon.size(); ++i) {
-        assert(edges[i].first == polygon[i]);
-        assert(
-            edges[i].second == polygon[(i + 1) % polygon.size()] - polygon[i]
-        );
+        assert(edges[i].a == polygon[i]);
+        assert(edges[i].b == polygon[(i + 1) % polygon.size()]);
         assert(
             orientation(
                 polygon[i], polygon[(i + 1) % polygon.size()],
@@ -53,13 +51,13 @@ void test_polygon_basics() {
 
     const Polygon<int> point{std::vector<Point2<int>>{{3, 4}}};
     assert(point.edges().size() == 1);
-    assert(point.edges()[0].first == Point2<int>(3, 4));
-    assert(point.edges()[0].second == Vec2<int>());
+    assert(point.edges()[0].a == Point2<int>(3, 4));
+    assert(point.edges()[0].b == Point2<int>(3, 4));
 
     const Polygon<int> two_points{std::vector<Point2<int>>{{0, 0}, {2, 0}}};
     assert(two_points.edges().size() == 2);
-    assert(two_points.edges()[0].second == Vec2<int>(2, 0));
-    assert(two_points.edges()[1].second == Vec2<int>(-2, 0));
+    assert(two_points.edges()[0].b == Point2<int>(2, 0));
+    assert(two_points.edges()[1].b == Point2<int>(0, 0));
 
     const Polygon<double> triangle{
         std::vector<Point2<double>>{{0, 0}, {0.5, 0}, {0, 0.5}}};

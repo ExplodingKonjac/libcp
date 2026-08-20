@@ -176,6 +176,16 @@ struct Line2 {
     }
 };
 
+template <GeometryScalar T>
+struct Segment2 {
+    Point2<T> a{}, b{};
+
+    constexpr Line2<T> line() const {
+        assert(a != b);
+        return Line2<T>::through(a, b);
+    }
+};
+
 namespace detail
 {
 
@@ -312,6 +322,51 @@ LineIntersection2<geometry_real_t<T>> intersection(Line2<T> a, Line2<T> b) {
     e /= std::hypot(e.x, e.y);
     R t = cross(q - p, e) / cross(d, e);
     return {LineIntersectionKind::point, p + d * t};
+}
+
+template <GeometryScalar T>
+LineIntersection2<geometry_real_t<T>> intersection(
+    Segment2<T> a, Segment2<T> b
+) {
+    using R = geometry_real_t<T>;
+    const bool a_point = a.a == a.b, b_point = b.a == b.b;
+    if (a_point && b_point)
+        return on_segment(a.a, a.b, b.a)
+            ? LineIntersection2<R>{LineIntersectionKind::point,
+                                   a.a.template cast<R>()}
+            : LineIntersection2<R>{};
+    if (a_point)
+        return on_segment(b.a, b.b, a.a)
+            ? LineIntersection2<R>{LineIntersectionKind::point,
+                                   a.a.template cast<R>()}
+            : LineIntersection2<R>{};
+    if (b_point)
+        return on_segment(a.a, a.b, b.a)
+            ? LineIntersection2<R>{LineIntersectionKind::point,
+                                   b.a.template cast<R>()}
+            : LineIntersection2<R>{};
+    auto x = a.a.template cast<R>(), y = a.b.template cast<R>();
+    auto u = b.a.template cast<R>(), v = b.b.template cast<R>();
+    const auto result =
+        intersection(Line2<R>::through(x, y), Line2<R>::through(u, v));
+    if (result.kind == LineIntersectionKind::point)
+        return orientation(a.a, a.b, b.a) * orientation(a.a, a.b, b.b) <= 0 &&
+                orientation(b.a, b.b, a.a) * orientation(b.a, b.b, a.b) <= 0
+            ? result
+            : LineIntersection2<R>{};
+    if (result.kind == LineIntersectionKind::none) return result;
+    const R dx = y.x - x.x, dy = y.y - x.y;
+    const bool use_x = std::abs(dx) >= std::abs(dy);
+    const auto coord = [use_x](Point2<R> p) { return use_x ? p.x : p.y; };
+    const R lo =
+        std::max(std::min(coord(x), coord(y)), std::min(coord(u), coord(v)));
+    const R hi =
+        std::min(std::max(coord(x), coord(y)), std::max(coord(u), coord(v)));
+    if (cmp(hi, lo) < 0) return {};
+    if (cmp(hi, lo) == 0)
+        for (auto p: {x, y, u, v})
+            if (cmp(coord(p), lo) == 0) return {LineIntersectionKind::point, p};
+    return {LineIntersectionKind::coincident, {}};
 }
 
 template <typename Lhs, typename Rhs, typename... Args>
