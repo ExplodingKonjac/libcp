@@ -29,6 +29,10 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fpoly.hpp`](cp/fpoly.hpp) | 多项式运算（AVX2 加速 NTT） |
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
+| [`cp/flow/max_flow.hpp`](cp/flow/max_flow.hpp) | 最大流 |
+| [`cp/flow/min_cost_flow.hpp`](cp/flow/min_cost_flow.hpp) | 最小费用流 |
+| [`cp/flow/min_cost_circulation.hpp`](cp/flow/min_cost_circulation.hpp) | 最小费用可行环流 |
+| [`cp/number_theory.hpp`](cp/number_theory.hpp) | 数论算法 |
 | [`cp/geometry.hpp`](cp/geometry.hpp) | 二维向量与基础计算几何 |
 | [`cp/geometry/circle.hpp`](cp/geometry/circle.hpp) | 圆、圆交点与最小覆盖圆 |
 | [`cp/geometry/polygon.hpp`](cp/geometry/polygon.hpp) | 多边形与凸几何算法 |
@@ -162,6 +166,56 @@ cp::Graph<int> gw(n);
 gw.add_edge(u, v, w);
 for (auto [to, weight] : gw.out(u)) { ... }
 ```
+
+---
+
+### `cp/flow/*` — 网络流
+
+提供三种网络流模型。边编号从 0 开始，`edge(i)` 可读取对应的边信息。
+
+- `MaxFlow<FlowT>`：整数容量的最大流，使用 Dinic 算法，`max_flow(s, t)` 返回最大流值。
+- `MinCostFlow<FlowT, CostT>`：带整数容量和有符号费用的最小费用流；
+  `min_cost_flow(s, t)` 返回费用最小的流，`min_cost_max_flow(s, t)` 返回最大流量下费用最小的流，
+  二者均返回 `{flow, cost}`。
+- `MinCostCirculation<FlowT, CostT>`：带点供给和边费用的最小费用可行环流；通过
+  `supply(u)` 设置点供给，`circulation()` 返回最小费用，若无可行流则返回 `std::nullopt`。
+
+```cpp
+#include "cp/flow/max_flow.hpp"
+#include "cp/flow/min_cost_flow.hpp"
+
+cp::MaxFlow<int> flow(n);
+flow.add_edge(u, v, capacity);
+int value = flow.max_flow(source, sink);
+
+cp::MinCostFlow<int, int> costs(n);
+costs.add_edge(u, v, capacity, cost);
+auto [sent, total_cost] = costs.min_cost_max_flow(source, sink);
+```
+
+`MinCostFlow` 的 `negative_cost` 参数在残量网络可能含负费用时设为 `true`；默认值适用于所有相关费用
+非负的初始网络。`MinCostCirculation` 要求所有点供给之和为零，`FlowT` 和 `CostT` 必须为有符号类型。
+
+---
+
+### `cp/number_theory.hpp` — 数论算法
+
+提供模幂、扩展欧几里得、一次二元不定方程、Miller–Rabin 素性测试、Pollard–Rho 分解、Legendre
+符号、Cipolla 开平方，以及可组合的 Universal-Uclidean Algorithm（`uniclidean`）。
+
+```cpp
+#include "cp/number_theory.hpp"
+
+using i64 = cp::i64;
+std::mt19937_64 gen(123456789);
+
+i64 r = cp::qpow<i64>(2, 30, 1'000'000'007);
+auto factors = cp::factorize<i64>(8051, gen); // {83, 97}
+auto root = cp::cipolla<i64>(10, 13, gen);    // optional<i64>
+```
+
+这些接口目前面向有符号整数；`qpow`、`miller_rabin`、`legendre` 和 `cipolla` 的模数需满足各自注释中的
+数学前提（例如素数或奇素数）。随机算法通过调用者传入的生成器取样；`factorize` 返回的质因子未保证排序。
 
 ---
 
