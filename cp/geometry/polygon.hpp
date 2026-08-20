@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "../geometry.hpp"
+#include "cp/geometry.hpp"
 
 namespace cp
 {

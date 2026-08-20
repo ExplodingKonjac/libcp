@@ -9,7 +9,7 @@
 #include <random>
 #include <vector>
 
-#include "../geometry.hpp"
+#include "cp/geometry.hpp"
 
 namespace cp
 {
