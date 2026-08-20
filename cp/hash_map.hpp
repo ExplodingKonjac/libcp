@@ -78,6 +78,7 @@ private:
 
     public:
         using value_type = Slot;
+        using difference_type = isize;
         using reference =
             std::conditional_t<is_const, const value_type&, value_type&>;
         using pointer =

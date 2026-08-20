@@ -29,6 +29,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fpoly.hpp`](cp/fpoly.hpp) | 多项式运算（AVX2 加速 NTT） |
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
+| [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
 | [`cp/flow/max_flow.hpp`](cp/flow/max_flow.hpp) | 最大流 |
 | [`cp/flow/min_cost_flow.hpp`](cp/flow/min_cost_flow.hpp) | 最小费用流 |
 | [`cp/flow/min_cost_circulation.hpp`](cp/flow/min_cost_circulation.hpp) | 最小费用可行环流 |
@@ -166,6 +167,29 @@ cp::Graph<int> gw(n);
 gw.add_edge(u, v, w);
 for (auto [to, weight] : gw.out(u)) { ... }
 ```
+
+---
+
+### `cp/suffix_automaton.hpp` — 后缀自动机
+
+`SuffixAutomaton<SymbolT, MapT>` 在线构造字符串的后缀自动机，支持判断子串和遍历状态转移。
+`MapT` 需要满足 `sam_symbol_map`，库内提供适合小整数符号集的 `DenseMap<Symbol, N>`。
+
+```cpp
+using SAM = cp::SuffixAutomaton<char, cp::DenseMap<char, 128>>;
+SAM sam;
+for (char c : std::string{"ababa"}) sam.extend(c);
+
+cp::usize state = 0;
+for (char c : std::string{"bab"}) {
+    auto next = sam.transition(state, c);
+    if (!next) break;                 // 不是原串的子串
+    state = *next;
+}
+```
+
+`size()` 返回状态数，`last()` 返回当前最后状态；`link(i)`、`max_len(i)` 和
+`transitions(i)` 分别访问状态的后缀链接、最长字符串长度和转移边。
 
 ---
 
@@ -413,6 +437,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
 | `tests/test_fenwick.cpp` | 树状数组正确性 |
 | `tests/test_graph.cpp` | 图容器正确性 |
+| `tests/test_suffix_automaton.cpp` | 后缀自动机子串判断、转移与状态结构 |
 | `tests/test_geometry.cpp` | 二维向量、直线、距离与直线交点正确性 |
 | `tests/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
 | `tests/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
