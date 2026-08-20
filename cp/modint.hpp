@@ -2,8 +2,6 @@
 #include <algorithm>
 #include <cassert>
 #include <concepts>
-#include <optional>
-#include <random>
 #include <stdexcept>
 #include <type_traits>
 
@@ -15,7 +13,7 @@ namespace cp
 namespace detail
 {
 
-#define C constexpr
+#define C inline constexpr
 struct MontInfo {
     u32 P, P2 = P * 2, P_INV = [](u32 P) {
         u32 x = P % 2;
@@ -123,32 +121,6 @@ C T pow(T x, U y) {
     for (; y; y >>= 1, x = x * x)
         if (y & 1) res = res * x;
     return res;
-}
-
-template <Modint T>
-C int legendre(T x) {
-    auto r = pow(x, (x.mont.P - 1) / 2)();
-    return r == x.mont.P - 1 ? -1 : r;
-}
-
-template <Modint T>
-C std::optional<T> sqrt(T x) {
-    static std::default_random_engine rng(std::random_device{}());
-    if (x == T{0}) return x;
-    if (legendre(x) != 1) return std::nullopt;
-    T r{}, g{};
-    do r = rng(), g = r * r - x;
-    while (legendre(g) != -1);
-    auto mul = [&](auto& x, auto& y) {
-        return std::pair{x.second * y.second * g + x.first * y.first,
-                         x.first * y.second + y.first * x.second};
-    };
-    std::pair<T, T> res{1, 0}, base{r, 1};
-    for (u32 t = (x.mont.P + 1) / 2; t; t >>= 1) {
-        if (t & 1) res = mul(res, base);
-        base = mul(base, base);
-    }
-    return res.first;
 }
 #undef C
 
