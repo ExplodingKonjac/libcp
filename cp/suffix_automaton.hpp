@@ -13,7 +13,7 @@ namespace cp
 {
 
 template <typename MapT, typename SymbolT>
-concept sam_symbol_map = std::semiregular<MapT> &&
+concept SamSymbolMap = std::semiregular<MapT> &&
     std::ranges::range<MapT> &&
     std::ranges::range<const MapT> &&
     requires(MapT& m, const MapT& cm, SymbolT s, usize u) {
@@ -83,7 +83,7 @@ public:
     }
 };
 
-template <typename SymbolT, sam_symbol_map<SymbolT> MapT>
+template <typename SymbolT, SamSymbolMap<SymbolT> MapT>
 class SuffixAutomaton {
 private:
     struct State {

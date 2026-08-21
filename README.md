@@ -31,6 +31,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
+| [`cp/suffix_array.hpp`](cp/suffix_array.hpp) | 后缀数组，支持后缀排序、排名和最长公共前缀 |
 | [`cp/flow/max_flow.hpp`](cp/flow/max_flow.hpp) | 最大流 |
 | [`cp/flow/min_cost_flow.hpp`](cp/flow/min_cost_flow.hpp) | 最小费用流 |
 | [`cp/flow/min_cost_circulation.hpp`](cp/flow/min_cost_circulation.hpp) | 最小费用可行环流 |
@@ -214,6 +215,26 @@ for (char c : std::string{"bab"}) {
 
 `size()` 返回状态数，`last()` 返回当前最后状态；`link(i)`、`max_len(i)` 和
 `transitions(i)` 分别访问状态的后缀链接、最长字符串长度和转移边。
+
+---
+
+### `cp/suffix_array.hpp` — 后缀数组
+
+`SuffixArray<Symbol>` 从随机访问范围构造后缀数组，提供按字典序排列的后缀位置、
+后缀排名以及相邻后缀的最长公共前缀长度。支持字符串、整数序列等可比较的符号类型，
+也支持通过类模板参数推导直接构造。
+
+```cpp
+#include "cp/suffix_array.hpp"
+
+cp::SuffixArray suffix_array(std::string{"banana"});
+auto position = suffix_array.sa(0);   // 5，最小后缀 "a"
+auto rank = suffix_array.rk(1);       // 2，"anana" 的排名
+auto common = suffix_array.height(2); // 3，与前一后缀的 LCP
+```
+
+`sa(i)` 返回第 `i` 个后缀的起始位置，`rk(i)` 返回从位置 `i` 开始的后缀排名，
+`height(i)` 返回第 `i` 个后缀与前一个后缀的最长公共前缀长度；`height(0)` 始终为零。
 
 ---
 

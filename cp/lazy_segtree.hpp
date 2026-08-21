@@ -16,13 +16,11 @@ namespace cp
 template <
     typename Value,
     typename Operand = Value,
-    typename Plus = std::plus<Value>,
-    typename Mult = std::multiplies<>,
+    FnMut<Value, Value, Value> Plus = std::plus<Value>,
+    FnMut<Value, Operand, Value> Mult = std::multiplies<>,
     typename Alloc = std::allocator<Value>
 >
-    requires FnMut<Plus, Value, Value, Value> &&
-    FnMut<Mult, Value, Operand, Value> &&
-    FnMut<Mult, Operand, Operand, Operand> &&
+    requires FnMut<Mult, Operand, Operand, Operand> &&
     requires { typename std::allocator_traits<Alloc>; }
 class LazySegTree {
     using Tag = std::optional<Operand>;
