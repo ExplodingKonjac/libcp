@@ -1,13 +1,12 @@
 #pragma once
 
-#include <concepts>
 #include <functional>
 #include <ranges>
-#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "cp/def.hpp"
+#include "utils/concepts.hpp"
 
 namespace cp
 {
@@ -30,26 +29,10 @@ std::vector<std::pair<T, T>> __to_vec(R&& r) {
 
 }  // namespace detail
 
-template <typename T, typename F, typename S>
-concept pair_like = (std::tuple_size_v<T> == 2) && requires(T p) {
-    { get<0>(p) } -> std::convertible_to<F>;
-    { get<1>(p) } -> std::convertible_to<S>;
-};
-
-template <typename T>
-concept arithmetic_like = requires(T x) {
-    T{0};
-    { x + x } -> std::convertible_to<T>;
-    { x - x } -> std::convertible_to<T>;
-    { x * x } -> std::convertible_to<T>;
-    { x / x } -> std::convertible_to<T>;
-    { -x } -> std::convertible_to<T>;
-};
-
 // Calculate f(x0) where f(x) is the polynomial decided by (x, y) pairs in `r`.
 // T should not be native integers since division is used.
-template <arithmetic_like T, std::ranges::input_range R>
-    requires pair_like<std::ranges::range_value_t<R>, T, T>
+template <ArithmeticLike T, std::ranges::input_range R>
+    requires PairLike<std::ranges::range_value_t<R>, T, T>
 T polynomial_interpolation(R&& r, T x0) {
     auto p = detail::__to_vec<T>(std::forward<R>(r));
     if (p.empty()) return T{0};
@@ -69,8 +52,8 @@ T polynomial_interpolation(R&& r, T x0) {
 
 // Resolves the polynomial coefficients decided by (x, y) pairs in `r`.
 // T should not be native integers since division is used.
-template <arithmetic_like T, std::ranges::input_range R, typename F>
-    requires pair_like<std::ranges::range_value_t<R>, T, T>
+template <ArithmeticLike T, std::ranges::input_range R, typename F>
+    requires PairLike<std::ranges::range_value_t<R>, T, T>
 std::vector<T> polynomial_coefficients(R&& r, F eq = std::equal_to<>{}) {
     auto p = detail::__to_vec<T>(std::forward<R>(r));
     if (p.empty()) return {T{0}};

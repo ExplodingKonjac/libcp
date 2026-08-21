@@ -20,12 +20,10 @@ template <
     typename Mult = std::multiplies<>,
     typename Alloc = std::allocator<Value>
 >
-    requires requires(Value x, Operand op, Plus plus, Mult mult) {
-        { plus(x, x) } -> std::convertible_to<Value>;
-        { mult(op, x) } -> std::convertible_to<Value>;
-        { mult(op, op) } -> std::convertible_to<Operand>;
-        typename std::allocator_traits<Alloc>;
-    }
+    requires FnMut<Plus, Value, Value, Value> &&
+    FnMut<Mult, Value, Operand, Value> &&
+    FnMut<Mult, Operand, Operand, Operand> &&
+    requires { typename std::allocator_traits<Alloc>; }
 class LazySegTree {
     using Tag = std::optional<Operand>;
     using ValueAlloc =

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "def.hpp"
+#include "utils/concepts.hpp"
 
 namespace cp
 {
@@ -20,15 +21,13 @@ struct ZeroFn {
 }  // namespace detail
 
 template <
-    typename T, typename PlusOp = std::plus<T>,
-    typename MinusOp = std::minus<T>, typename ZeroFn = detail::ZeroFn<T>,
-    typename Alloc = std::allocator<T>>
-    requires requires(T x, PlusOp plus, MinusOp minus, ZeroFn zero) {
-        { plus(x, x) } -> std::same_as<T>;
-        { minus(x, x) } -> std::same_as<T>;
-        { zero() } -> std::same_as<T>;
-        typename std::allocator_traits<Alloc>;
-    }
+    typename T,
+    Fn<T, T, T> PlusOp = std::plus<T>,
+    Fn<T, T, T> MinusOp = std::minus<T>,
+    Fn<T> ZeroFn = detail::ZeroFn<T>,
+    typename Alloc = std::allocator<T>
+>
+    requires requires { typename std::allocator_traits<Alloc>; }
 class FenwickTree {
 public:
     explicit FenwickTree(

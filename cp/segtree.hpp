@@ -15,13 +15,10 @@ namespace cp
 
 template <
     typename SemiGroup,
-    typename Mult = std::multiplies<SemiGroup>,
+    Fn<SemiGroup, SemiGroup, SemiGroup> Mult = std::multiplies<SemiGroup>,
     typename Alloc = std::allocator<SemiGroup>
 >
-    requires requires(SemiGroup x, Mult mul) {
-        { mul(x, x) } -> std::same_as<SemiGroup>;
-        typename std::allocator_traits<Alloc>;
-    }
+    requires requires { typename std::allocator_traits<Alloc>; }
 class SegTree {
     using AllocTraits = std::allocator_traits<Alloc>;
 

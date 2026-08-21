@@ -1,23 +1,23 @@
 #pragma once
 
 #include <algorithm>
-#include <concepts>
 #include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "def.hpp"
+#include "utils/concepts.hpp"
 
 namespace cp
 {
 
-template <typename T, typename Compare = std::less<T>,
-          typename Alloc = std::allocator<T>>
-    requires requires(T x, Compare cmp) {
-        { cmp(x, x) } -> std::same_as<bool>;
-        typename std::allocator_traits<Alloc>;
-    }
+template <
+    typename T,
+    Fn<bool, const T&, const T&> Compare = std::less<T>,
+    typename Alloc = std::allocator<T>
+>
+    requires requires { typename std::allocator_traits<Alloc>; }
 class PairingHeap {
 private:
     struct Node {

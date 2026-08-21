@@ -2,19 +2,11 @@
 
 #include <emmintrin.h>
 
-#include <algorithm>
-#include <bit>
-#include <concepts>
-#include <cstddef>
 #include <cstring>
-#include <functional>
-#include <memory>
 #include <optional>
-#include <tuple>
-#include <type_traits>
-#include <utility>
 
 #include "def.hpp"
+#include "utils/concepts.hpp"
 
 namespace cp
 {
@@ -38,14 +30,10 @@ alignas(16) inline const u8 default_ctrl[16]{
 template <
     typename Key,
     typename Mapped,
-    typename Hash = std::hash<Key>,
-    typename Eq = std::equal_to<Key>,
+    FnMut<usize, const Key&> Hash = std::hash<Key>,
+    FnMut<bool, const Key&, const Key&> Eq = std::equal_to<Key>,
     typename Alloc = std::allocator<std::pair<const Key, Mapped>>
 >
-    requires requires(Key k, Hash hash, Eq eq) {
-        { hash(k) } -> std::convertible_to<usize>;
-        { eq(k, k) } -> std::convertible_to<bool>;
-    }
 class FlatHashMap {
 private:
     using Slot = std::pair<const Key, Mapped>;
@@ -377,11 +365,8 @@ public:
             );
         return iterator(_ctrl + idx, _data + idx);
     }
-    template <std::invocable<> Fn>
-        requires requires(Fn f) {
-            { f() } -> std::convertible_to<Mapped>;
-        }
-    iterator try_insert_with(key_type key, Fn f) {
+    template <FnMut<Mapped> F>
+    iterator try_insert_with(key_type key, F f) {
         try_rehash();
         auto hsh = do_hash(key);
         auto [fl, idx] = lookup<true, false>(hsh, key);
