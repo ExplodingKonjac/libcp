@@ -42,7 +42,7 @@ namespace literals
 {
 
 template <FixedString S>
-consteval auto operator""_fmt() {
+inline consteval auto operator""_fmt() {
     return FormatString<S>{};
 }
 

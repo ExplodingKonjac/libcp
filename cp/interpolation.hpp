@@ -15,7 +15,7 @@ namespace detail
 {
 
 template <typename T, typename R>
-std::vector<std::pair<T, T>> __to_vec(R&& r) {
+inline std::vector<std::pair<T, T>> __to_vec(R&& r) {
     std::vector<std::pair<T, T>> p;
     for (auto&& x: r) {
         if constexpr (std::is_lvalue_reference_v<R>) {
@@ -33,7 +33,7 @@ std::vector<std::pair<T, T>> __to_vec(R&& r) {
 // T should not be native integers since division is used.
 template <ArithmeticLike T, std::ranges::input_range R>
     requires PairLike<std::ranges::range_value_t<R>, T, T>
-T polynomial_interpolation(R&& r, T x0) {
+inline T polynomial_interpolation(R&& r, T x0) {
     auto p = detail::__to_vec<T>(std::forward<R>(r));
     if (p.empty()) return T{0};
     usize n = p.size();
@@ -54,7 +54,7 @@ T polynomial_interpolation(R&& r, T x0) {
 // T should not be native integers since division is used.
 template <ArithmeticLike T, std::ranges::input_range R, typename F>
     requires PairLike<std::ranges::range_value_t<R>, T, T>
-std::vector<T> polynomial_coefficients(R&& r, F eq = std::equal_to<>{}) {
+inline std::vector<T> polynomial_coefficients(R&& r, F eq = std::equal_to<>{}) {
     auto p = detail::__to_vec<T>(std::forward<R>(r));
     if (p.empty()) return {T{0}};
     usize n = p.size();

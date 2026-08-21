@@ -34,22 +34,22 @@ using geometry_real_t =
     std::conditional_t<std::floating_point<T>, T, long double>;
 
 template <std::floating_point T>
-constexpr bool almost_equal(T a, T b) {
+inline constexpr bool almost_equal(T a, T b) {
     return std::abs(a - b) <= geometry_eps;
 }
 
 template <GeometryScalar T>
-constexpr int cmp(T a, T b) {
+inline constexpr int cmp(T a, T b) {
     if constexpr (std::floating_point<T>)
         if (almost_equal(a, b)) return 0;
     return (a > b) - (a < b);
 }
 
 template <GeometryScalar T>
-constexpr int sgn(T x) {
+inline constexpr int sgn(T x) {
     return cmp(x, T{});
 }
-constexpr int sgn(i128 x) { return x > 0 ? 1 : x < 0 ? -1 : 0; }
+inline constexpr int sgn(i128 x) { return x > 0 ? 1 : x < 0 ? -1 : 0; }
 
 template <GeometryScalar T>
 struct Vec2 {
@@ -87,24 +87,26 @@ template <GeometryScalar T>
 using Point2 = Vec2<T>;
 
 template <std::floating_point T>
-constexpr bool almost_equal(Vec2<T> a, Vec2<T> b) {
+inline constexpr bool almost_equal(Vec2<T> a, Vec2<T> b) {
     return almost_equal(a.x, b.x) && almost_equal(a.y, b.y);
 }
 
 template <GeometryScalar T>
-constexpr geometry_wide_t<T> dot(Vec2<T> a, Vec2<T> b) {
+inline constexpr geometry_wide_t<T> dot(Vec2<T> a, Vec2<T> b) {
     using W = geometry_wide_t<T>;
     return (W)a.x * (W)b.x + (W)a.y * (W)b.y;
 }
 
 template <GeometryScalar T>
-constexpr geometry_wide_t<T> cross(Vec2<T> a, Vec2<T> b) {
+inline constexpr geometry_wide_t<T> cross(Vec2<T> a, Vec2<T> b) {
     using W = geometry_wide_t<T>;
     return (W)a.x * (W)b.y - (W)a.y * (W)b.x;
 }
 
 template <GeometryScalar T>
-constexpr geometry_wide_t<T> cross(Point2<T> o, Point2<T> a, Point2<T> b) {
+inline constexpr geometry_wide_t<T> cross(
+    Point2<T> o, Point2<T> a, Point2<T> b
+) {
     using W = geometry_wide_t<T>;
     W ax = (W)a.x - (W)o.x, ay = (W)a.y - (W)o.y;
     W bx = (W)b.x - (W)o.x, by = (W)b.y - (W)o.y;
@@ -112,44 +114,44 @@ constexpr geometry_wide_t<T> cross(Point2<T> o, Point2<T> a, Point2<T> b) {
 }
 
 template <GeometryScalar T>
-constexpr geometry_wide_t<T> norm_sq(Vec2<T> a) {
+inline constexpr geometry_wide_t<T> norm_sq(Vec2<T> a) {
     return dot(a, a);
 }
 
 template <GeometryScalar T>
-constexpr geometry_wide_t<T> distance_sq(Point2<T> a, Point2<T> b) {
+inline constexpr geometry_wide_t<T> distance_sq(Point2<T> a, Point2<T> b) {
     using W = geometry_wide_t<T>;
     W x = (W)a.x - (W)b.x, y = (W)a.y - (W)b.y;
     return x * x + y * y;
 }
 
 template <GeometryScalar T>
-geometry_real_t<T> norm(Vec2<T> a) {
+inline geometry_real_t<T> norm(Vec2<T> a) {
     using R = geometry_real_t<T>;
     return std::hypot((R)a.x, (R)a.y);
 }
 
 template <GeometryScalar T>
-geometry_real_t<T> distance(Point2<T> a, Point2<T> b) {
+inline geometry_real_t<T> distance(Point2<T> a, Point2<T> b) {
     using R = geometry_real_t<T>;
     return std::hypot((R)a.x - (R)b.x, (R)a.y - (R)b.y);
 }
 
 template <GeometryScalar T>
-geometry_real_t<T> angle(Vec2<T> a) {
+inline geometry_real_t<T> angle(Vec2<T> a) {
     using R = geometry_real_t<T>;
     return std::atan2((R)a.y, (R)a.x);
 }
 
 template <GeometryScalar T>
-Vec2<geometry_real_t<T>> rotate(Vec2<T> a, geometry_real_t<T> r) {
+inline Vec2<geometry_real_t<T>> rotate(Vec2<T> a, geometry_real_t<T> r) {
     using R = geometry_real_t<T>;
     R c = std::cos(r), s = std::sin(r), x = (R)a.x, y = (R)a.y;
     return {x * c - y * s, x * s + y * c};
 }
 
 template <GeometryScalar T>
-std::optional<Vec2<geometry_real_t<T>>> normalized(Vec2<T> a) {
+inline std::optional<Vec2<geometry_real_t<T>>> normalized(Vec2<T> a) {
     using R = geometry_real_t<T>;
     R d = norm(a);
     if (almost_equal(d, R{})) return std::nullopt;
@@ -190,19 +192,19 @@ namespace detail
 {
 
 template <std::floating_point T>
-constexpr T max_norm(T x, T y) {
+inline constexpr T max_norm(T x, T y) {
     return std::max(x < T{} ? -x : x, y < T{} ? -y : y);
 }
 
 template <std::floating_point T>
-constexpr int unit_det_sgn(T ax, T ay, T bx, T by) {
+inline constexpr int unit_det_sgn(T ax, T ay, T bx, T by) {
     T an = max_norm(ax, ay), bn = max_norm(bx, by);
     if (an == T{} || bn == T{}) return 0;
     return sgn((ax / an) * (by / bn) - (ay / an) * (bx / bn));
 }
 
 template <GeometryScalar T>
-constexpr int det_sgn(
+inline constexpr int det_sgn(
     geometry_wide_t<T> ax,
     geometry_wide_t<T> ay,
     geometry_wide_t<T> bx,
@@ -217,7 +219,7 @@ constexpr int det_sgn(
 }  // namespace detail
 
 template <GeometryScalar T>
-constexpr int line_side(Line2<T> l, Point2<T> p) {
+inline constexpr int line_side(Line2<T> l, Point2<T> p) {
     using W = geometry_wide_t<T>;
     W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
     W a = (W)l.direction.x, b = (W)l.direction.y;
@@ -229,7 +231,7 @@ constexpr int line_side(Line2<T> l, Point2<T> p) {
 }
 
 template <GeometryScalar T>
-constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
+inline constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
     using W = geometry_wide_t<T>;
     W ax = (W)a.x - (W)o.x, ay = (W)a.y - (W)o.y;
     W bx = (W)b.x - (W)o.x, by = (W)b.y - (W)o.y;
@@ -239,13 +241,13 @@ constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
 }
 
 template <GeometryScalar T>
-constexpr bool parallel(Line2<T> a, Line2<T> b) {
+inline constexpr bool parallel(Line2<T> a, Line2<T> b) {
     assert(a.is_valid() && b.is_valid());
     return orientation(Point2<T>{}, a.direction, b.direction) == 0;
 }
 
 template <GeometryScalar T>
-constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
+inline constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
     using W = geometry_wide_t<T>;
     assert(a.is_valid() && b.is_valid());
     if constexpr (std::floating_point<T>) {
@@ -261,13 +263,13 @@ constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
 }
 
 template <GeometryScalar T>
-constexpr bool on_line(Line2<T> l, Point2<T> p) {
+inline constexpr bool on_line(Line2<T> l, Point2<T> p) {
     assert(l.is_valid());
     return line_side(l, p) == 0;
 }
 
 template <GeometryScalar T>
-constexpr bool on_segment(Point2<T> a, Point2<T> b, Point2<T> p) {
+inline constexpr bool on_segment(Point2<T> a, Point2<T> b, Point2<T> p) {
     if (orientation(a, b, p)) return false;
     auto in = [&](T x, T l, T r) {
         if (l > r) std::swap(l, r);
@@ -280,7 +282,7 @@ constexpr bool on_segment(Point2<T> a, Point2<T> b, Point2<T> p) {
 }
 
 template <GeometryScalar T>
-Point2<geometry_real_t<T>> project(Point2<T> p, Line2<T> l) {
+inline Point2<geometry_real_t<T>> project(Point2<T> p, Line2<T> l) {
     using R = geometry_real_t<T>;
     assert(l.is_valid());
     auto a = l.point.template cast<R>(), d = l.direction.template cast<R>();
@@ -289,13 +291,13 @@ Point2<geometry_real_t<T>> project(Point2<T> p, Line2<T> l) {
 }
 
 template <GeometryScalar T>
-Point2<geometry_real_t<T>> reflect(Point2<T> p, Line2<T> l) {
+inline Point2<geometry_real_t<T>> reflect(Point2<T> p, Line2<T> l) {
     using R = geometry_real_t<T>;
     return project(p, l) * R{2} - p.template cast<R>();
 }
 
 template <GeometryScalar T>
-geometry_real_t<T> distance(Point2<T> p, Line2<T> l) {
+inline geometry_real_t<T> distance(Point2<T> p, Line2<T> l) {
     using R = geometry_real_t<T>;
     return distance(p.template cast<R>(), project(p, l));
 }
@@ -309,7 +311,9 @@ struct LineIntersection2 {
 };
 
 template <GeometryScalar T>
-LineIntersection2<geometry_real_t<T>> intersection(Line2<T> a, Line2<T> b) {
+inline LineIntersection2<geometry_real_t<T>> intersection(
+    Line2<T> a, Line2<T> b
+) {
     using R = geometry_real_t<T>;
     assert(a.is_valid() && b.is_valid());
     if (parallel(a, b))
@@ -325,7 +329,7 @@ LineIntersection2<geometry_real_t<T>> intersection(Line2<T> a, Line2<T> b) {
 }
 
 template <GeometryScalar T>
-LineIntersection2<geometry_real_t<T>> intersection(
+inline LineIntersection2<geometry_real_t<T>> intersection(
     Segment2<T> a, Segment2<T> b
 ) {
     using R = geometry_real_t<T>;
@@ -370,7 +374,7 @@ LineIntersection2<geometry_real_t<T>> intersection(
 }
 
 template <typename Lhs, typename Rhs, typename... Args>
-bool intersects(Lhs a, Rhs b, Args... args) {
+inline bool intersects(Lhs a, Rhs b, Args... args) {
     return intersection(a, b, args...).kind !=
         decltype(intersection(a, b, args...)){}.kind;
 }

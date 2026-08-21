@@ -159,7 +159,7 @@ inline std::optional<T> cipolla(T n, T p, Gen&& gen) {
 //   (n - 1, f(n - 1)) -> (n, f(n - 1)) -> ... -> (n, f(n))
 // where going up denotes a `U` and going right denotes an `R`.
 template <typename D, std::signed_integral T, typename Op = std::multiplies<D>>
-D uniclidean(T p, T q, T r, T n, D R, D U, D init = {}, Op mul = Op{}) {
+inline D uniclidean(T p, T q, T r, T n, D R, D U, D init = {}, Op mul = Op{}) {
     if (n == 0) return init;
     auto qpow = [&](D x, T y, D init) {
         for (; y; y >>= 1, x = mul(x, x))

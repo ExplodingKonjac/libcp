@@ -557,8 +557,8 @@ concept InitFriendlyType =
     std::same_as<T, u32> || std::same_as<T, i32> || std::same_as<T, Mint>;
 
 template <typename R, typename Mint>
-concept CanFastInit = std::ranges::contiguous_range<R>
-    && InitFriendlyType<std::ranges::range_value_t<R>, Mint>;
+concept CanFastInit = std::ranges::contiguous_range<R> &&
+    InitFriendlyType<std::ranges::range_value_t<R>, Mint>;
 
 }  // namespace detail
 
@@ -601,9 +601,9 @@ public:
         }
     }
     template <std::ranges::input_range R>
-        requires std::convertible_to<std::ranges::range_value_t<R>, Mint>
-        && (!detail::CanFastInit<R, Mint>)
-        && (!std::same_as<std::remove_cvref_t<R>, FPoly>)
+        requires std::convertible_to<std::ranges::range_value_t<R>, Mint> &&
+        (!detail::CanFastInit<R, Mint>) &&
+        (!std::same_as<std::remove_cvref_t<R>, FPoly>)
     FPoly(R&& r) {
         if constexpr (std::ranges::sized_range<R>) {
             reserve(std::ranges::size(r));
@@ -696,14 +696,14 @@ public:
 #define Poly FPoly<Q>
 #define U Poly::U
 template <u32 Q>
-Poly integrate(Poly f) {
+inline Poly integrate(Poly f) {
     f.resize(f.size() + 1);
     U::polyint(f.data(), f.size(), f.data());
     return f;
 }
 
 template <u32 Q>
-Poly derivative(Poly f) {
+inline Poly derivative(Poly f) {
     if (f.size() == 0) return f;
     U::polyder(f.data(), f.size(), f.data());
     f.resize(f.size() - 1);
@@ -711,28 +711,28 @@ Poly derivative(Poly f) {
 }
 
 template <u32 Q>
-Poly inv(const Poly& f) {
+inline Poly inv(const Poly& f) {
     Poly res(f.size(), true);
     U::polyinv(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q>
-Poly ln(const Poly& f) {
+inline Poly ln(const Poly& f) {
     Poly res(f.size(), true);
     U::polyln(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q>
-Poly exp(const Poly& f) {
+inline Poly exp(const Poly& f) {
     Poly res(f.size(), true);
     U::polyexp(f.data(), f.size(), res.data());
     return res;
 }
 
 template <u32 Q>
-Poly sqrt(const Poly& f) {
+inline Poly sqrt(const Poly& f) {
     auto k = std::ranges::find_if(f, [](auto x) { return x(); }) - f.begin();
     if (k == f.size()) return Poly(f.size(), true);
     if (k % 2 != 0) throw std::invalid_argument("sqrt does not exist");
@@ -752,7 +752,7 @@ Poly sqrt(const Poly& f) {
 }
 
 template <u32 Q>
-std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
+inline std::pair<Poly, Poly> div(const Poly& f, const Poly& g) {
     size_t n = f.size(), m = g.size();
     if (m == 0) throw std::invalid_argument("divider is empty");
     if (n < m) return {{}, f};
