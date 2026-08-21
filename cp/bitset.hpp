@@ -15,7 +15,7 @@
 namespace cp
 {
 
-namespace details
+namespace detail
 {
 
 template <typename E>
@@ -110,56 +110,55 @@ struct BitsetAnt {
     }
 };
 
-}  // namespace details
+}  // namespace detail
 
 template <typename E>
 concept BitsetExpr = requires(const std::remove_reference_t<E>& e, usize i) {
     e.block_at(i);
-    details::expr_bit_size_v<E>;
-    details::expr_block_count_v<E>;
+    detail::expr_bit_size_v<E>;
+    detail::expr_block_count_v<E>;
 };
 
 template <BitsetExpr E>
 inline auto operator~(E&& e) {
-    return details::BitsetNot<E>{std::forward<E>(e)};
+    return detail::BitsetNot<E>{std::forward<E>(e)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline auto operator&(XE&& xe, YE&& ye) {
-    return details::BitsetAnd<XE, YE>{std::forward<XE>(xe),
-                                      std::forward<YE>(ye)};
-}
-
-template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
-inline auto operator|(XE&& xe, YE&& ye) {
-    return details::BitsetOr<XE, YE>{std::forward<XE>(xe),
+    return detail::BitsetAnd<XE, YE>{std::forward<XE>(xe),
                                      std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
+inline auto operator|(XE&& xe, YE&& ye) {
+    return detail::BitsetOr<XE, YE>{std::forward<XE>(xe), std::forward<YE>(ye)};
+}
+
+template <BitsetExpr XE, BitsetExpr YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline auto operator^(XE&& xe, YE&& ye) {
-    return details::BitsetXor<XE, YE>{std::forward<XE>(xe),
-                                      std::forward<YE>(ye)};
+    return detail::BitsetXor<XE, YE>{std::forward<XE>(xe),
+                                     std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline auto operator-(XE&& xe, YE&& ye) {
-    return details::BitsetAnt<XE, YE>{std::forward<XE>(xe),
-                                      std::forward<YE>(ye)};
+    return detail::BitsetAnt<XE, YE>{std::forward<XE>(xe),
+                                     std::forward<YE>(ye)};
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline bool operator==(XE&& xe, YE&& ye) {
-    for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
+    for (usize i = 0; i != detail::expr_block_count_v<XE>; ++i) {
         auto bxa = _mm256_xor_si256(ye.block_at(i), xe.block_at(i));
-        if (i + 1 == details::expr_block_count_v<XE>)
+        if (i + 1 == detail::expr_block_count_v<XE>)
             bxa = _mm256_and_si256(
-                bxa, details::bitset_mask(details::expr_bit_size_v<XE>)
+                bxa, detail::bitset_mask(detail::expr_bit_size_v<XE>)
             );
         if (!_mm256_testz_si256(bxa, bxa)) return false;
     }
@@ -167,19 +166,19 @@ inline bool operator==(XE&& xe, YE&& ye) {
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline bool operator!=(XE&& xe, YE&& ye) {
     return !(xe == ye);
 }
 
 template <BitsetExpr XE, BitsetExpr YE>
-    requires details::SameBitsetExprSize<XE, YE>
+    requires detail::SameBitsetExprSize<XE, YE>
 inline std::partial_ordering operator<=>(XE&& xe, YE&& ye) {
     bool x_extra = false, y_extra = false;
-    for (usize i = 0; i != details::expr_block_count_v<XE>; ++i) {
+    for (usize i = 0; i != detail::expr_block_count_v<XE>; ++i) {
         auto x = xe.block_at(i), y = ye.block_at(i);
-        if (i + 1 == details::expr_block_count_v<XE>) {
-            auto mask = details::bitset_mask(details::expr_bit_size_v<XE>);
+        if (i + 1 == detail::expr_block_count_v<XE>) {
+            auto mask = detail::bitset_mask(detail::expr_bit_size_v<XE>);
             x = _mm256_and_si256(x, mask);
             y = _mm256_and_si256(y, mask);
         }
@@ -615,8 +614,8 @@ public:
             }
             while (remaining) {
                 --destination, --source;
-                *destination = (source[0] << bit_shift)
-                    | (source[-1] >> (WORD_SIZE - bit_shift));
+                *destination = (source[0] << bit_shift) |
+                    (source[-1] >> (WORD_SIZE - bit_shift));
                 --remaining;
             }
             *--destination = *--source << bit_shift;
@@ -656,8 +655,8 @@ public:
                 remaining -= BLOCK_SIZE;
             }
             while (remaining) {
-                *destination = (source[0] >> bit_shift)
-                    | (source[1] << (WORD_SIZE - bit_shift));
+                *destination = (source[0] >> bit_shift) |
+                    (source[1] << (WORD_SIZE - bit_shift));
                 ++destination, ++source;
                 --remaining;
             }
@@ -700,8 +699,8 @@ public:
             }
             while (remaining) {
                 --destination, --source;
-                *destination = (source[0] << bit_shift)
-                    | (source[-1] >> (WORD_SIZE - bit_shift));
+                *destination = (source[0] << bit_shift) |
+                    (source[-1] >> (WORD_SIZE - bit_shift));
                 --remaining;
             }
             *--destination = *--source << bit_shift;
@@ -739,8 +738,8 @@ public:
                 remaining -= BLOCK_SIZE;
             }
             while (remaining) {
-                *destination = (source[0] >> bit_shift)
-                    | (source[1] << (WORD_SIZE - bit_shift));
+                *destination = (source[0] >> bit_shift) |
+                    (source[1] << (WORD_SIZE - bit_shift));
                 ++destination, ++source;
                 --remaining;
             }

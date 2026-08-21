@@ -35,6 +35,7 @@ public:
 
     template <bool Const>
     struct Iter {
+        using Map = std::conditional_t<Const, const DenseMap, DenseMap>;
         using Item =
             std::pair<Symbol, std::conditional_t<Const, const usize&, usize&>>;
         using value_type = std::pair<Symbol, usize>;
@@ -45,7 +46,7 @@ public:
             const Item* operator->() const { return &item; }
         };
 
-        std::conditional_t<Const, const DenseMap, DenseMap>* m{};
+        Map* m{};
         usize i{N};
 
         // clang-format off

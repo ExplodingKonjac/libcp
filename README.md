@@ -27,6 +27,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/fast_io.hpp`](cp/fast_io.hpp) | 快速 IO 库 |
 | [`cp/modint.hpp`](cp/modint.hpp) | 模运算（Montgomery 形式） |
 | [`cp/fpoly.hpp`](cp/fpoly.hpp) | 多项式运算（AVX2 加速 NTT） |
+| [`cp/interpolation.hpp`](cp/interpolation.hpp) | 多项式插值与系数求解 |
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
@@ -132,6 +133,29 @@ Poly h = f * g;             // NTT 加速乘法
 Poly i = cp::inv(f, 3);    // 模 x^3 逆
 Poly l = cp::ln(f, 3);     // 模 x^3 对数
 Poly e = cp::exp(f, 3);    // 模 x^3 指数
+```
+
+---
+
+### `cp/interpolation.hpp` — 多项式插值
+
+提供拉格朗日插值求值和根据点值恢复多项式系数：
+
+- `polynomial_interpolation(points, x)` — 计算插值多项式在 `x` 处的值
+- `polynomial_coefficients<T>(points, eq)` — 返回升幂排列的系数
+
+节点横坐标必须互异。系数计算包含除法，`T` 应支持适合问题的精确除法（通常使用浮点类型或域类型）。
+
+```cpp
+#include <functional>
+#include <vector>
+#include "cp/interpolation.hpp"
+
+std::vector<std::pair<double, double>> points{{0, 5}, {1, 4}, {2, 7}};
+double value = cp::polynomial_interpolation(points, 3);  // 14
+auto coefficients = cp::polynomial_coefficients<double>(
+    points, std::equal_to<>{}
+);  // {5, -3, 2}
 ```
 
 ---
@@ -442,6 +466,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
 | `tests/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
 | `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
+| `tests/test_interpolation.cpp` | 多项式插值与系数求解 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
 | `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |
