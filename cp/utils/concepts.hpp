@@ -1,6 +1,8 @@
+#pragma once
+
 #include <concepts>
-#include <functional>
 #include <tuple>
+#include <type_traits>
 
 namespace cp
 {
@@ -8,22 +10,25 @@ namespace cp
 namespace detail
 {
 
-template <typename From, typename To>
-concept returnable_as = std::same_as<To, void> || std::convertible_to<From, To>;
+template <typename F, typename S>
+struct SignatureCheck: std::false_type {};
+
+template <typename F, typename R, typename... Args>
+    requires std::invocable<F, Args...> &&
+    (std::same_as<R, void> ||
+     std::convertible_to<std::invoke_result_t<F, Args...>, R>)
+struct SignatureCheck<F, R(Args...)>: std::true_type {};
 
 }  // namespace detail
 
-template <class F, class R, class... Args>
-concept Fn = std::invocable<const F&, Args...> &&
-    detail::returnable_as<std::invoke_result_t<const F&, Args...>, R>;
+template <typename F, typename S>
+concept Fn = detail::SignatureCheck<const F&, S>::value;
 
-template <class F, class R, class... Args>
-concept FnMut = std::invocable<F&, Args...> &&
-    detail::returnable_as<std::invoke_result_t<F&, Args...>, R>;
+template <typename F, typename S>
+concept FnMut = detail::SignatureCheck<F&, S>::value;
 
-template <class F, class R, class... Args>
-concept FnOnce = std::invocable<F&&, Args...> &&
-    detail::returnable_as<std::invoke_result_t<F&&, Args...>, R>;
+template <typename F, typename S>
+concept FnOnce = detail::SignatureCheck<F&&, S>::value;
 
 template <typename T, typename R, typename S>
 concept PairLike = (std::tuple_size_v<T> == 2) && requires(T p) {

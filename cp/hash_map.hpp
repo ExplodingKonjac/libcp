@@ -30,8 +30,8 @@ alignas(16) inline const u8 default_ctrl[16]{
 template <
     typename Key,
     typename Mapped,
-    FnMut<usize, const Key&> Hash = std::hash<Key>,
-    FnMut<bool, const Key&, const Key&> Eq = std::equal_to<Key>,
+    FnMut<usize(const Key&)> Hash = std::hash<Key>,
+    FnMut<bool(const Key&, const Key&)> Eq = std::equal_to<Key>,
     typename Alloc = std::allocator<std::pair<const Key, Mapped>>
 >
 class FlatHashMap {
@@ -365,7 +365,7 @@ public:
             );
         return iterator(_ctrl + idx, _data + idx);
     }
-    template <FnMut<Mapped> F>
+    template <FnMut<Mapped()> F>
     iterator try_insert_with(key_type key, F f) {
         try_rehash();
         auto hsh = do_hash(key);

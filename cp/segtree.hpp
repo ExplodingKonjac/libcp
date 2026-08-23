@@ -15,7 +15,7 @@ namespace cp
 
 template <
     typename SemiGroup,
-    Fn<SemiGroup, SemiGroup, SemiGroup> Mult = std::multiplies<SemiGroup>,
+    Fn<SemiGroup(SemiGroup, SemiGroup)> Mult = std::multiplies<SemiGroup>,
     typename Alloc = std::allocator<SemiGroup>
 >
     requires requires { typename std::allocator_traits<Alloc>; }
@@ -25,7 +25,7 @@ class SegTree {
 public:
     SegTree() = default;
 
-    template <FnMut<SemiGroup, usize> F>
+    template <FnMut<SemiGroup(usize)> F>
     SegTree(usize n, F gen, Mult mul = {}, Alloc alloc = {}):
         n_{n}, mult_{std::move(mul)}, alloc_{std::move(alloc)} {
         if (n_ > 0) {
@@ -45,7 +45,7 @@ public:
         for (usize i = 1; i < 2 * n_; i++) AllocTraits::destroy(alloc_, t_ + i);
         AllocTraits::deallocate(alloc_, t_, 2 * n_);
     }
-    template <FnOnce<SemiGroup, SemiGroup> F>
+    template <FnOnce<SemiGroup(SemiGroup)> F>
     bool update(usize p, F func) noexcept {
         if (p >= n_) return false;
         return modify(p, func(t_[n_ + p]));

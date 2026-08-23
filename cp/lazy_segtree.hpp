@@ -16,11 +16,11 @@ namespace cp
 template <
     typename Value,
     typename Operand = Value,
-    FnMut<Value, Value, Value> Plus = std::plus<Value>,
-    FnMut<Value, Operand, Value> Mult = std::multiplies<>,
+    FnMut<Value(Value, Value)> Plus = std::plus<Value>,
+    FnMut<Value(Operand, Value)> Mult = std::multiplies<>,
     typename Alloc = std::allocator<Value>
 >
-    requires FnMut<Mult, Operand, Operand, Operand> &&
+    requires FnMut<Mult, Operand(Operand, Operand)> &&
     requires { typename std::allocator_traits<Alloc>; }
 class LazySegTree {
     using Tag = std::optional<Operand>;
@@ -34,7 +34,7 @@ class LazySegTree {
 public:
     LazySegTree() = default;
 
-    template <FnMut<Value, usize> F>
+    template <FnMut<Value(usize)> F>
     LazySegTree(
         usize n, F gen, Plus plus = {}, Mult mult = {}, Alloc alloc = {}
     ):
@@ -67,7 +67,7 @@ public:
         TagAllocTraits::deallocate(operand_alloc_, lz_, cap_);
     }
 
-    template <FnOnce<Value, Value> F>
+    template <FnOnce<Value(Value)> F>
     bool update(usize p, F func) noexcept {
         if (p >= n_) return false;
         update_impl(p, std::forward<F>(func), 1, 0, n_);
@@ -92,7 +92,7 @@ public:
 private:
 #define LC (i << 1)
 #define RC (i << 1 | 1)
-    template <FnMut<Value, usize> F>
+    template <FnMut<Value(usize)> F>
     void build(usize i, usize l, usize r, F& gen) {
         if (r - l == 1) {
             ValueAllocTraits::construct(value_alloc_, t_ + i, gen(l));
@@ -125,7 +125,7 @@ private:
         pushtag(i << 1 | 1, *lz_[i]);
         lz_[i].reset();
     }
-    template <FnOnce<Value, Value> F>
+    template <FnOnce<Value(Value)> F>
     void update_impl(usize pos, F&& func, usize i, usize l, usize r) {
         if (r - l == 1) {
             t_[i] = std::forward<F>(func)(t_[i]);

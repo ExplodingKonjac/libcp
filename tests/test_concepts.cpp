@@ -20,17 +20,17 @@ struct WrongReturnFn {
     void operator()(int) const;
 };
 
-static_assert(cp::fn<ConstFn, int, int>);
-static_assert(!cp::fn<MutableFn, int, int>);
-static_assert(cp::fn_mut<ConstFn, int, int>);
-static_assert(cp::fn_mut<MutableFn, int, int>);
-static_assert(cp::fn_once<OnceFn, int, int>);
-static_assert(!cp::fn_mut<OnceFn, int, int>);
-static_assert(!cp::fn<WrongReturnFn, int, int>);
-static_assert(!cp::fn<ConstFn, int, std::string>);
+static_assert(cp::Fn<ConstFn, int(int)>);
+static_assert(!cp::Fn<MutableFn, int(int)>);
+static_assert(cp::FnMut<ConstFn, int(int)>);
+static_assert(cp::FnMut<MutableFn, int(int)>);
+static_assert(cp::FnOnce<OnceFn, int(int)>);
+static_assert(!cp::FnMut<OnceFn, int(int)>);
+static_assert(!cp::Fn<WrongReturnFn, int(int)>);
+static_assert(!cp::Fn<ConstFn, int(std::string)>);
 
-static_assert(cp::pair_like<std::pair<int, int>, int, int>);
-static_assert(cp::pair_like<std::array<int, 2>, int, int>);
-static_assert(cp::arithmetic_like<int>);
+static_assert(cp::PairLike<std::pair<int, int>, int, int>);
+static_assert(cp::PairLike<std::array<int, 2>, int, int>);
+static_assert(cp::ArithmeticLike<int>);
 
 int main() {}

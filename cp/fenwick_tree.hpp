@@ -22,9 +22,9 @@ struct ZeroFn {
 
 template <
     typename T,
-    Fn<T, T, T> PlusOp = std::plus<T>,
-    Fn<T, T, T> MinusOp = std::minus<T>,
-    Fn<T> ZeroFn = detail::ZeroFn<T>,
+    Fn<T(T, T)> PlusOp = std::plus<T>,
+    Fn<T(T, T)> MinusOp = std::minus<T>,
+    Fn<T()> ZeroFn = detail::ZeroFn<T>,
     typename Alloc = std::allocator<T>
 >
     requires requires { typename std::allocator_traits<Alloc>; }

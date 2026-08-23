@@ -162,7 +162,7 @@ inline std::optional<T> cipolla(T n, T p, Gen&& gen) {
 template <
     typename D,
     std::signed_integral T,
-    FnMut<D, D, D> Op = std::multiplies<D>
+    FnMut<D(D, D)> Op = std::multiplies<D>
 >
 inline D uniclidean(T p, T q, T r, T n, D R, D U, D init = {}, Op mul = Op{}) {
     if (n == 0) return init;

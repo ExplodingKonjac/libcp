@@ -14,7 +14,7 @@ namespace cp
 
 template <
     typename T,
-    Fn<bool, const T&, const T&> Compare = std::less<T>,
+    Fn<bool(const T&, const T&)> Compare = std::less<T>,
     typename Alloc = std::allocator<T>
 >
     requires requires { typename std::allocator_traits<Alloc>; }
