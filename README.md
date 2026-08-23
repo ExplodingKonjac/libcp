@@ -32,6 +32,8 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
 | [`cp/suffix_array.hpp`](cp/suffix_array.hpp) | 后缀数组，支持后缀排序、排名和最长公共前缀 |
+| [`cp/bipartite_matching.hpp`](cp/bipartite_matching.hpp) | 二分图最大匹配（Hopcroft–Karp） |
+| [`cp/bipartite_weighted_matching.hpp`](cp/bipartite_weighted_matching.hpp) | 二分图最大权完备匹配（Hungarian） |
 | [`cp/max_flow.hpp`](cp/max_flow.hpp) | 最大流 |
 | [`cp/min_cost_flow.hpp`](cp/min_cost_flow.hpp) | 最小费用流 |
 | [`cp/min_cost_circulation.hpp`](cp/min_cost_circulation.hpp) | 最小费用可行环流 |
@@ -235,6 +237,50 @@ auto common = suffix_array.height(2); // 3，与前一后缀的 LCP
 
 `sa(i)` 返回第 `i` 个后缀的起始位置，`rk(i)` 返回从位置 `i` 开始的后缀排名，
 `height(i)` 返回第 `i` 个后缀与前一个后缀的最长公共前缀长度；`height(0)` 始终为零。
+
+---
+
+### `cp/bipartite_matching.hpp` — 二分图最大匹配
+
+`BipartiteMatching` 使用 Hopcroft–Karp 算法求二分图最大匹配。左右部点分别编号为
+`[0, n)` 和 `[0, m)`；`max_matching()` 返回 `{匹配数, match}`，其中 `match[u]`
+是左部点 `u` 匹配的右部点，未匹配时为 `BipartiteMatching::npos`。
+
+```cpp
+#include "cp/bipartite_matching.hpp"
+
+cp::BipartiteMatching matching(3, 3);
+matching.add_edge(0, 1);
+matching.add_edge(1, 0);
+matching.add_edge(2, 1);
+matching.add_edge(2, 2);
+auto [size, match] = matching.max_matching();  // size == 3
+```
+
+单次求解的复杂度为 $O(E\sqrt{V})$，空间复杂度为 $O(V+E)$。
+
+---
+
+### `cp/bipartite_weighted_matching.hpp` — 二分图最大权完备匹配
+
+`BipartiteWeightedMatching<T>` 使用 Hungarian 算法，将每个左部点匹配到不同的右部点，
+并最大化边权和。`max_weighted_matching()` 返回 `{最大权和, match}`；当左部点多于右部点
+或不存在覆盖所有左部点的匹配时返回 `std::nullopt`。
+
+```cpp
+#include "cp/bipartite_weighted_matching.hpp"
+
+cp::BipartiteWeightedMatching<int> matching(2, 3);
+matching.add_edge(0, 0, 4);
+matching.add_edge(0, 1, 7);
+matching.add_edge(1, 1, 2);
+matching.add_edge(1, 2, 5);
+auto result = matching.max_weighted_matching();  // 权和 12，匹配 {1, 2}
+```
+
+`add_edge()` 对重边保留最大权值，`set_edge()` 直接覆盖，`get_edge()` 查询当前权值。
+`no_edge` 是“无边”哨兵，不能作为有效边权；最终权和须能由 `T` 表示。设左右部大小为
+$n,m$（$n\le m$），时间复杂度为 $O(n^2m)$，空间复杂度为 $O(nm)$。
 
 ---
 
@@ -511,6 +557,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
 | `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
 | `tests/test_interpolation.cpp` | 多项式插值与系数求解 |
+| `tests/test_bipartite_matching.cpp` | 二分图最大匹配与最大权完备匹配 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
 | `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |
