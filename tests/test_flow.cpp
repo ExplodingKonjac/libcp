@@ -6,8 +6,8 @@
 #include <random>
 #include <vector>
 
-#include "cp/flow/max_flow.hpp"
-#include "cp/flow/min_cost_flow.hpp"
+#include "cp/max_flow.hpp"
+#include "cp/min_cost_flow.hpp"
 
 using cp::MaxFlow;
 using cp::MinCostFlow;

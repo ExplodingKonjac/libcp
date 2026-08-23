@@ -32,9 +32,9 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
 | [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
 | [`cp/suffix_array.hpp`](cp/suffix_array.hpp) | 后缀数组，支持后缀排序、排名和最长公共前缀 |
-| [`cp/flow/max_flow.hpp`](cp/flow/max_flow.hpp) | 最大流 |
-| [`cp/flow/min_cost_flow.hpp`](cp/flow/min_cost_flow.hpp) | 最小费用流 |
-| [`cp/flow/min_cost_circulation.hpp`](cp/flow/min_cost_circulation.hpp) | 最小费用可行环流 |
+| [`cp/max_flow.hpp`](cp/max_flow.hpp) | 最大流 |
+| [`cp/min_cost_flow.hpp`](cp/min_cost_flow.hpp) | 最小费用流 |
+| [`cp/min_cost_circulation.hpp`](cp/min_cost_circulation.hpp) | 最小费用可行环流 |
 | [`cp/number_theory.hpp`](cp/number_theory.hpp) | 数论算法 |
 | [`cp/geometry.hpp`](cp/geometry.hpp) | 二维向量与基础计算几何 |
 | [`cp/geometry/circle.hpp`](cp/geometry/circle.hpp) | 圆、圆交点与最小覆盖圆 |
@@ -238,32 +238,55 @@ auto common = suffix_array.height(2); // 3，与前一后缀的 LCP
 
 ---
 
-### `cp/flow/*` — 网络流
+### `cp/max_flow.hpp` — 最大流
 
-提供三种网络流模型。边编号从 0 开始，`edge(i)` 可读取对应的边信息。
-
-- `MaxFlow<FlowT>`：整数容量的最大流，使用 Dinic 算法，`max_flow(s, t)` 返回最大流值。
-- `MinCostFlow<FlowT, CostT>`：带整数容量和有符号费用的最小费用流；
-  `min_cost_flow(s, t)` 返回费用最小的流，`min_cost_max_flow(s, t)` 返回最大流量下费用最小的流，
-  二者均返回 `{flow, cost}`。
-- `MinCostCirculation<FlowT, CostT>`：带点供给和边费用的最小费用可行环流；通过
-  `supply(u)` 设置点供给，`circulation()` 返回最小费用，若无可行流则返回 `std::nullopt`。
+`MaxFlow<FlowT>` 使用 Dinic 算法计算整数容量网络的最大流，`max_flow(s, t)` 返回最大流值。
+边编号从 0 开始，`edge(i)` 可读取对应的边信息。
 
 ```cpp
-#include "cp/flow/max_flow.hpp"
-#include "cp/flow/min_cost_flow.hpp"
+#include "cp/max_flow.hpp"
 
 cp::MaxFlow<int> flow(n);
 flow.add_edge(u, v, capacity);
 int value = flow.max_flow(source, sink);
+```
+
+---
+
+### `cp/min_cost_flow.hpp` — 最小费用流
+
+`MinCostFlow<FlowT, CostT>` 支持整数容量和有符号费用。
+`min_cost_flow(s, t)` 返回费用最小的流，`min_cost_max_flow(s, t)` 返回最大流量下费用最小的流，
+二者均返回 `{flow, cost}`。
+
+```cpp
+#include "cp/min_cost_flow.hpp"
 
 cp::MinCostFlow<int, int> costs(n);
 costs.add_edge(u, v, capacity, cost);
 auto [sent, total_cost] = costs.min_cost_max_flow(source, sink);
 ```
 
-`MinCostFlow` 的 `negative_cost` 参数在残量网络可能含负费用时设为 `true`；默认值适用于所有相关费用
-非负的初始网络。`MinCostCirculation` 要求所有点供给之和为零，`FlowT` 和 `CostT` 必须为有符号类型。
+`negative_cost` 参数在残量网络可能含负费用时设为 `true`；默认值适用于所有相关费用非负的初始网络。
+
+---
+
+### `cp/min_cost_circulation.hpp` — 最小费用可行环流
+
+`MinCostCirculation<FlowT, CostT>` 支持带点供给和边费用的最小费用可行环流。
+通过 `supply(u)` 设置点供给，`circulation()` 返回最小费用，若无可行流则返回 `std::nullopt`。
+
+```cpp
+#include "cp/min_cost_circulation.hpp"
+
+cp::MinCostCirculation<int, int> circulation(n);
+circulation.supply(source) = amount;
+circulation.supply(sink) = -amount;
+circulation.add_edge(u, v, capacity, cost);
+auto total_cost = circulation.circulation();
+```
+
+所有点供给之和必须为零，`FlowT` 和 `CostT` 必须为有符号类型。
 
 ---
 

@@ -5,7 +5,7 @@
 #include <random>
 #include <vector>
 
-#include "cp/flow/min_cost_circulation.hpp"
+#include "cp/min_cost_circulation.hpp"
 
 using cp::MinCostCirculation;
 using cp::usize;
@@ -42,7 +42,7 @@ void check_case(
     const std::vector<int>& supply, const std::vector<Edge>& edges
 ) {
     MinCostCirculation<int, int> g(supply.size());
-    for (usize u = 0; u < supply.size(); u++) g.node(u).supply = supply[u];
+    for (usize u = 0; u < supply.size(); u++) g.supply(u) = supply[u];
     for (auto e: edges) g.add_edge(e.from, e.to, e.capacity, e.cost);
 
     auto expected = brute_force(supply, edges);
@@ -73,8 +73,8 @@ void test_edge_cases() {
 
 void test_parallel_edges_and_flow() {
     MinCostCirculation<int, int> g(2);
-    g.node(0).supply = 3;
-    g.node(1).supply = -3;
+    g.supply(0) = 3;
+    g.supply(1) = -3;
     auto cheap = g.add_edge(0, 1, 2, 1);
     auto expensive = g.add_edge(0, 1, 2, 5);
 
