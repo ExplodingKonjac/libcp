@@ -34,6 +34,8 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/suffix_array.hpp`](cp/suffix_array.hpp) | 后缀数组，支持后缀排序、排名和最长公共前缀 |
 | [`cp/bipartite_matching.hpp`](cp/bipartite_matching.hpp) | 二分图最大匹配（Hopcroft–Karp） |
 | [`cp/bipartite_weighted_matching.hpp`](cp/bipartite_weighted_matching.hpp) | 二分图最大权完备匹配（Hungarian） |
+| [`cp/general_matching.hpp`](cp/general_matching.hpp) | 一般图最大匹配（Edmonds Blossom） |
+| [`cp/general_weighted_matching.hpp`](cp/general_weighted_matching.hpp) | 一般图最大权完美匹配（Weighted Blossom） |
 | [`cp/max_flow.hpp`](cp/max_flow.hpp) | 最大流 |
 | [`cp/min_cost_flow.hpp`](cp/min_cost_flow.hpp) | 最小费用流 |
 | [`cp/min_cost_circulation.hpp`](cp/min_cost_circulation.hpp) | 最小费用可行环流 |
@@ -281,6 +283,52 @@ auto result = matching.max_weighted_matching();  // 权和 12，匹配 {1, 2}
 `add_edge()` 对重边保留最大权值，`set_edge()` 直接覆盖，`get_edge()` 查询当前权值。
 `no_edge` 是“无边”哨兵，不能作为有效边权；最终权和须能由 `T` 表示。设左右部大小为
 $n,m$（$n\le m$），时间复杂度为 $O(n^2m)$，空间复杂度为 $O(nm)$。
+
+---
+
+### `cp/general_matching.hpp` — 一般图最大匹配
+
+`GeneralMatching` 使用 Edmonds Blossom 算法求无向一般图的最大匹配。顶点编号为
+`[0, n)`；`max_matching()` 返回 `{匹配数, match}`，其中 `match[u]` 是顶点 `u`
+的匹配点，未匹配时为 `GeneralMatching::npos`。
+
+```cpp
+#include "cp/general_matching.hpp"
+
+cp::GeneralMatching matching(4);
+matching.add_edge(0, 1);
+matching.add_edge(1, 2);
+matching.add_edge(2, 0);
+matching.add_edge(2, 3);
+auto [size, match] = matching.max_matching();  // size == 2
+```
+
+`add_edge()` 添加无向边，端点须不同。时间复杂度为 $O(n^3)$，空间复杂度为
+$O(n+m)$。
+
+---
+
+### `cp/general_weighted_matching.hpp` — 一般图最大权完美匹配
+
+`GeneralWeightedMatching<T>` 使用原始-对偶 Weighted Blossom 算法，在无向一般图中寻找
+覆盖所有顶点且边权和最大的匹配。`max_weighted_matching()` 返回
+`{最大权和, match}`；顶点数为奇数或不存在完美匹配时返回 `std::nullopt`。
+
+```cpp
+#include "cp/general_weighted_matching.hpp"
+
+cp::GeneralWeightedMatching<int> matching(4);
+matching.add_edge(0, 1, -2);
+matching.add_edge(0, 2, 5);
+matching.add_edge(1, 3, 4);
+matching.add_edge(2, 3, -1);
+auto result = matching.max_weighted_matching();  // 权和 9，匹配 {2, 3, 0, 1}
+```
+
+`T` 可以是有符号整数或浮点数；浮点边权须为有限值。`add_edge()` 对重边保留最大权值，
+`set_edge()` 直接覆盖，`get_edge()` 查询当前权值，三个操作都按无向边对称处理。
+`no_edge` 不能作为有效边权，最终权和须能由 `T` 表示。时间复杂度为 $O(n^3)$，
+空间复杂度为 $O(n^2)$。
 
 ---
 
@@ -558,6 +606,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
 | `tests/test_interpolation.cpp` | 多项式插值与系数求解 |
 | `tests/test_bipartite_matching.cpp` | 二分图最大匹配与最大权完备匹配 |
+| `tests/test_general_matching.cpp` | 一般图最大匹配与最大权完美匹配 |
 | `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
 | `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
 | `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |
