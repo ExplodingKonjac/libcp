@@ -19,7 +19,7 @@ if [[ -z "$prefix" ]]; then
 	exit 1
 fi
 
-src="$(dirname "$0")/cp"
+src="$(dirname "$0")/include/cp"
 dst="$prefix/include/cp"
 
 rm -rf "$dst"
