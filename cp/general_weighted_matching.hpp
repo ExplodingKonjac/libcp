@@ -5,7 +5,6 @@
 #include <concepts>
 #include <limits>
 #include <optional>
-#include <queue>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -58,14 +57,15 @@ public:
         calc_t eps{};
         std::vector g(2 * n + 1, std::vector<Edge>(2 * n + 1));
         std::vector<usize> match(2 * n + 1), slack(2 * n + 1);
-        std::vector<usize> representative(2 * n + 1), parent(2 * n + 1);
+        std::vector<usize> rep(2 * n + 1), par(2 * n + 1);
         std::vector<usize> visit(2 * n + 1);
         // Alternating-forest state: -1 outside, 0 outer, 1 inner.
         std::vector<int> state(2 * n + 1);
         std::vector<calc_t> label(2 * n + 1);
         std::vector from(2 * n + 1, std::vector<usize>(n + 1));
         std::vector<std::vector<usize>> blossom(2 * n + 1);
-        std::queue<usize> queue;
+        std::vector<usize> queue;
+        usize queue_head = 0;
 
         bool has_edge = false;
         calc_t minimum{}, maximum{};
@@ -85,16 +85,15 @@ public:
         // One more matched edge must dominate every possible weight gain.
         calc_t bonus = (range + 1) * static_cast<calc_t>(n / 2 + 1);
         calc_t largest = 0;
-        for (usize u = 1; u <= 2 * n; ++u)
-            for (usize v = 1; v <= 2 * n; ++v) g[u][v] = {u, v, 0};
         for (usize u = 1; u <= n; ++u) {
-            representative[u] = u;
+            rep[u] = u;
             from[u][u] = u;
             for (usize v = u + 1; v <= n; ++v) {
                 if (_w[u - 1][v - 1] == no_edge) continue;
                 calc_t transformed =
                     static_cast<calc_t>(_w[u - 1][v - 1]) - minimum + bonus;
-                g[u][v].w = g[v][u].w = transformed;
+                g[u][v] = {u, v, transformed};
+                g[v][u] = {v, u, transformed};
                 largest = std::max(largest, transformed);
             }
         }
@@ -128,19 +127,17 @@ public:
         auto set_slack = [&](usize x) {
             slack[x] = 0;
             for (usize u = 1; u <= n; ++u) {
-                if (g[u][x].w > 0 &&
-                    representative[u] != x &&
-                    state[representative[u]] == 0)
+                if (g[u][x].w > 0 && rep[u] != x && state[rep[u]] == 0)
                     update_slack(u, x);
             }
         };
         auto queue_push = [&](auto&& self, usize x) -> void {
-            if (x <= n) queue.push(x);
+            if (x <= n) queue.push_back(x);
             else
                 for (usize v: blossom[x]) self(self, v);
         };
         auto set_representative = [&](auto&& self, usize x, usize b) -> void {
-            representative[x] = b;
+            rep[x] = b;
             if (x > n)
                 for (usize v: blossom[x]) self(self, v, b);
         };
@@ -167,11 +164,11 @@ public:
         };
         auto augment = [&](usize u, usize v) {
             while (true) {
-                usize next = representative[match[u]];
+                usize next = rep[match[u]];
                 set_match(set_match, u, v);
                 if (!next) return;
-                set_match(set_match, next, representative[parent[next]]);
-                u = representative[parent[next]];
+                set_match(set_match, next, rep[par[next]]);
+                u = rep[par[next]];
                 v = next;
             }
         };
@@ -181,14 +178,14 @@ public:
                 if (!u) continue;
                 if (visit[u] == visit_id) return u;
                 visit[u] = visit_id;
-                u = representative[match[u]];
-                if (u) u = representative[parent[u]];
+                u = rep[match[u]];
+                if (u) u = rep[par[u]];
             }
             return usize{0};
         };
         auto add_blossom = [&](usize u, usize base, usize v) {
             usize b = n + 1;
-            while (b <= node_count && representative[b]) ++b;
+            while (b <= node_count && rep[b]) ++b;
             if (b > node_count) ++node_count;
 
             label[b] = 0;
@@ -196,16 +193,16 @@ public:
             match[b] = match[base];
             blossom[b].clear();
             blossom[b].push_back(base);
-            for (usize x = u, y; x != base; x = representative[parent[y]]) {
+            for (usize x = u, y; x != base; x = rep[par[y]]) {
                 blossom[b].push_back(x);
-                y = representative[match[x]];
+                y = rep[match[x]];
                 blossom[b].push_back(y);
                 queue_push(queue_push, y);
             }
             std::reverse(blossom[b].begin() + 1, blossom[b].end());
-            for (usize x = v, y; x != base; x = representative[parent[y]]) {
+            for (usize x = v, y; x != base; x = rep[par[y]]) {
                 blossom[b].push_back(x);
-                y = representative[match[x]];
+                y = rep[match[x]];
                 blossom[b].push_back(y);
                 queue_push(queue_push, y);
             }
@@ -232,11 +229,11 @@ public:
         auto expand_blossom = [&](usize b) {
             for (usize x: blossom[b])
                 set_representative(set_representative, x, x);
-            usize entry = from[b][g[b][parent[b]].u];
+            usize entry = from[b][g[b][par[b]].u];
             usize pos = rotate_blossom(b, entry);
             for (usize i = 0; i < pos; i += 2) {
                 usize x = blossom[b][i], next = blossom[b][i + 1];
-                parent[x] = g[next][x].u;
+                par[x] = g[next][x].u;
                 state[x] = 1;
                 state[next] = 0;
                 slack[x] = 0;
@@ -244,20 +241,20 @@ public:
                 queue_push(queue_push, next);
             }
             state[entry] = 1;
-            parent[entry] = parent[b];
+            par[entry] = par[b];
             for (usize i = pos + 1; i < blossom[b].size(); ++i) {
                 usize x = blossom[b][i];
                 state[x] = -1;
                 set_slack(x);
             }
-            representative[b] = 0;
+            rep[b] = 0;
         };
         auto found_edge = [&](const Edge& edge) {
-            usize u = representative[edge.u], v = representative[edge.v];
+            usize u = rep[edge.u], v = rep[edge.v];
             if (state[v] == -1) {
-                parent[v] = edge.u;
+                par[v] = edge.u;
                 state[v] = 1;
-                usize next = representative[match[v]];
+                usize next = rep[match[v]];
                 slack[v] = slack[next] = 0;
                 state[next] = 0;
                 queue_push(queue_push, next);
@@ -275,10 +272,11 @@ public:
         auto matching_step = [&]() {
             std::fill(state.begin(), state.end(), -1);
             std::fill(slack.begin(), slack.end(), 0);
-            queue = {};
+            queue.clear();
+            queue_head = 0;
             for (usize x = 1; x <= node_count; ++x) {
-                if (representative[x] == x && !match[x]) {
-                    parent[x] = 0;
+                if (rep[x] == x && !match[x]) {
+                    par[x] = 0;
                     state[x] = 0;
                     queue_push(queue_push, x);
                 }
@@ -286,31 +284,27 @@ public:
             if (queue.empty()) return false;
 
             while (true) {
-                while (!queue.empty()) {
-                    usize u = queue.front();
-                    queue.pop();
-                    if (state[representative[u]] == 1) continue;
+                while (queue_head < queue.size()) {
+                    usize u = queue[queue_head++];
+                    if (state[rep[u]] == 1) continue;
                     for (usize v = 1; v <= n; ++v) {
-                        if (!g[u][v].w ||
-                            representative[u] == representative[v])
-                            continue;
+                        if (!g[u][v].w || rep[u] == rep[v]) continue;
                         if (zero(delta(g[u][v]))) {
                             if (found_edge(g[u][v])) return true;
                         } else {
-                            update_slack(u, representative[v]);
+                            update_slack(u, rep[v]);
                         }
                     }
                 }
 
                 calc_t d = std::numeric_limits<calc_t>::max();
                 for (usize u = 1; u <= n; ++u)
-                    if (state[representative[u]] == 0)
-                        d = std::min(d, label[u]);
+                    if (state[rep[u]] == 0) d = std::min(d, label[u]);
                 for (usize b = n + 1; b <= node_count; ++b)
-                    if (representative[b] == b && state[b] == 1)
+                    if (rep[b] == b && state[b] == 1)
                         d = std::min(d, label[b] / 2);
                 for (usize x = 1; x <= node_count; ++x) {
-                    if (representative[x] != x || !slack[x]) continue;
+                    if (rep[x] != x || !slack[x]) continue;
                     calc_t candidate = delta(g[slack[x]][x]);
                     if (state[x] == 0) candidate /= 2;
                     if (state[x] != 1 && less(candidate, d)) d = candidate;
@@ -319,34 +313,33 @@ public:
                 normalize(d);
 
                 for (usize u = 1; u <= n; ++u) {
-                    if (state[representative[u]] == 0) {
+                    if (state[rep[u]] == 0) {
                         if (zero(label[u] - d)) return false;
                         label[u] -= d;
-                    } else if (state[representative[u]] == 1) {
+                    } else if (state[rep[u]] == 1) {
                         label[u] += d;
                     }
                     normalize(label[u]);
                 }
                 for (usize b = n + 1; b <= node_count; ++b) {
-                    if (representative[b] != b) continue;
+                    if (rep[b] != b) continue;
                     if (state[b] == 0) label[b] += d * 2;
                     else if (state[b] == 1) label[b] -= d * 2;
                     normalize(label[b]);
                 }
 
-                queue = {};
+                queue.clear();
+                queue_head = 0;
                 for (usize x = 1; x <= node_count; ++x) {
-                    if (representative[x] == x &&
+                    if (rep[x] == x &&
                         slack[x] &&
-                        representative[slack[x]] != x &&
+                        rep[slack[x]] != x &&
                         zero(delta(g[slack[x]][x]))) {
                         if (found_edge(g[slack[x]][x])) return true;
                     }
                 }
                 for (usize b = n + 1; b <= node_count; ++b)
-                    if (representative[b] == b &&
-                        state[b] == 1 &&
-                        zero(label[b]))
+                    if (rep[b] == b && state[b] == 1 && zero(label[b]))
                         expand_blossom(b);
             }
         };

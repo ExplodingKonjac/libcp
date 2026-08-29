@@ -221,9 +221,26 @@ void test_random_cases() {
     }
 }
 
+void test_large_weighted_smoke() {
+    constexpr usize n = 200;
+    GeneralWeightedMatching<int> graph(n);
+    for (usize u = 0; u < n; ++u) {
+        for (usize v = u + 1; v < n; ++v) {
+            int w = static_cast<int>((u * 1009 + v * 9176) % 1000);
+            graph.add_edge(u, v, w);
+        }
+    }
+    for (usize u = 0; u < n; u += 2) graph.set_edge(u, u + 1, 1'000'000);
+
+    auto result = graph.max_weighted_matching();
+    assert(result && result->first == static_cast<int>(n / 2) * 1'000'000);
+    for (usize u = 0; u < n; ++u) assert(result->second[u] == (u ^ 1));
+}
+
 int main() {
     test_edge_operations();
     test_fixed_cases();
     test_random_cases();
+    test_large_weighted_smoke();
     std::cout << "All tests passed!\n";
 }
