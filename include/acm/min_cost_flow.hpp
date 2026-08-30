@@ -8,11 +8,10 @@
 #include <utility>
 #include <vector>
 
-#include "cp/def.hpp"
+#include "def.hpp"
 
-namespace cp
+namespace acm
 {
-
 template <std::integral FlowT = int, typename CostT = int>
     requires(std::signed_integral<CostT> || std::floating_point<CostT>)
 class MinCostFlow {
@@ -180,4 +179,4 @@ std::pair<FlowT, CostT> MinCostFlow<FlowT, CostT>::_flow(usize s, usize t) {
     return {total_flow, total_cost};
 }
 
-}  // namespace cp
+}  // namespace acm
