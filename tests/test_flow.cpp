@@ -98,21 +98,23 @@ void check_flow_state(
     assert(actual_cost == cost);
 }
 
-void check_min_cost_flow(usize n, const std::vector<Edge>& edges) {
+void check_min_cost_flow(
+    usize n, const std::vector<Edge>& edges, bool negative_cost
+) {
     auto expected = brute_costs(n, edges);
     usize max_flow = expected.size() - 1;
     while (!expected[max_flow]) max_flow--;
 
     MinCostFlow<int, int> g(n);
     for (auto e: edges) g.add_edge(e.from, e.to, e.capacity, e.cost);
-    auto [flow, cost] = g.min_cost_max_flow(0, n - 1);
+    auto [flow, cost] = g.min_cost_max_flow(0, n - 1, negative_cost);
     assert(flow == static_cast<int>(max_flow));
     assert(cost == expected[max_flow]);
     check_flow_state(g, n, flow, cost);
 
     MinCostFlow<int, int> h(n);
     for (auto e: edges) h.add_edge(e.from, e.to, e.capacity, e.cost);
-    auto [min_flow, min_cost] = h.min_cost_flow(0, n - 1);
+    auto [min_flow, min_cost] = h.min_cost_flow(0, n - 1, negative_cost);
     auto best =
         *std::min_element(expected.begin(), expected.end(), [](auto a, auto b) {
             if (!a) return false;
@@ -130,8 +132,8 @@ void test_edge_cases() {
     assert(g.max_flow(0, 1) == 0);
 
     check_max_flow(2, {{0, 1, 3, 0}, {0, 1, 4, 0}, {0, 0, 9, 0}});
-    check_min_cost_flow(3, {{0, 1, 2, -3}, {1, 2, 2, 1}, {0, 2, 1, 4}});
-    check_min_cost_flow(3, {{0, 1, 2, 1}, {1, 2, 1, 2}});
+    check_min_cost_flow(3, {{0, 1, 2, -3}, {1, 2, 2, 1}, {0, 2, 1, 4}}, true);
+    check_min_cost_flow(3, {{0, 1, 2, 1}, {1, 2, 1, 2}}, false);
 
     MaxFlow<unsigned> unsigned_max_flow(2);
     unsigned_max_flow.add_edge(0, 1, 3);
@@ -146,12 +148,13 @@ void test_edge_cases() {
 void test_repeated_min_cost_flow() {
     MinCostFlow<int, int> g(4);
     g.add_edge(0, 1, 1, 0);
-    g.add_edge(1, 3, 1, 5);
-    g.add_edge(0, 2, 1, 0);
+    g.add_edge(1, 2, 1, 5);
+    g.add_edge(2, 3, 1, 0);
+    g.add_edge(0, 2, 1, 10);
     assert((g.min_cost_max_flow(0, 3) == std::pair{1, 5}));
 
-    g.add_edge(2, 3, 1, 7);
-    assert((g.min_cost_max_flow(0, 3) == std::pair{1, 7}));
+    g.add_edge(1, 3, 1, 0);
+    assert((g.min_cost_max_flow(0, 3) == std::pair{1, 5}));
 }
 
 void test_max_flow_against_min_cut() {
@@ -180,7 +183,7 @@ void test_min_cost_flow_against_brute_force() {
             int cost = negative_cost ? int(rng() % 9) - 4 : int(rng() % 5);
             edges.push_back({from, to, int(rng() % 3), cost});
         }
-        check_min_cost_flow(n, edges);
+        check_min_cost_flow(n, edges, negative_cost);
     }
 }
 

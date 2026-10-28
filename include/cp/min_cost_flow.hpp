@@ -1,10 +1,11 @@
 #pragma once
 
 #include <algorithm>
-#include <concepts>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <queue>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -13,9 +14,11 @@
 namespace cp
 {
 
-template <std::integral FlowT = int, typename CostT = int>
-    requires(std::signed_integral<CostT> || std::floating_point<CostT>)
+template <typename FlowT = int, typename CostT = int>
 class MinCostFlow {
+    static_assert(std::is_integral_v<FlowT>, "FlowT must be integral type");
+    static_assert(std::is_signed_v<CostT>, "CostT must be signed type");
+
 public:
     struct Edge {
         usize from, to;
@@ -25,159 +28,200 @@ public:
 
 private:
     struct Arc {
-        usize to;
-        usize nxt;
-        FlowT w;
-        CostT cost;
+        usize edge;
+        bool reverse;
     };
 
-    static constexpr usize npos = -1;
-
-    std::vector<usize> _head;
-    std::vector<Arc> _e;
+    std::vector<std::vector<Arc>> _adj;
+    std::vector<Edge> _edges;
+    bool _solved = false, _dirty = false;
 
     template <bool maximize>
-    std::pair<FlowT, CostT> _flow(usize s, usize t);
+    std::pair<FlowT, CostT> _flow(usize s, usize t, bool negative_cost);
 
 public:
     MinCostFlow() = default;
-    MinCostFlow(usize V): _head(V, npos) {}
+    MinCostFlow(usize V): _adj(V) {}
 
-    usize size_V() const { return _head.size(); }
-    usize size_E() const { return _e.size() / 2; }
+    usize size_V() const { return _adj.size(); }
+    usize size_E() const { return _edges.size(); }
 
-    Edge edge(usize i) const {
-        const auto& e = _e[2 * i];
-        const auto& rev = _e[2 * i + 1];
-        return {rev.to, e.to, e.w + rev.w, rev.w, e.cost};
-    }
+    const Edge& edge(usize i) const { return _edges[i]; }
     usize add_edge(usize u, usize v, FlowT capacity, CostT cost) {
-        usize i = size_E();
-        _e.push_back({v, _head[u], capacity, cost});
-        _head[u] = 2 * i;
-        _e.push_back({u, _head[v], 0, -cost});
-        _head[v] = 2 * i + 1;
+        usize i = _edges.size();
+        _edges.push_back({u, v, capacity, 0, cost});
+        _adj[u].push_back({i, false});
+        _adj[v].push_back({i, true});
+        _dirty = true;
         return i;
     }
 
-    std::pair<FlowT, CostT> min_cost_flow(usize s, usize t) {
-        return _flow<false>(s, t);
+    std::pair<FlowT, CostT> min_cost_flow(
+        usize s, usize t, bool negative_cost = false
+    ) {
+        return _flow<false>(s, t, negative_cost);
     }
-    std::pair<FlowT, CostT> min_cost_max_flow(usize s, usize t) {
-        return _flow<true>(s, t);
+    std::pair<FlowT, CostT> min_cost_max_flow(
+        usize s, usize t, bool negative_cost = false
+    ) {
+        return _flow<true>(s, t, negative_cost);
     }
 };
 
-template <std::integral FlowT, typename CostT>
-    requires(std::signed_integral<CostT> || std::floating_point<CostT>)
+template <typename FlowT, typename CostT>
 template <bool maximize>
-std::pair<FlowT, CostT> MinCostFlow<FlowT, CostT>::_flow(usize s, usize t) {
+std::pair<FlowT, CostT> MinCostFlow<FlowT, CostT>::_flow(
+    usize s, usize t, bool negative_cost
+) {
     if (s == t) return {0, 0};
+    constexpr usize npos = -1;
     constexpr FlowT flow_inf = std::numeric_limits<FlowT>::max();
     constexpr CostT cost_inf = std::numeric_limits<CostT>::max();
     usize n = size_V();
-    std::vector<usize> dep(n), cur(n), q;
-    q.reserve(n);
-    std::vector<u8> vis(n), inq(n);
-    std::vector<CostT> dis(n), p(n);
+    FlowT old_flow = 0;
+    CostT old_cost = 0;
+    if (_solved && _dirty) {
+        // ponytail: recompute after graph changes; add cycle cancellation
+        // if repeated reoptimization becomes a bottleneck.
+        FlowT out = 0, in = 0;
+        for (auto& e: _edges) {
+            if (e.from == s) out += e.flow;
+            if (e.to == s) in += e.flow;
+            old_cost += static_cast<CostT>(e.flow) * e.cost;
+            e.flow = 0;
+        }
+        old_flow = out - in;
+    }
+    std::vector<usize> level(n), head(n), queue(n);
+    std::vector<std::uint8_t> visited(n), in_queue(n);
+    std::vector<CostT> distance(n), potential(n);
+    auto residual = [&](Arc a) {
+        auto& e = _edges[a.edge];
+        return a.reverse ? e.flow : e.capacity - e.flow;
+    };
+    auto cost = [&](Arc a) {
+        return a.reverse ? -_edges[a.edge].cost : _edges[a.edge].cost;
+    };
+    auto to = [&](usize u, Arc a) {
+        auto& e = _edges[a.edge];
+        return e.from ^ e.to ^ u;
+    };
+    auto augment = [&](Arc a, FlowT flow) {
+        if (a.reverse) _edges[a.edge].flow -= flow;
+        else _edges[a.edge].flow += flow;
+    };
     auto spfa = [&] {
-        dis.assign(n, cost_inf);
-        inq.assign(n, false);
-        q.clear();
-        dis[s] = 0;
-        inq[s] = true;
-        q.push_back(s);
-        for (usize hd = 0; hd < q.size(); hd++) {
-            usize u = q[hd];
-            inq[u] = false;
-            for (usize i = _head[u]; i != npos; i = _e[i].nxt) {
-                const auto& e = _e[i];
-                if (!e.w) continue;
-                CostT next = dis[u] + e.cost + p[u] - p[e.to];
-                if (next >= dis[e.to]) continue;
-                dis[e.to] = next;
-                if (!inq[e.to]) {
-                    inq[e.to] = true;
-                    q.push_back(e.to);
+        distance.assign(n, cost_inf);
+        in_queue.assign(n, false);
+        std::queue<usize> q;
+        distance[s] = 0;
+        in_queue[s] = true;
+        q.push(s);
+        while (!q.empty()) {
+            usize u = q.front();
+            q.pop();
+            in_queue[u] = false;
+            for (auto a: _adj[u]) {
+                if (!residual(a)) continue;
+                usize v = to(u, a);
+                CostT next =
+                    distance[u] + cost(a) + potential[u] - potential[v];
+                if (next >= distance[v]) continue;
+                distance[v] = next;
+                if (!in_queue[v]) {
+                    in_queue[v] = true;
+                    q.push(v);
                 }
             }
         }
-        return dis[t] != cost_inf;
+        return distance[t] != cost_inf;
     };
     auto dijkstra = [&] {
-        dis.assign(n, cost_inf);
-        vis.assign(n, false);
+        distance.assign(n, cost_inf);
+        visited.assign(n, false);
         using Item = std::pair<CostT, usize>;
         std::priority_queue<Item, std::vector<Item>, std::greater<>> q;
-        q.emplace(dis[s] = 0, s);
+        q.emplace(distance[s] = 0, s);
         while (!q.empty()) {
             usize u = q.top().second;
             q.pop();
-            if (vis[u]) continue;
-            vis[u] = true;
-            for (usize i = _head[u]; i != npos; i = _e[i].nxt) {
-                const auto& e = _e[i];
-                if (!e.w) continue;
-                CostT next = dis[u] + e.cost + p[u] - p[e.to];
-                if (next >= dis[e.to]) continue;
-                dis[e.to] = next;
-                q.emplace(next, e.to);
+            if (visited[u]) continue;
+            visited[u] = true;
+            for (auto a: _adj[u]) {
+                if (!residual(a)) continue;
+                usize v = to(u, a);
+                CostT next =
+                    distance[u] + cost(a) + potential[u] - potential[v];
+                if (next >= distance[v]) continue;
+                distance[v] = next;
+                q.emplace(next, v);
             }
         }
-        return dis[t] != cost_inf;
+        return distance[t] != cost_inf;
     };
     auto bfs = [&] {
-        dep.assign(n, 0);
-        cur = _head;
-        q.clear();
-        dep[s] = 1;
-        q.push_back(s);
-        for (usize hd = 0; hd < q.size(); hd++) {
-            usize u = q[hd];
-            for (usize i = _head[u]; i != npos; i = _e[i].nxt) {
-                const auto& e = _e[i];
-                if (!e.w || dep[e.to] || p[e.to] != p[u] + e.cost) continue;
-                dep[e.to] = dep[u] + 1;
-                q.push_back(e.to);
-                if (e.to == t) return true;
+        level.assign(n, npos);
+        head.assign(n, 0);
+        usize front = 0, back = 0;
+        level[s] = 0;
+        queue[back++] = s;
+        while (front < back) {
+            usize u = queue[front++];
+            for (auto a: _adj[u]) {
+                usize v = to(u, a);
+                if (residual(a) &&
+                    level[v] == npos &&
+                    potential[v] == potential[u] + cost(a)) {
+                    level[v] = level[u] + 1;
+                    queue[back++] = v;
+                }
             }
         }
-        return false;
+        return level[t] != npos;
     };
     auto dfs = [&](auto&& self, usize u, FlowT flow) -> FlowT {
         if (u == t || !flow) return flow;
-        FlowT rem = flow;
-        for (usize& i = cur[u]; i != npos; i = _e[i].nxt) {
-            if (!_e[i].w ||
-                dep[_e[i].to] != dep[u] + 1 ||
-                p[_e[i].to] != p[u] + _e[i].cost)
+        for (auto& i = head[u]; i < _adj[u].size(); i++) {
+            auto a = _adj[u][i];
+            usize v = to(u, a);
+            FlowT available = residual(a);
+            if (!available ||
+                level[v] != level[u] + 1 ||
+                potential[v] != potential[u] + cost(a))
                 continue;
-            FlowT c = self(self, _e[i].to, std::min(rem, _e[i].w));
-            _e[i].w -= c;
-            _e[i ^ 1].w += c;
-            if (!(rem -= c)) break;
+            FlowT pushed = self(self, v, std::min(flow, available));
+            if (pushed) {
+                augment(a, pushed);
+                return pushed;
+            }
         }
-        if (rem == flow) dep[u] = 0;
-        return flow - rem;
+        level[u] = npos;
+        return 0;
     };
 
     FlowT total_flow = 0;
     CostT total_cost = 0;
-    bool neg =
-        std::ranges::any_of(_e, [](auto& e) { return e.w && e.cost < 0; });
-    if (neg ? spfa() : dijkstra()) {
-        do {
-            for (usize u = 0; u < n; u++) {
-                if (dis[u] != cost_inf) p[u] += dis[u];
-            }
-            if (!maximize && p[t] >= 0) break;
-            FlowT delta = 0;
-            while (bfs()) delta += dfs(dfs, s, flow_inf);
-            total_flow += delta;
-            total_cost += static_cast<CostT>(delta) * p[t];
-        } while (dijkstra());
+    for (auto e: _edges) {
+        negative_cost |=
+            (e.flow < e.capacity && e.cost < 0) || (e.flow > 0 && e.cost > 0);
     }
-    return {total_flow, total_cost};
+    bool reachable = negative_cost ? spfa() : dijkstra();
+    while (reachable) {
+        for (usize u = 0; u < n; u++) {
+            if (distance[u] != cost_inf) potential[u] += distance[u];
+        }
+        if (!maximize && potential[t] >= 0) break;
+        FlowT delta = 0;
+        while (bfs()) {
+            while (FlowT flow = dfs(dfs, s, flow_inf)) delta += flow;
+        }
+        total_flow += delta;
+        total_cost += static_cast<CostT>(delta) * potential[t];
+        reachable = dijkstra();
+    }
+    _solved = true;
+    _dirty = false;
+    return {total_flow - old_flow, total_cost - old_cost};
 }
 
 }  // namespace cp

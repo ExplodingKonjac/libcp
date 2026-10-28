@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #include "cp/def.hpp"
@@ -9,8 +10,10 @@
 namespace cp
 {
 
-template <std::integral FlowT = int>
+template <typename FlowT = int>
 class MaxFlow {
+    static_assert(std::is_integral_v<FlowT>, "FlowT must be integral type");
+
 public:
     struct Edge {
         usize from, to;
@@ -19,81 +22,87 @@ public:
 
 private:
     struct Arc {
-        usize to;
-        usize nxt;
-        FlowT w;
+        usize edge;
+        bool reverse;
     };
 
-    static constexpr usize npos = -1;
-
-    std::vector<usize> _head;
-    std::vector<Arc> _e;
+    std::vector<std::vector<Arc>> _adj;
+    std::vector<Edge> _edges;
 
 public:
     MaxFlow() = default;
-    MaxFlow(usize V): _head(V, npos) {}
+    MaxFlow(usize V): _adj(V) {}
 
-    usize size_V() const { return _head.size(); }
-    usize size_E() const { return _e.size() / 2; }
+    usize size_V() const { return _adj.size(); }
+    usize size_E() const { return _edges.size(); }
 
-    Edge edge(usize i) const {
-        const auto& e = _e[2 * i];
-        const auto& rev = _e[2 * i + 1];
-        return {rev.to, e.to, e.w + rev.w, rev.w};
-    }
+    Edge& edge(usize i) { return _edges[i]; }
+    Edge edge(usize i) const { return _edges[i]; }
     usize add_edge(usize u, usize v, FlowT capacity) {
-        usize i = size_E();
-        _e.push_back({v, _head[u], capacity});
-        _head[u] = 2 * i;
-        _e.push_back({u, _head[v], 0});
-        _head[v] = 2 * i + 1;
+        usize i = _edges.size();
+        _edges.push_back({u, v, capacity, 0});
+        _adj[u].push_back({i, false});
+        _adj[v].push_back({i, true});
         return i;
     }
 
     FlowT max_flow(usize s, usize t);
 };
 
-template <std::integral FlowT>
+template <typename FlowT>
 FlowT MaxFlow<FlowT>::max_flow(usize s, usize t) {
     if (s == t) return 0;
+    constexpr usize npos = -1;
     constexpr FlowT inf = std::numeric_limits<FlowT>::max();
     usize n = size_V();
-    std::vector<usize> dep(n), cur(n), q(n);
-
+    std::vector<usize> level(n), head(n), queue(n);
+    auto residual = [&](Arc a) {
+        auto& e = _edges[a.edge];
+        return a.reverse ? e.flow : e.capacity - e.flow;
+    };
+    auto augment = [&](Arc a, FlowT flow) {
+        if (a.reverse) _edges[a.edge].flow -= flow;
+        else _edges[a.edge].flow += flow;
+    };
     auto bfs = [&] {
-        dep.assign(n, 0);
-        cur = _head;
-        usize hd = 0, tl = 0;
-        dep[s] = 1;
-        q[tl++] = s;
-        while (hd < tl) {
-            usize u = q[hd++];
-            for (usize i = _head[u]; i != npos; i = _e[i].nxt) {
-                const auto& e = _e[i];
-                if (!e.w || dep[e.to]) continue;
-                dep[e.to] = dep[u] + 1;
-                q[tl++] = e.to;
-                if (e.to == t) return true;
+        level.assign(n, npos);
+        head.assign(n, 0);
+        usize front = 0, back = 0;
+        level[s] = 0;
+        queue[back++] = s;
+        while (front < back) {
+            usize u = queue[front++];
+            for (auto a: _adj[u]) {
+                usize v = _edges[a.edge].from ^ _edges[a.edge].to ^ u;
+                if (residual(a) && level[v] == npos) {
+                    level[v] = level[u] + 1;
+                    queue[back++] = v;
+                }
             }
         }
-        return false;
+        return level[t] != npos;
     };
     auto dfs = [&](auto&& self, usize u, FlowT flow) -> FlowT {
         if (u == t || !flow) return flow;
-        FlowT rem = flow;
-        for (usize& i = cur[u]; i != npos; i = _e[i].nxt) {
-            if (!_e[i].w || dep[_e[i].to] != dep[u] + 1) continue;
-            FlowT c = self(self, _e[i].to, std::min(rem, _e[i].w));
-            _e[i].w -= c;
-            _e[i ^ 1].w += c;
-            if (!(rem -= c)) break;
+        for (auto& i = head[u]; i < _adj[u].size(); i++) {
+            auto a = _adj[u][i];
+            usize v = _edges[a.edge].from ^ _edges[a.edge].to ^ u;
+            FlowT available = residual(a);
+            if (!available || level[v] != level[u] + 1) continue;
+            FlowT pushed = self(self, v, std::min(flow, available));
+            if (pushed) {
+                augment(a, pushed);
+                return pushed;
+            }
         }
-        if (rem == flow) dep[u] = 0;
-        return flow - rem;
+        level[u] = npos;
+        return 0;
     };
 
     FlowT result = 0;
-    while (bfs()) result += dfs(dfs, s, inf);
+    while (bfs()) {
+        while (FlowT flow = dfs(dfs, s, inf)) result += flow;
+    }
     return result;
 }
 
