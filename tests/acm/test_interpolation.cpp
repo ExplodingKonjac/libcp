@@ -6,27 +6,10 @@
 #include <iostream>
 #include <vector>
 
-#include "cp/interpolation.hpp"
-#include "cp/modint.hpp"
+#include "acm/interpolation.hpp"
+#include "acm/modint.hpp"
 
-using namespace cp;
-
-static_assert(pair_like<std::pair<int, int>, int, int>);
-static_assert(pair_like<std::array<short, 2>, int, int>);
-static_assert(!pair_like<std::tuple<int, int, int>, int, int>);
-static_assert(!pair_like<std::pair<const char*, int>, int, int>);
-static_assert(arithmetic_like<SModint<998244353>>);
-
-struct MissingDivision {
-    MissingDivision() = default;
-    MissingDivision(int) {}
-    friend MissingDivision operator+(MissingDivision, MissingDivision);
-    friend MissingDivision operator-(MissingDivision, MissingDivision);
-    friend MissingDivision operator*(MissingDivision, MissingDivision);
-    friend MissingDivision operator-(MissingDivision);
-};
-
-static_assert(!arithmetic_like<MissingDivision>);
+using namespace acm;
 
 namespace
 {

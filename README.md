@@ -18,6 +18,14 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 
 许可：GPLv3
 
+## ACM 赛场版
+
+`include/acm/` 是与主库并存的 C++20 赛场抄写版：命名空间 `acm`，无 SIMD、无内存池/分配器，内部变量尽量短，单头文件即可复制。它只保留以下组件：
+
+`def`、`fast_io`、`modint`、`number_theory`、`suffix_array`、`suffix_automaton`、`bipartite_matching`、`bipartite_weighted_matching`、`general_matching`、`general_weighted_matching`、`max_flow`、`min_cost_flow`、`min_cost_circulation`、`fpoly`、`interpolation`、`geometry`（含 `geometry/circle`、`geometry/polygon`）。
+
+使用方式、与 `cp` 的 API 差异和复杂度表见 [`include/acm/README.md`](include/acm/README.md)。
+
 ## 组件
 
 | 头文件 | 说明 |
@@ -573,44 +581,64 @@ bool subseteq = c <= b;            // 判断 c 是 b 的子集
 
 ## 构建测试
 
-使用 `g++` 直接编译测试文件，推荐开启 sanitizer：
+测试目录按实现分为 `tests/cp/`（主库）和 `tests/acm/`（赛场版），统一通过 `-Iinclude` 编译。根目录的 `Makefile` 提供以下目标：
 
 ```bash
-g++ tests/test_hash_map.cpp -std=c++23 -O2 -Wall -o test_hash_map
-./test_hash_map
+make test-acm      # C++20 编译并运行 tests/acm
+make test-cp       # C++23 编译并运行 tests/cp（跳过需要 stdin 的测试）
+make test          # 两者都跑
+make test-acm-san  # acm 测试 + ASan/UBSan
+make headers       # 逐个检查 include/acm 头文件可独立编译
+```
+
+默认 `CXX=clang++`（当前环境的 GCC 15.2 libstdc++ 在 `<mutex>` 上有头文件问题），可覆盖：
+
+```bash
+make CXX=g++ test-acm
+```
+
+也可以手动编译单个测试：
+
+```bash
+g++ -std=c++20 -Iinclude tests/acm/test_headers.cpp -O2 -Wall -o test_headers
+g++ -std=c++23 -Iinclude tests/cp/test_hash_map.cpp -O2 -Wall -o test_hash_map
 ```
 
 调试构建（开启 sanitizer）：
 
 ```bash
-g++ tests/test_hash_map.cpp -std=c++23 -g -fsanitize=address,undefined,leak \
-  -o test_hash_map -DDADALZY -Wall -Wno-unused-result
+g++ -std=c++20 -Iinclude tests/acm/test_fpoly.cpp -g \
+  -fsanitize=address,undefined -o test_fpoly -DDADALZY -Wall
 ```
 
-VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译当前文件。
+VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译当前文件（已带 `-Iinclude`）。
 
-测试文件列表：
+### cp 测试
 
 | 文件 | 测试目标 |
 |------|----------|
-| `tests/test_fastio.cpp` | 快速 IO 基准（5000 万整数读取） |
-| `tests/test_io.cpp` | 快速 IO（CP_FASTIO_ACCELERATE 模式） |
-| `tests/test_hash_map.cpp` | 哈希表正确性 + 对比 benchmark |
-| `tests/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
-| `tests/test_fenwick.cpp` | 树状数组正确性 |
-| `tests/test_graph.cpp` | 图容器正确性 |
-| `tests/test_suffix_automaton.cpp` | 后缀自动机子串判断、转移与状态结构 |
-| `tests/test_geometry.cpp` | 二维向量、直线、距离与直线交点正确性 |
-| `tests/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
-| `tests/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
-| `tests/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
-| `tests/test_interpolation.cpp` | 多项式插值与系数求解 |
-| `tests/test_bipartite_matching.cpp` | 二分图最大匹配与最大权完备匹配 |
-| `tests/test_general_matching.cpp` | 一般图最大匹配与最大权完美匹配 |
-| `tests/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
-| `tests/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
-| `tests/test_dft_new.cpp` | 多项式 NTT + inv 基准 |
-| `tests/test_luogu.cpp` | 多项式 sqrt（Luogu 风格测试） |
+| `tests/cp/test_fastio.cpp` | 快速 IO 基准（5000 万整数读取） |
+| `tests/cp/test_io.cpp` | 快速 IO（CP_FASTIO_ACCELERATE 模式，需 stdin） |
+| `tests/cp/test_hash_map.cpp` | 哈希表正确性 + 对比 benchmark |
+| `tests/cp/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
+| `tests/cp/test_fenwick.cpp` | 树状数组正确性 |
+| `tests/cp/test_graph.cpp` | 图容器正确性 |
+| `tests/cp/test_suffix_automaton.cpp` | 后缀自动机子串判断、转移与状态结构 |
+| `tests/cp/test_geometry.cpp` | 二维向量、直线、距离与直线交点正确性 |
+| `tests/cp/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
+| `tests/cp/test_circle.cpp` | 圆、圆交点与最小覆盖圆 |
+| `tests/cp/test_polygon.cpp` | 多边形、凸包、Minkowski 和与半平面交 |
+| `tests/cp/test_interpolation.cpp` | 多项式插值与系数求解 |
+| `tests/cp/test_bipartite_matching.cpp` | 二分图最大匹配与最大权完备匹配 |
+| `tests/cp/test_general_matching.cpp` | 一般图最大匹配与最大权完美匹配 |
+| `tests/cp/test_radix2.cpp` | 多项式乘法基准（radix-2 NTT） |
+| `tests/cp/test_radix4.cpp` | 多项式乘法基准（radix-4 AVX2 NTT） |
+| `tests/cp/test_dft_new.cpp` | 多项式 NTT + inv 基准（需 stdin） |
+| `tests/cp/test_luogu.cpp` | 多项式 sqrt（Luogu 风格测试，需 stdin） |
+
+### acm 测试
+
+`tests/acm/` 覆盖 `include/acm` 的全部 18 个算法头：快速 IO、模运算、数论、后缀数组/自动机、匹配、流、环流、多项式、插值和几何。`make test-acm` 会先执行 `make headers` 的逐头文件编译检查。
 
 ## 设计原则
 

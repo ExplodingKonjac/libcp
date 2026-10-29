@@ -5,7 +5,9 @@
 *.exe
 !Makefile
 !LICENSE
-!tests/cp
+
+# build artifacts
+/build/
 
 # input/output/answer files
 *.in

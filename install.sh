@@ -26,4 +26,13 @@ rm -rf "$dst"
 mkdir -p "$dst"
 cp -r "$src/"* "$dst/"
 
+src_acm="$(dirname "$0")/include/acm"
+dst_acm="$prefix/include/acm"
+if [[ -d "$src_acm" ]]; then
+	rm -rf "$dst_acm"
+	mkdir -p "$dst_acm"
+	cp -r "$src_acm/"* "$dst_acm/"
+	echo "Installed to $dst_acm"
+fi
+
 echo "Installed to $dst"

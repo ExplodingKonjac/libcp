@@ -11,8 +11,8 @@ using DenseMap = cp::DenseMap<char, 128>;
 template <typename Map>
 using Sam = cp::SuffixAutomaton<char, Map>;
 
-static_assert(cp::sam_symbol_map<TreeMap, char>);
-static_assert(cp::sam_symbol_map<DenseMap, char>);
+static_assert(cp::SamSymbolMap<TreeMap, char>);
+static_assert(cp::SamSymbolMap<DenseMap, char>);
 
 template <typename Map>
 bool contains(const Sam<Map>& sam, const std::string& pattern) {
