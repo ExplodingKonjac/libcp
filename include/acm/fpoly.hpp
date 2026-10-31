@@ -57,13 +57,7 @@ struct FPoly: std::vector<SModint<P>> {
         return Mint(0);
     }
 
-    // Primitive root of P, computed at compile time.
     static constexpr Mint G = primitive_root_const();
-
-    // Preprocessed twiddle factors, laid out by level:
-    //   w[h + j] = (a primitive 2h-th root)^j,  0 <= j < h
-    // for h = 1, 2, 4, ..., n / 2. Each level is a contiguous block, so dft
-    // and idft only look the factors up and never multiply the root along.
     inline static std::vector<Mint> w{0, 1};
 
     static void prepare_roots(usize n) {
@@ -78,8 +72,6 @@ struct FPoly: std::vector<SModint<P>> {
         }
     }
 
-    // Transposed NTT, no bit-reversal permutation:
-    // forward DIF (bit-reversed output), inverse DIT (bit-reversed input).
     static void dft(Mint* a, usize n) {
         if (n <= 1) return;
         prepare_roots(n);
@@ -94,8 +86,6 @@ struct FPoly: std::vector<SModint<P>> {
         }
     }
 
-    // Inverse NTT: the transpose DIT with the same (forward) roots, then
-    // reverse a[1..n-1] and scale by n^{-1}; only one root table is needed.
     static void idft(Mint* a, usize n) {
         if (n <= 1) return;
         prepare_roots(n);
