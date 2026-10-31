@@ -49,8 +49,7 @@ public:
             bk.assign(m, 0);
             for (usize i = 0; i < n; i++) bk[b[i]]++;
             for (usize i = 1; i < m; i++) bk[i] += bk[i - 1];
-            for (usize i = n; i > 0; i--)
-                a[--bk[b[tmp[i - 1]]]] = tmp[i - 1];
+            for (usize i = n; i > 0; i--) a[--bk[b[tmp[i - 1]]]] = tmp[i - 1];
             old.swap(b);
             m = 1;
             for (usize i = 0; i < n; i++) {

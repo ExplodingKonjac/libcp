@@ -30,10 +30,10 @@ private:
             };
             return row | std::views::transform(f);
         };
-        return g
-            | std::views::enumerate
-            | std::views::transform(f)
-            | std::views::join;
+        return g |
+            std::views::enumerate |
+            std::views::transform(f) |
+            std::views::join;
     }
 
 public:
@@ -79,10 +79,10 @@ public:
             };
             return row | std::views::transform(f);
         };
-        return _g
-            | std::views::enumerate
-            | std::views::transform(f)
-            | std::views::join;
+        return _g |
+            std::views::enumerate |
+            std::views::transform(f) |
+            std::views::join;
     }
 };
 

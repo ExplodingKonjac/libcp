@@ -177,8 +177,10 @@ public:
             } else {
                 auto val = scan<std::tuple_element_t<I, std::tuple<Args...>>>();
                 if (!val) return std::nullopt;
-                return self(self, std::forward<decltype(args)>(args)...,
-                            std::move(val).value());
+                return self(
+                    self, std::forward<decltype(args)>(args)...,
+                    std::move(val).value()
+                );
             }
         };
         return helper(helper);

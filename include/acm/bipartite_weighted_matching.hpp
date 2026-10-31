@@ -70,8 +70,7 @@ public:
                 for (usize j = 1; j <= m; j++) {
                     if (used[j]) continue;
                     if (w[i - 1][j - 1] != no_edge) {
-                        Calc cur =
-                            lx[i] + ly[j] - Calc(w[i - 1][j - 1]);
+                        Calc cur = lx[i] + ly[j] - Calc(w[i - 1][j - 1]);
                         if (cur < slack[j]) slack[j] = cur, way[j] = u;
                     }
                     if (slack[j] < delta) delta = slack[j], v = j;

@@ -33,9 +33,7 @@ concept HasVectorDivision =
 static_assert(HasVectorDivision<double>);
 static_assert(!HasVectorDivision<i32>);
 
-static_assert(
-    std::same_as<decltype(cross(Vec2<i32>{}, Vec2<i32>{})), i64>
-);
+static_assert(std::same_as<decltype(cross(Vec2<i32>{}, Vec2<i32>{})), i64>);
 static_assert(
     std::same_as<decltype(distance_sq(Vec2<i32>{}, Vec2<i32>{})), i64>
 );
@@ -51,8 +49,7 @@ template <typename T>
 concept HasSegmentIntersection =
     requires(Segment2<T> a, Segment2<T> b) { intersection(a, b); };
 template <typename T>
-concept HasScalarDivision =
-    requires(Vec2<T> value, T k) { value / k; };
+concept HasScalarDivision = requires(Vec2<T> value, T k) { value / k; };
 
 static_assert(HasCross<i64>);
 static_assert(!HasLineIntersection<i64>);
@@ -119,15 +116,15 @@ void test_vector_arithmetic() {
 void test_tolerance() {
     static_assert(eps == 1e-9L);
 
-    assert(almost_equal(1.0, 1.0 + 5e-10));
-    assert(!almost_equal(1.0, 1.0 + 5e-7));
-    assert(!almost_equal(1'000'000'000.0, 1'000'000'000.5));
+    assert(cmp(1.0, 1.0 + 5e-10) == 0);
+    assert(cmp(1.0, 1.0 + 5e-7) != 0);
+    assert(cmp(1'000'000'000.0, 1'000'000'000.5) != 0);
     assert(sgn(5e-10) == 0);
     assert(sgn(1e-5) == 1);
-    assert(cmp(1.0, 1.0 + 5e-10) == 0);
     assert(cmp(1.0, 1.0 + 1e-5) == -1);
-    assert(cmp(1'000'000'000.0, 1'000'000'000.5) == -1);
-    assert(almost_equal(Vec2<double>{1, 2}, Vec2<double>{1 + 5e-10, 2 - 5e-10}));
+    assert(
+        cmp(Vec2<double>{1, 2}, Vec2<double>{1 + 5e-10, 2 - 5e-10}) == 0
+    );
 
     assert(
         orientation(
@@ -280,8 +277,7 @@ void test_segment_intersections() {
     require_point_near(huge_direction.point, {0, 0});
 
     const auto tiny_direction = intersection(
-        Line2<double>{{0, 0}, {1e-155, 0}},
-        Line2<double>{{0, -1}, {0, 1e-155}}
+        Line2<double>{{0, 0}, {1e-155, 0}}, Line2<double>{{0, -1}, {0, 1e-155}}
     );
     assert(tiny_direction.kind == LineIntersectionKind::point);
     require_point_near(tiny_direction.point, {0, 0});

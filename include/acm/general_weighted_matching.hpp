@@ -55,14 +55,18 @@ public:
         const usize n = N;
         usize node_count = n, visit_id = 0;
         Calc eps{};
-        std::vector<std::vector<Edge>> g(2 * n + 1, std::vector<Edge>(2 * n + 1));
+        std::vector<std::vector<Edge>> g(
+            2 * n + 1, std::vector<Edge>(2 * n + 1)
+        );
         std::vector<usize> match(2 * n + 1), slack(2 * n + 1);
         std::vector<usize> rep(2 * n + 1), par(2 * n + 1);
         std::vector<usize> visit(2 * n + 1);
         // Alternating-forest state: -1 outside, 0 outer, 1 inner.
         std::vector<i32> state(2 * n + 1);
         std::vector<Calc> label(2 * n + 1);
-        std::vector<std::vector<usize>> from(2 * n + 1, std::vector<usize>(n + 1));
+        std::vector<std::vector<usize>> from(
+            2 * n + 1, std::vector<usize>(n + 1)
+        );
         std::vector<std::vector<usize>> blossom(2 * n + 1);
         std::vector<usize> queue;
         usize queue_head = 0;

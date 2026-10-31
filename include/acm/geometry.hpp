@@ -20,27 +20,25 @@ inline constexpr long double eps = 1e-9L;
 #endif
 
 template <typename T>
-concept GeomScalar = (std::signed_integral<T> || std::floating_point<T> ||
+concept GeomScalar = (std::signed_integral<T> ||
+                      std::floating_point<T> ||
                       std::same_as<std::remove_cv_t<T>, i128>) &&
     !std::same_as<std::remove_cv_t<T>, bool>;
 
 template <GeomScalar T>
 using Wide = std::conditional_t<
-    std::is_integral_v<T>, std::conditional_t<(sizeof(T) <= 4), i64, i128>, T
+    std::is_integral_v<T>,
+    std::conditional_t<(sizeof(T) <= 4), i64, i128>,
+    T
 >;
 
 template <GeomScalar T>
 using Real = std::conditional_t<std::is_integral_v<T>, long double, T>;
 
-template <std::floating_point T>
-constexpr bool almost_equal(T a, T b) {
-    return std::abs(a - b) <= T(eps);
-}
-
 template <GeomScalar T>
 constexpr int cmp(T a, T b) {
     if constexpr (std::floating_point<T>)
-        if (almost_equal(a, b)) return 0;
+        if (std::abs(a - b) <= T(eps)) return 0;
     return (a > b) - (a < b);
 }
 
@@ -94,9 +92,10 @@ struct Vec2 {
 template <GeomScalar T>
 using Point2 = Vec2<T>;
 
-template <std::floating_point T>
-constexpr bool almost_equal(Vec2<T> a, Vec2<T> b) {
-    return almost_equal(a.x, b.x) && almost_equal(a.y, b.y);
+template <GeomScalar T>
+constexpr int cmp(Vec2<T> a, Vec2<T> b) {
+    if (int c = cmp(a.x, b.x)) return c;
+    return cmp(a.y, b.y);
 }
 
 template <GeomScalar T>
@@ -152,7 +151,7 @@ Vec2<T> rotate(Vec2<T> a, T r) {
 template <std::floating_point T>
 std::optional<Vec2<T>> normalized(Vec2<T> a) {
     T d = norm(a);
-    if (almost_equal(d, T{})) return std::nullopt;
+    if (!cmp(d, T{})) return std::nullopt;
     return a / d;
 }
 
@@ -160,9 +159,7 @@ template <GeomScalar T>
 struct Line2 {
     Vec2<T> p{}, d{};
 
-    static constexpr Line2 through(Vec2<T> a, Vec2<T> b) {
-        return {a, b - a};
-    }
+    static constexpr Line2 through(Vec2<T> a, Vec2<T> b) { return {a, b - a}; }
     constexpr bool valid() const { return d.x != T{} || d.y != T{}; }
 };
 
@@ -181,9 +178,7 @@ constexpr int line_side(Line2<T> l, Vec2<T> q) {
     if constexpr (std::floating_point<T>) {
         T n = std::max(std::abs(l.d.x), std::abs(l.d.y));
         if (n == T{}) return 0;
-        return sgn(
-            l.d.x / n * (q.y - l.p.y) - l.d.y / n * (q.x - l.p.x)
-        );
+        return sgn(l.d.x / n * (q.y - l.p.y) - l.d.y / n * (q.x - l.p.x));
     } else {
         using W = Wide<T>;
         W x = W(q.x) - W(l.p.x), y = W(q.y) - W(l.p.y);
@@ -314,8 +309,7 @@ LineIntersection2<T> intersection(Segment2<T> a, Segment2<T> b) {
     if (cmp(hi, lo) < 0) return {};
     if (cmp(hi, lo) == 0)
         for (auto p: {a.a, a.b, b.a, b.b})
-            if (cmp(coord(p), lo) == 0)
-                return {LineIntersectionKind::point, p};
+            if (cmp(coord(p), lo) == 0) return {LineIntersectionKind::point, p};
     return {LineIntersectionKind::coincident, {}};
 }
 

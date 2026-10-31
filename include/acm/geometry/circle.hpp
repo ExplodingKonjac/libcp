@@ -25,7 +25,7 @@ template <GeomScalar T>
 constexpr bool on_circle(Circle2<T> c, Vec2<T> p) {
     assert(c.valid());
     if constexpr (std::floating_point<T>)
-        return almost_equal(distance(c.o, p), c.r);
+        return !cmp(distance(c.o, p), c.r);
     else {
         using W = Wide<T>;
         return distance_sq(c.o, p) == W(c.r) * W(c.r);
@@ -89,8 +89,7 @@ PointIntersection2<T> intersection(Circle2<T> a, Circle2<T> b) {
     T z = distance(a.o, b.o);
     if (!cmp(z, T{})) {
         if (cmp(a.r, b.r)) return {};
-        if (!cmp(a.r, T{}))
-            return {PointIntersectionKind::one, {a.o, {}}};
+        if (!cmp(a.r, T{})) return {PointIntersectionKind::one, {a.o, {}}};
         return {PointIntersectionKind::coincident, {}};
     }
     T sum = a.r + b.r, dif = std::abs(a.r - b.r);
@@ -99,8 +98,7 @@ PointIntersection2<T> intersection(Circle2<T> a, Circle2<T> b) {
     Vec2<T> m = a.o + d * (t / z);
     if (!cmp(z, sum) || !cmp(z, dif))
         return {PointIntersectionKind::one, {m, {}}};
-    T h = std::sqrt(std::max(T{}, a.r - t)) *
-        std::sqrt(std::max(T{}, a.r + t));
+    T h = std::sqrt(std::max(T{}, a.r - t)) * std::sqrt(std::max(T{}, a.r + t));
     Vec2<T> v{-d.y, d.x};
     v *= h / z;
     return {PointIntersectionKind::two, {m + v, m - v}};
@@ -125,7 +123,7 @@ Circle2<T> circle_from(Vec2<T> a, Vec2<T> b, Vec2<T> c) {
     if (scale == T{}) return detail::circle_from_pair(a, b);
     Vec2<T> su = u / scale, sv = v / scale;
     T d = T{2} * cross(su, sv);
-    if (almost_equal(d, T{})) {
+    if (!cmp(d, T{})) {
         T ab = distance(a, b), ac = distance(a, c), bc = distance(b, c);
         if (ab >= ac && ab >= bc) return detail::circle_from_pair(a, b);
         if (ac >= bc) return detail::circle_from_pair(a, c);
@@ -134,10 +132,9 @@ Circle2<T> circle_from(Vec2<T> a, Vec2<T> b, Vec2<T> c) {
     T u2 = norm_sq(su), v2 = norm_sq(sv);
     Vec2<T> o = a +
         Vec2<T>{
-                    (u2 * sv.y - v2 * su.y) / d,
-                    (su.x * v2 - sv.x * u2) / d,
-                } *
-            scale;
+            (u2 * sv.y - v2 * su.y) / d,
+            (su.x * v2 - sv.x * u2) / d,
+        } * scale;
     return {o, distance(o, a)};
 }
 

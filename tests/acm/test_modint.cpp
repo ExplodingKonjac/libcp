@@ -6,9 +6,9 @@
 
 #include "acm/modint.hpp"
 
+using acm::i128;
 using acm::i32;
 using acm::i64;
-using acm::i128;
 using acm::u32;
 using acm::u64;
 

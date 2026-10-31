@@ -60,56 +60,55 @@ struct FPoly: std::vector<SModint<P>> {
     // Primitive root of P, computed at compile time.
     static constexpr Mint G = primitive_root_const();
 
-    // w[k] is a primitive 2^k-th root, iw[k] its inverse.
-    static constexpr std::array<Mint, 32> make_w() {
-        std::array<Mint, 32> a{};
-        a[LG] = pow(G, (P - 1) >> LG);
-        for (int i = LG - 1; i >= 0; i--) a[i] = a[i + 1] * a[i + 1];
-        return a;
+    // Preprocessed twiddle factors, laid out by level:
+    //   w[h + j] = (a primitive 2h-th root)^j,  0 <= j < h
+    // for h = 1, 2, 4, ..., n / 2. Each level is a contiguous block, so dft
+    // and idft only look the factors up and never multiply the root along.
+    inline static std::vector<Mint> w{0, 1};
+
+    static void prepare_roots(usize n) {
+        assert(std::has_single_bit(n));
+        if (w.size() >= n) return;
+        usize h = w.size() >> 1;
+        w.resize(n);
+        for (; h * 2 <= n; h <<= 1) {
+            Mint wh = pow(G, (P - 1) / (h * 2));
+            w[h] = Mint(1);
+            for (usize j = 1; j < h; j++) w[h + j] = w[h + j - 1] * wh;
+        }
     }
 
-    static constexpr std::array<Mint, 32> make_iw() {
-        std::array<Mint, 32> a{};
-        a[LG] = w[LG].inv();
-        for (int i = LG - 1; i >= 0; i--) a[i] = a[i + 1] * a[i + 1];
-        return a;
-    }
-
-    inline static constexpr std::array<Mint, 32> w = make_w();
-    inline static constexpr std::array<Mint, 32> iw = make_iw();
-
-    // Transposed NTT: forward DIF (bit-reversed output), inverse DIT
-    // (bit-reversed input). No explicit bit-reversal permutation is needed.
+    // Transposed NTT, no bit-reversal permutation:
+    // forward DIF (bit-reversed output), inverse DIT (bit-reversed input).
     static void dft(Mint* a, usize n) {
-        for (usize len = n; len > 1; len >>= 1) {
-            usize h = len >> 1;
-            Mint wl = w[std::countr_zero(len)];
-            for (usize i = 0; i < n; i += len) {
-                Mint x = 1;
-                for (usize j = 0; j < h; j++) {
-                    Mint u = a[i + j], v = a[i + j + h];
-                    a[i + j] = u + v;
-                    a[i + j + h] = (u - v) * x;
-                    x *= wl;
+        if (n <= 1) return;
+        prepare_roots(n);
+        for (usize i = n >> 1; i >= 1; i >>= 1) {
+            for (usize j = 0; j < n; j += (i << 1)) {
+                for (usize k = 0; k < i; k++) {
+                    Mint u = a[j + k], v = a[i + j + k];
+                    a[j + k] = u + v;
+                    a[i + j + k] = (u - v) * w[i + k];
                 }
             }
         }
     }
 
+    // Inverse NTT: the transpose DIT with the same (forward) roots, then
+    // reverse a[1..n-1] and scale by n^{-1}; only one root table is needed.
     static void idft(Mint* a, usize n) {
-        for (usize len = 2; len <= n; len <<= 1) {
-            usize h = len >> 1;
-            Mint wl = iw[std::countr_zero(len)];
-            for (usize i = 0; i < n; i += len) {
-                Mint x = 1;
-                for (usize j = 0; j < h; j++) {
-                    Mint u = a[i + j], v = a[i + j + h] * x;
-                    a[i + j] = u + v;
-                    a[i + j + h] = u - v;
-                    x *= wl;
+        if (n <= 1) return;
+        prepare_roots(n);
+        for (usize i = 1; i < n; i <<= 1) {
+            for (usize j = 0; j < n; j += (i << 1)) {
+                for (usize k = 0; k < i; k++) {
+                    Mint u = a[j + k], v = a[i + j + k] * w[i + k];
+                    a[j + k] = u + v;
+                    a[i + j + k] = u - v;
                 }
             }
         }
+        std::reverse(a + 1, a + n);
         Mint z = Mint(n).inv();
         for (usize i = 0; i < n; i++) a[i] *= z;
     }
@@ -291,9 +290,7 @@ struct FPoly: std::vector<SModint<P>> {
     friend bool operator==(const FPoly& a, const FPoly& b) {
         return static_cast<const Base&>(a) == static_cast<const Base&>(b);
     }
-    friend bool operator!=(const FPoly& a, const FPoly& b) {
-        return !(a == b);
-    }
+    friend bool operator!=(const FPoly& a, const FPoly& b) { return !(a == b); }
 };
 
 template <i32 P>

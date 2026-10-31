@@ -366,12 +366,12 @@ void test_comparisons() {
     assert(((subset & overlap) <=> subset) == std::partial_ordering::less);
     assert(((subset | overlap) <=> subset) == std::partial_ordering::greater);
     assert(
-        ((subset | overlap) <=> (overlap | subset))
-        == std::partial_ordering::equivalent
+        ((subset | overlap) <=> (overlap | subset)) ==
+        std::partial_ordering::equivalent
     );
     assert(
-        ((subset - overlap) <=> (overlap - subset))
-        == std::partial_ordering::unordered
+        ((subset - overlap) <=> (overlap - subset)) ==
+        std::partial_ordering::unordered
     );
     assert(left_only != right_only);
 

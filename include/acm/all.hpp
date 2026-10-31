@@ -3,7 +3,6 @@
 #include "bipartite_matching.hpp"
 #include "bipartite_weighted_matching.hpp"
 #include "def.hpp"
-#include "fast_io.hpp"
 #include "fpoly.hpp"
 #include "general_matching.hpp"
 #include "general_weighted_matching.hpp"

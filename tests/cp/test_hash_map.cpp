@@ -385,7 +385,7 @@ void test_copy_independence() {
     src.erase(1);
     src.try_emplace(3, 30);
     assert(src.get(1) == nullptr);
-    assert(*dst.get(1) == 10);  // copy still has key 1
+    assert(*dst.get(1) == 10);      // copy still has key 1
     assert(dst.get(3) == nullptr);  // copy doesn't have key 3
 
     // Mutate copy — source should be independent

@@ -205,8 +205,9 @@ public:
     std::optional<std::tuple<Args...>> scan() {
         std::tuple<std::optional<Args>...> tmp;
         auto try_scan = [this](auto&... r) {
-            return ((r = scan<std::remove_cvref_t<decltype(r.value())>>()) &&
-                    ...);
+            return (
+                (r = scan<std::remove_cvref_t<decltype(r.value())>>()) && ...
+            );
         };
         auto unwrap = [](auto&&... items) {
             return std::tuple(std::move(items).value()...);
@@ -735,8 +736,10 @@ public:
     }
 
 #define DEF_OP(op)                                                      \
-    template <std::common_reference_with<FPoly> T,                      \
-              std::common_reference_with<FPoly> U>                      \
+    template <                                                          \
+        std::common_reference_with<FPoly> T,                            \
+        std::common_reference_with<FPoly> U                             \
+    >                                                                   \
     friend FPoly operator op(T&& lhs, U&& rhs) {                        \
         return FPoly(std::forward<T>(lhs)) op## = std::forward<U>(rhs); \
     }

@@ -18,8 +18,7 @@ namespace detail
 template <typename T, typename R>
 std::vector<std::pair<T, T>> to_pairs(R&& r) {
     std::vector<std::pair<T, T>> p;
-    for (auto&& x: r)
-        p.emplace_back(T(std::get<0>(x)), T(std::get<1>(x)));
+    for (auto&& x: r) p.emplace_back(T(std::get<0>(x)), T(std::get<1>(x)));
     return p;
 }
 

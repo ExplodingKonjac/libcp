@@ -123,14 +123,6 @@ void test_convex_hull() {
         {0, 2}, {0, 1}, {1, 1}, {0, 0}, {2, 2},
     };
     require_points(
-        convex_hull(points, HullMode::lower),
-        std::vector<Vec2<int>>{{0, 0}, {2, 0}, {2, 2}}
-    );
-    require_points(
-        convex_hull(points, HullMode::upper),
-        std::vector<Vec2<int>>{{0, 0}, {0, 2}, {2, 2}}
-    );
-    require_points(
         convex_hull(points),
         std::vector<Vec2<int>>{{0, 0}, {2, 0}, {2, 2}, {0, 2}}
     );
@@ -217,10 +209,10 @@ void test_half_plane_intersection() {
     assert(without_duplicate.has_value());
     assert(without_duplicate->size() == 4);
     for (usize i = 0; i != without_duplicate->size(); i++)
-        assert(!almost_equal(
-            (*without_duplicate)[i],
-            (*without_duplicate)[(i + 1) % without_duplicate->size()]
-        ));
+        assert(cmp(
+                   (*without_duplicate)[i],
+                   (*without_duplicate)[(i + 1) % without_duplicate->size()]
+               ) != 0);
 
     const std::vector<Line2<double>> wedge{
         {{0, 0}, {0, -1}},

@@ -13,8 +13,6 @@
 namespace acm
 {
 
-enum class HullMode { lower, upper, full };
-
 enum class PointPolygonRelation { outside, boundary, inside };
 
 namespace detail
@@ -25,25 +23,6 @@ Wide<T> area2(const std::vector<Vec2<T>>& p) {
     Wide<T> s{};
     for (usize i = 1; i + 1 < p.size(); i++) s += cross(p[0], p[i], p[i + 1]);
     return s;
-}
-
-template <bool up, GeomScalar T>
-std::vector<Vec2<T>> chain(const std::vector<Vec2<T>>& p) {
-    std::vector<Vec2<T>> res;
-    res.reserve(p.size());
-    auto add = [&](Vec2<T> q) {
-        while (res.size() >= 2 &&
-               orientation(res[res.size() - 2], res.back(), q) <= 0)
-            res.pop_back();
-        res.push_back(q);
-    };
-    if constexpr (up) {
-        for (auto i = p.rbegin(); i != p.rend(); i++) add(*i);
-        std::reverse(res.begin(), res.end());
-    } else {
-        for (auto q: p) add(q);
-    }
-    return res;
 }
 
 template <GeomScalar T>
@@ -111,20 +90,24 @@ struct Polygon {
 };
 
 template <GeomScalar T>
-std::vector<Vec2<T>> convex_hull(
-    std::vector<Vec2<T>> p, HullMode mode = HullMode::full
-) {
-    std::sort(p.begin(), p.end());
-    p.erase(std::unique(p.begin(), p.end()), p.end());
-    if (p.size() <= 1) return p;
-    if (mode == HullMode::lower) return detail::chain<false>(p);
-    if (mode == HullMode::upper) return detail::chain<true>(p);
+std::vector<Vec2<T>> convex_hull(std::vector<Vec2<T>> p) {
+    usize n = p.size();
+    if (n <= 1) return p;
 
-    auto lo = detail::chain<false>(p);
-    auto up = detail::chain<true>(p);
-    lo.reserve(lo.size() + up.size() - 2);
-    for (usize i = up.size() - 1; i > 1; i--) lo.push_back(up[i - 1]);
-    return lo;
+    std::swap(p[0], *std::min_element(p.begin(), p.end()));
+    std::sort(p.begin() + 1, p.end(), [&](Vec2<T> a, Vec2<T> b) {
+        int c = orientation(p[0], a, b);
+        if (c) return c > 0;
+        return norm_sq(a - p[0]) < norm_sq(b - p[0]);
+    });
+    std::vector<Vec2<T>> h;
+    h.reserve(n);
+    for (auto q: p) {
+        while (h.size() >= 2 && orientation(h[h.size() - 2], h.back(), q) <= 0)
+            h.pop_back();
+        h.push_back(q);
+    }
+    return h;
 }
 
 template <GeomScalar T>
@@ -140,7 +123,7 @@ Polygon<T> minkowski_sum(const Polygon<T>& a, const Polygon<T>& b) {
         for (usize i = s; i + 1 < p.size(); i++) e.push_back(p[i + 1] - p[i]);
         e.push_back(p[0] - p.back());
         for (usize i = 0; i < s; i++) e.push_back(p[i + 1] - p[i]);
-        return std::pair{e, p[s]};
+        return std::pair{std::move(e), p[s]};
     };
     auto [e1, p0] = get_edges(a.vertices());
     auto [e2, q0] = get_edges(b.vertices());
@@ -148,8 +131,8 @@ Polygon<T> minkowski_sum(const Polygon<T>& a, const Polygon<T>& b) {
     std::vector<Vec2<T>> res{p0 + q0};
     for (usize i = 0, j = 0; i != e1.size() || j != e2.size();) {
         int c = i == e1.size() ? 1
-            : j == e2.size()     ? -1
-                                 : sgn(cross(e2[j], e1[i]));
+            : j == e2.size()   ? -1
+                               : sgn(cross(e2[j], e1[i]));
         Vec2<T> d{};
         if (c <= 0) d += e1[i++];
         if (c >= 0) d += e2[j++];
@@ -184,8 +167,7 @@ std::optional<Polygon<T>> half_plane_intersection(std::vector<Line2<T>> ls) {
     u.reserve(h.size());
     for (auto x: h) {
         auto l = x.l;
-        if (!u.empty() && parallel(u.back(), l) &&
-            dot(u.back().d, l.d) > T{}) {
+        if (!u.empty() && parallel(u.back(), l) && dot(u.back().d, l.d) > T{}) {
             if (detail::outside(l, u.back().p)) u.back() = l;
         } else {
             u.push_back(l);
@@ -235,9 +217,9 @@ std::optional<Polygon<T>> half_plane_intersection(std::vector<Line2<T>> ls) {
             return std::nullopt;
         auto x = inter(q[i], q[(i + 1) % q.size()]);
         if (!x) return std::nullopt;
-        if (p.empty() || !almost_equal(p.back(), *x)) p.push_back(*x);
+        if (p.empty() || cmp(p.back(), *x) != 0) p.push_back(*x);
     }
-    if (p.size() > 1 && almost_equal(p.front(), p.back())) p.pop_back();
+    if (p.size() > 1 && !cmp(p.front(), p.back())) p.pop_back();
     if (p.size() < 3) return std::nullopt;
     return Polygon<T>(std::move(p));
 }

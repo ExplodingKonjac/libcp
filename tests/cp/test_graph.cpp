@@ -9,8 +9,8 @@ using namespace cp;
 
 template <typename T, typename U>
 void assert_eq(const T& a, const U& b, const char* msg) {
-    if (static_cast<std::common_type_t<T, U>>(a)
-        != static_cast<std::common_type_t<T, U>>(b)) {
+    if (static_cast<std::common_type_t<T, U>>(a) !=
+        static_cast<std::common_type_t<T, U>>(b)) {
         std::cerr << "Assertion failed: " << msg << "\n";
         exit(1);
     }

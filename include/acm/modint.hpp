@@ -19,11 +19,9 @@ class ModintBase {
 protected:
     i32 v = 0;
 
-    // v is always in [0, mod). qmo maps a value in (-mod, mod) back to [0, mod).
     constexpr static inline i32 qmo(i32 x) {
         return x + ((x >> 31) & D::mod());
     }
-    // Let CRTP base member functions return D / D& without explicit casts.
     constexpr operator D() const { return static_cast<const D&>(*this); }
     constexpr operator D&() { return static_cast<D&>(*this); }
 

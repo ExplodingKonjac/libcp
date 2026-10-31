@@ -13,8 +13,6 @@
 namespace cp
 {
 
-enum class HullMode { lower, upper, full };
-
 enum class PointPolygonRelation { outside, boundary, inside };
 
 namespace detail
@@ -25,27 +23,6 @@ geometry_wide_t<T> area2(const std::vector<Point2<T>>& p) {
     geometry_wide_t<T> s{};
     for (usize i = 1; i + 1 < p.size(); ++i) s += cross(p[0], p[i], p[i + 1]);
     return s;
-}
-
-template <bool up, GeometryScalar T>
-std::vector<Point2<T>> chain(const std::vector<Point2<T>>& p) {
-    std::vector<Point2<T>> res;
-    res.reserve(p.size());
-    const auto add = [&](Point2<T> q) {
-        while (
-            res.size() >= 2 &&
-            orientation(res[res.size() - 2], res.back(), q) <= 0
-        )
-            res.pop_back();
-        res.push_back(q);
-    };
-    if constexpr (up) {
-        for (auto i = p.rbegin(); i != p.rend(); ++i) add(*i);
-        std::reverse(res.begin(), res.end());
-    } else {
-        for (auto q: p) add(q);
-    }
-    return res;
 }
 
 template <std::floating_point T>
@@ -115,22 +92,36 @@ public:
     }
 };
 
+// Graham scan: sort by polar angle around the lowest (leftmost on ties)
+// point, then build the full hull with a monotone stack.
 template <GeometryScalar T>
-std::vector<Point2<T>> convex_hull(
-    std::vector<Point2<T>> p, HullMode mode = HullMode::full
-) {
-    std::sort(p.begin(), p.end());
-    p.erase(std::unique(p.begin(), p.end()), p.end());
-    if (p.size() <= 1) return p;
+std::vector<Point2<T>> convex_hull(std::vector<Point2<T>> p) {
+    usize n = p.size();
+    if (n <= 1) return p;
 
-    if (mode == HullMode::lower) return detail::chain<false>(p);
-    if (mode == HullMode::upper) return detail::chain<true>(p);
+    std::swap(
+        p[0],
+        *std::min_element(p.begin(), p.end(), [](Point2<T> a, Point2<T> b) {
+            return a.y != b.y ? a.y < b.y : a.x < b.x;
+        })
+    );
+    std::sort(p.begin() + 1, p.end(), [&](Point2<T> a, Point2<T> b) {
+        int c = orientation(p[0], a, b);
+        if (c) return c > 0;
+        return norm_sq(a - p[0]) < norm_sq(b - p[0]);
+    });
 
-    auto lo = detail::chain<false>(p);
-    auto up = detail::chain<true>(p);
-    lo.reserve(lo.size() + up.size() - 2);
-    for (usize i = up.size() - 1; i > 1; i--) lo.push_back(up[i - 1]);
-    return lo;
+    std::vector<Point2<T>> h;
+    h.reserve(n);
+    for (auto q: p) {
+        while (
+            h.size() >= 2 &&
+            orientation(h[h.size() - 2], h.back(), q) <= 0
+        )
+            h.pop_back();
+        h.push_back(q);
+    }
+    return h;
 }
 
 template <GeometryScalar T>

@@ -83,11 +83,13 @@ void test_circle_intersections() {
         PointIntersectionKind::none
     );
 
-    const auto external_tangent = intersection(first, Circle2<double>{{10, 0}, 5});
+    const auto external_tangent =
+        intersection(first, Circle2<double>{{10, 0}, 5});
     assert(external_tangent.kind == PointIntersectionKind::one);
     require_point_near(external_tangent.points[0], Vec2<double>{5, 0});
 
-    const auto internal_tangent = intersection(first, Circle2<double>{{3, 0}, 2});
+    const auto internal_tangent =
+        intersection(first, Circle2<double>{{3, 0}, 2});
     assert(internal_tangent.kind == PointIntersectionKind::one);
     require_point_near(internal_tangent.points[0], Vec2<double>{5, 0});
 
@@ -137,20 +139,21 @@ void test_circle_intersections() {
 }
 
 void test_circle_from_three_points() {
-    static_assert(
-        std::same_as<
-            decltype(circle_from(Vec2<double>{}, Vec2<double>{}, Vec2<double>{})),
-            Circle2<double>
-        >
-    );
+    static_assert(std::same_as<
+                  decltype(circle_from(
+                      Vec2<double>{}, Vec2<double>{}, Vec2<double>{}
+                  )),
+                  Circle2<double>
+    >);
 
     const auto triangle =
         circle_from(Vec2<double>{0, 0}, Vec2<double>{4, 0}, Vec2<double>{0, 3});
     require_point_near(triangle.o, Vec2<double>{2, 1.5});
     assert(near(triangle.r, 2.5));
 
-    const auto collinear =
-        circle_from(Vec2<double>{-3, 2}, Vec2<double>{5, 2}, Vec2<double>{0, 2});
+    const auto collinear = circle_from(
+        Vec2<double>{-3, 2}, Vec2<double>{5, 2}, Vec2<double>{0, 2}
+    );
     require_point_near(collinear.o, Vec2<double>{1, 2});
     assert(near(collinear.r, 4.0));
 
@@ -265,8 +268,7 @@ Circle2<double> brute_force_minimum_circle(
 ) {
     Circle2<double> best{{}, std::numeric_limits<double>::infinity()};
     const auto consider = [&](Circle2<double> candidate) {
-        if (candidate.r < best.r &&
-            reference_contains_all(candidate, points))
+        if (candidate.r < best.r && reference_contains_all(candidate, points))
             best = candidate;
     };
 

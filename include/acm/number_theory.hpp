@@ -2,14 +2,12 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <concepts>
 #include <cstdlib>
 #include <functional>
 #include <numeric>
 #include <optional>
 #include <random>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -18,6 +16,7 @@
 namespace acm
 {
 
+// Calculates a^b mod p
 template <std::signed_integral T>
 T qpow(T a, T b, T p) {
     static_assert(sizeof(T) <= 8, "qpow supports up to 64-bit integers");
@@ -28,6 +27,7 @@ T qpow(T a, T b, T p) {
     return r;
 }
 
+// Returns gcd(a,b) and assigned x,y to one solution of ax+by=gcd(a,b)
 template <std::signed_integral T>
 T exgcd(T a, T b, T& x, T& y) {
     if (!b) return x = 1, y = 0, a;
@@ -35,6 +35,7 @@ T exgcd(T a, T b, T& x, T& y) {
     return y -= a / b * x, d;
 }
 
+// Solve ax+by=c. returns {x,y}, making x>=0 and minimizing x.
 template <std::signed_integral T>
 std::pair<T, T> biequation(T a, T b, T c) {
     T x, y, g = exgcd(a, b, x, y);
@@ -47,6 +48,7 @@ std::pair<T, T> biequation(T a, T b, T c) {
     return {T(xx + k * dx), T(yy - k * dy)};
 }
 
+// Checks if n passes test_num Miller-Rabin tests.
 inline bool is_prime(i64 n) {
     if (n < 2) return false;
     for (i64 p: {2, 3, 5, 7, 11, 13, 17, 19, 23, 29}) {
@@ -71,6 +73,7 @@ inline bool is_prime(i64 n) {
     return true;
 }
 
+// Returns one of the non-trivial factor of n, using Pollard-Rho algorithm.
 inline i64 pollard_rho(i64 n) {
     if (n % 2 == 0) return 2;
     if (n % 3 == 0) return 3;
@@ -89,6 +92,7 @@ inline i64 pollard_rho(i64 n) {
     }
 }
 
+// Factorize n and put the prime factors into res.
 inline std::vector<i64> factorize(i64 n) {
     assert(n > 0);
     std::vector<i64> res, st{n};
@@ -108,6 +112,7 @@ inline std::vector<i64> factorize(i64 n) {
     return res;
 }
 
+// Returns the Legendre Symbol (a|p), assuming p is a odd prime number.
 inline i64 legendre(i64 a, i64 p) {
     a %= p;
     if (a < 0) a += p;
@@ -117,6 +122,8 @@ inline i64 legendre(i64 a, i64 p) {
     return r == p - 1 ? -1 : 1;
 }
 
+// Returns x that x^2 mod p=n, or -1 if such x doesn't exists, assuming p is a
+// odd prime number.
 inline std::optional<i64> cipolla(i64 n, i64 p) {
     n %= p;
     if (n < 0) n += p;
@@ -127,8 +134,7 @@ inline std::optional<i64> cipolla(i64 n, i64 p) {
     static std::mt19937_64 rng(987654321);
     std::uniform_int_distribution<i64> dist(0, p - 1);
     i64 a = dist(rng);
-    while (legendre(i64((i128(a) * a % p - n + p) % p), p) != -1)
-        a = dist(rng);
+    while (legendre(i64((i128(a) * a % p - n + p) % p), p) != -1) a = dist(rng);
 
     i64 i2 = i64((i128(a) * a % p - n + p) % p);
     using P = std::pair<i128, i128>;
@@ -144,6 +150,12 @@ inline std::optional<i64> cipolla(i64 n, i64 p) {
     return i64(res.first);
 }
 
+// Universal-Uclidean Algorithm. Computes the semigroup product of the segments:
+// let f(x) = ⌊(p x + r) / q⌋, then
+//   (0, f(0)) -> (1, f(0)) -> ... -> (1, f(1)) -> ... ->
+//   (i, f(i)) -> (i + 1, f(i)) -> ... -> (i + 1, f(i + 1)) -> ... ->
+//   (n - 1, f(n - 1)) -> (n, f(n - 1)) -> ... -> (n, f(n))
+// where going up denotes a `U` and going right denotes an `R`.
 template <typename D, std::signed_integral T, typename Op = std::multiplies<D>>
 D uniclidean(T p, T q, T r, T n, D R, D U, D init = {}, Op mul = Op{}) {
     if (n == 0) return init;

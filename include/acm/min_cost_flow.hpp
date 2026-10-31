@@ -29,7 +29,7 @@ private:
     struct Arc {
         usize to, nxt;
         FlowT w;
-        CostT cost;
+        CostT c;
     };
 
     static constexpr usize npos = usize(-1);
@@ -44,114 +44,103 @@ private:
         constexpr CostT cost_inf = std::numeric_limits<CostT>::max() / 4;
         usize n = size_V();
         std::vector<usize> dep(n), cur(n), q;
+        std::vector<u8> vis(n);
+        std::vector<CostT> dis(n), h(n, 0);
         q.reserve(n);
-        std::vector<u8> vis(n), inq(n);
-        std::vector<CostT> dis(n), pot(n, 0);
 
         auto spfa = [&] {
             dis.assign(n, cost_inf);
-            inq.assign(n, false);
-            std::queue<usize> qu;
+            vis.assign(n, false);
+            q.clear();
             dis[s] = 0;
-            inq[s] = true;
-            qu.push(s);
-            while (!qu.empty()) {
-                usize u = qu.front();
-                qu.pop();
-                inq[u] = false;
+            vis[s] = true;
+            q.push_back(s);
+            for (usize hd = 0; hd < q.size(); hd++) {
+                usize u = q[hd];
+                vis[u] = false;
                 for (usize i = head[u]; i != npos; i = e[i].nxt) {
-                    const auto& a = e[i];
-                    if (!a.w) continue;
-                    CostT nd = dis[u] + a.cost + pot[u] - pot[a.to];
-                    if (nd >= dis[a.to]) continue;
-                    dis[a.to] = nd;
-                    if (!inq[a.to]) inq[a.to] = true, qu.push(a.to);
+                    usize v = e[i].to;
+                    if (!e[i].w) continue;
+                    CostT tmp = dis[u] + e[i].c + h[u] - h[v];
+                    if (tmp < dis[v]) {
+                        dis[v] = tmp;
+                        if (!vis[v]) vis[v] = true, q.push_back(v);
+                    }
                 }
             }
             return dis[t] != cost_inf;
         };
-
         auto dijkstra = [&] {
+            using Item = std::pair<CostT, usize>;
+            std::priority_queue<Item, std::vector<Item>, std::greater<>> q;
             dis.assign(n, cost_inf);
             vis.assign(n, false);
-            using Item = std::pair<CostT, usize>;
-            std::priority_queue<Item, std::vector<Item>, std::greater<>> pq;
-            dis[s] = 0;
-            pq.push({0, s});
-            while (!pq.empty()) {
-                auto [d, u] = pq.top();
-                pq.pop();
+            q.push({dis[s] = 0, s});
+            while (!q.empty()) {
+                auto [d, u] = q.top();
+                q.pop();
                 if (vis[u]) continue;
                 vis[u] = true;
                 for (usize i = head[u]; i != npos; i = e[i].nxt) {
-                    const auto& a = e[i];
-                    if (!a.w) continue;
-                    CostT nd = d + a.cost + pot[u] - pot[a.to];
-                    if (nd >= dis[a.to]) continue;
-                    dis[a.to] = nd;
-                    pq.push({nd, a.to});
+                    if (!e[i].w) continue;
+                    usize v = e[i].to;
+                    CostT tmp = d + e[i].c + h[u] - h[v];
+                    if (tmp < dis[v]) q.push({dis[v] = tmp, v});
                 }
             }
             return dis[t] != cost_inf;
         };
-
         auto bfs = [&] {
             dep.assign(n, npos);
             cur = head;
             q.clear();
             dep[s] = 0;
             q.push_back(s);
-            for (usize h = 0; h < q.size(); h++) {
-                usize u = q[h];
+            for (usize hd = 0; hd < q.size(); hd++) {
+                usize u = q[hd];
                 for (usize i = head[u]; i != npos; i = e[i].nxt) {
-                    const auto& a = e[i];
-                    if (!a.w || dep[a.to] != npos ||
-                        pot[a.to] != pot[u] + a.cost)
+                    usize v = e[i].to;
+                    if (!e[i].w || dep[v] != npos || h[v] != h[u] + e[i].c)
                         continue;
-                    dep[a.to] = dep[u] + 1;
-                    q.push_back(a.to);
+                    dep[v] = dep[u] + 1;
+                    q.push_back(v);
                 }
             }
             return dep[t] != npos;
         };
-
-        auto dfs = [&](auto&& self, usize u, FlowT f) -> FlowT {
-            if (u == t || !f) return f;
+        auto dfs = [&](auto&& self, usize u, FlowT flow) -> FlowT {
+            if (u == t || !flow) return flow;
+            FlowT res = flow;
             for (usize& i = cur[u]; i != npos; i = e[i].nxt) {
-                auto& a = e[i];
-                if (!a.w || dep[a.to] != dep[u] + 1 ||
-                    pot[a.to] != pot[u] + a.cost)
+                if (!e[i].w ||
+                    dep[e[i].to] != dep[u] + 1 ||
+                    h[e[i].to] != h[u] + e[i].c)
                     continue;
-                FlowT c = self(self, a.to, std::min(f, a.w));
-                if (!c) continue;
-                a.w -= c;
+                FlowT c = self(self, e[i].to, std::min(res, e[i].w));
+                e[i].w -= c;
                 e[i ^ 1].w += c;
-                return c;
+                if (!(res -= c)) break;
             }
-            dep[u] = npos;
-            return 0;
+            if (res == flow) dep[u] = npos;
+            return flow - res;
         };
 
-        bool neg = false;
-        for (const auto& a: e)
-            if (a.w > 0 && a.cost < 0) {
-                neg = true;
-                break;
-            }
-
+        bool neg = std::any_of(e.begin(), e.end(), [](auto& x) {
+            return x.w > 0 && x.c < 0;
+        });
         FlowT total_flow = 0;
         CostT total_cost = 0;
-        if (!(neg ? spfa() : dijkstra())) return {0, 0};
-        do {
-            for (usize u = 0; u < n; u++)
-                if (dis[u] != cost_inf) pot[u] += dis[u];
-            if (!maximize && pot[t] >= 0) break;
+        while (neg ? spfa() : dijkstra()) {
+            neg = false;
+            for (usize u = 0; u < n; u++) {
+                if (dis[u] != cost_inf) h[u] += dis[u];
+            }
+            if (!maximize && h[t] >= 0) break;
             FlowT delta = 0;
-            while (bfs())
-                while (FlowT f = dfs(dfs, s, flow_inf)) delta += f;
+            while (bfs()) delta += dfs(dfs, s, flow_inf);
             total_flow += delta;
-            total_cost += CostT(delta) * pot[t];
-        } while (dijkstra());
+            total_cost += CostT(delta) * h[t];
+        }
         return {total_flow, total_cost};
     }
 
@@ -165,7 +154,7 @@ public:
     Edge edge(usize i) const {
         const auto& a = e[2 * i];
         const auto& b = e[2 * i + 1];
-        return {b.to, a.to, a.w + b.w, b.w, a.cost};
+        return {b.to, a.to, a.w + b.w, b.w, a.c};
     }
 
     usize add_edge(usize u, usize v, FlowT cap, CostT cost) {

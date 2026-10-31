@@ -159,18 +159,11 @@ void test_randomized_range_add() {
         auto actual = seg.query(l, r);
         long long expected = expect_sum(values, l, r);
         if (!actual || actual->sum != expected) {
-            std::cerr
-                << "test_randomized_range_add failed at step "
-                << step
-                << " for query("
-                << l
-                << ", "
-                << r
-                << "): expected "
-                << expected
-                << ", got "
-                << (actual ? std::to_string(actual->sum) : "nullopt")
-                << "\n";
+            std::cerr << "test_randomized_range_add failed at step " << step
+                      << " for query(" << l << ", " << r << "): expected "
+                      << expected << ", got "
+                      << (actual ? std::to_string(actual->sum) : "nullopt")
+                      << "\n";
             std::exit(1);
         }
     }

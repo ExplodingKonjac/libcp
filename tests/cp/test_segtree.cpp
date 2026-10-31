@@ -18,16 +18,10 @@ void test_basic_sum() {
             for (int k = l; k < r; ++k) expected += (k + 1);
             auto actual = seg.query(l, r);
             if (!actual || *actual != expected) {
-                std::cerr
-                    << "test_basic_sum failed at query("
-                    << l
-                    << ", "
-                    << r
-                    << "): expected "
-                    << expected
-                    << ", got "
-                    << (actual ? std::to_string(*actual) : "nullopt")
-                    << "\n";
+                std::cerr << "test_basic_sum failed at query(" << l << ", " << r
+                          << "): expected " << expected << ", got "
+                          << (actual ? std::to_string(*actual) : "nullopt")
+                          << "\n";
                 exit(1);
             }
         }
@@ -46,8 +40,7 @@ void test_modify_updates() {
         std::cerr
             << "test_modify_updates failed after modify(2, 10): expected 14, "
                "got "
-            << *seg.query(0, 5)
-            << "\n";
+            << *seg.query(0, 5) << "\n";
         exit(1);
     }
     seg.modify(0, 100);
@@ -55,8 +48,7 @@ void test_modify_updates() {
         std::cerr
             << "test_modify_updates failed after modify(0, 100): expected 113, "
                "got "
-            << *seg.query(0, 5)
-            << "\n";
+            << *seg.query(0, 5) << "\n";
         exit(1);
     }
 }
@@ -74,17 +66,14 @@ void test_mul_semigroup() {
     SegTree seg(5, 1, std::multiplies<int>{});
     for (int i = 0; i < 5; ++i) seg.modify(i, i + 1);
     if (seg.query(0, 5) != 120) {
-        std::cerr
-            << "test_mul_semigroup failed: expected 120, got "
-            << *seg.query(0, 5)
-            << "\n";
+        std::cerr << "test_mul_semigroup failed: expected 120, got "
+                  << *seg.query(0, 5) << "\n";
         exit(1);
     }
     if (seg.query(1, 4) != 24) {
         std::cerr
             << "test_mul_semigroup failed at query(1,4): expected 24, got "
-            << *seg.query(1, 4)
-            << "\n";
+            << *seg.query(1, 4) << "\n";
         exit(1);
     }
 }
@@ -98,24 +87,18 @@ void test_min_semigroup() {
     seg.modify(4, 9);
 
     if (seg.query(0, 5) != 1) {
-        std::cerr
-            << "test_min_semigroup failed: expected 1, got "
-            << *seg.query(0, 5)
-            << "\n";
+        std::cerr << "test_min_semigroup failed: expected 1, got "
+                  << *seg.query(0, 5) << "\n";
         exit(1);
     }
     if (seg.query(0, 2) != 3) {
-        std::cerr
-            << "test_min_semigroup failed at query(0,2): expected 3, got "
-            << *seg.query(0, 2)
-            << "\n";
+        std::cerr << "test_min_semigroup failed at query(0,2): expected 3, got "
+                  << *seg.query(0, 2) << "\n";
         exit(1);
     }
     if (seg.query(3, 5) != 1) {
-        std::cerr
-            << "test_min_semigroup failed at query(3,5): expected 1, got "
-            << *seg.query(3, 5)
-            << "\n";
+        std::cerr << "test_min_semigroup failed at query(3,5): expected 1, got "
+                  << *seg.query(3, 5) << "\n";
         exit(1);
     }
 }
@@ -129,24 +112,18 @@ void test_max_semigroup() {
     seg.modify(4, 9);
 
     if (seg.query(0, 5) != 10) {
-        std::cerr
-            << "test_max_semigroup failed: expected 10, got "
-            << *seg.query(0, 5)
-            << "\n";
+        std::cerr << "test_max_semigroup failed: expected 10, got "
+                  << *seg.query(0, 5) << "\n";
         exit(1);
     }
     if (seg.query(1, 4) != 7) {
-        std::cerr
-            << "test_max_semigroup failed at query(1,4): expected 7, got "
-            << *seg.query(1, 4)
-            << "\n";
+        std::cerr << "test_max_semigroup failed at query(1,4): expected 7, got "
+                  << *seg.query(1, 4) << "\n";
         exit(1);
     }
     if (seg.query(4, 5) != 9) {
-        std::cerr
-            << "test_max_semigroup failed at query(4,5): expected 9, got "
-            << *seg.query(4, 5)
-            << "\n";
+        std::cerr << "test_max_semigroup failed at query(4,5): expected 9, got "
+                  << *seg.query(4, 5) << "\n";
         exit(1);
     }
 }
@@ -160,12 +137,8 @@ void test_large_n() {
     for (usize i = 0; i < n; ++i) expected += static_cast<int>(i % 100);
     auto actual = seg.query(0, n);
     if (!actual || *actual != expected) {
-        std::cerr
-            << "test_large_n failed: expected "
-            << expected
-            << ", got "
-            << (actual ? std::to_string(*actual) : "nullopt")
-            << "\n";
+        std::cerr << "test_large_n failed: expected " << expected << ", got "
+                  << (actual ? std::to_string(*actual) : "nullopt") << "\n";
         exit(1);
     }
 }
@@ -175,10 +148,8 @@ void test_power_of_two_boundary() {
         SegTree seg(n, 0, std::plus<int>{});
         for (usize i = 0; i < n; ++i) seg.modify(i, 1);
         if (seg.query(0, n) != static_cast<int>(n)) {
-            std::cerr
-                << "test_power_of_two_boundary failed for n="
-                << n
-                << "\n";
+            std::cerr << "test_power_of_two_boundary failed for n=" << n
+                      << "\n";
             exit(1);
         }
     }
@@ -235,14 +206,9 @@ void test_randomized_large_sum_queries() {
             int value = value_dist(rng);
             values[index] = value;
             if (!seg.modify(index, value)) {
-                std::cerr
-                    << "test_randomized_large_sum_queries failed: modify("
-                    << index
-                    << ", "
-                    << value
-                    << ") returned false at step "
-                    << step
-                    << "\n";
+                std::cerr << "test_randomized_large_sum_queries failed: modify("
+                          << index << ", " << value
+                          << ") returned false at step " << step << "\n";
                 exit(1);
             }
             continue;
@@ -259,37 +225,24 @@ void test_randomized_large_sum_queries() {
         );
         auto actual = seg.query(l, r);
         if (!actual || *actual != expected) {
-            std::cerr
-                << "test_randomized_large_sum_queries failed at step "
-                << step
-                << " for query("
-                << l
-                << ", "
-                << r
-                << "): expected "
-                << expected
-                << ", got "
-                << (actual ? std::to_string(*actual) : "nullopt")
-                << "\n";
+            std::cerr << "test_randomized_large_sum_queries failed at step "
+                      << step << " for query(" << l << ", " << r
+                      << "): expected " << expected << ", got "
+                      << (actual ? std::to_string(*actual) : "nullopt") << "\n";
             exit(1);
         }
     }
 
     int total_expected = std::accumulate(values.begin(), values.end(), 0);
     auto total_actual = seg.query(0, n);
-    if (!total_actual
-        || *total_actual
-        != total_expected
-        || seg.all()
-        != total_expected) {
+    if (!total_actual ||
+        *total_actual != total_expected ||
+        seg.all() != total_expected) {
         std::cerr
             << "test_randomized_large_sum_queries final check failed: expected "
-            << total_expected
-            << ", got query="
+            << total_expected << ", got query="
             << (total_actual ? std::to_string(*total_actual) : "nullopt")
-            << ", all="
-            << seg.all()
-            << "\n";
+            << ", all=" << seg.all() << "\n";
         exit(1);
     }
 }
@@ -314,14 +267,9 @@ void test_randomized_large_min_queries() {
             int value = value_dist(rng);
             values[index] = value;
             if (!seg.modify(index, value)) {
-                std::cerr
-                    << "test_randomized_large_min_queries failed: modify("
-                    << index
-                    << ", "
-                    << value
-                    << ") returned false at step "
-                    << step
-                    << "\n";
+                std::cerr << "test_randomized_large_min_queries failed: modify("
+                          << index << ", " << value
+                          << ") returned false at step " << step << "\n";
                 exit(1);
             }
             continue;
@@ -338,18 +286,10 @@ void test_randomized_large_min_queries() {
         );
         auto actual = seg.query(l, r);
         if (!actual || *actual != expected) {
-            std::cerr
-                << "test_randomized_large_min_queries failed at step "
-                << step
-                << " for query("
-                << l
-                << ", "
-                << r
-                << "): expected "
-                << expected
-                << ", got "
-                << (actual ? std::to_string(*actual) : "nullopt")
-                << "\n";
+            std::cerr << "test_randomized_large_min_queries failed at step "
+                      << step << " for query(" << l << ", " << r
+                      << "): expected " << expected << ", got "
+                      << (actual ? std::to_string(*actual) : "nullopt") << "\n";
             exit(1);
         }
     }

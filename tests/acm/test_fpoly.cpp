@@ -29,9 +29,20 @@ int main() {
     static_assert(std::is_base_of_v<std::vector<M>, P>);
     static_assert(P::LG == 23);
     static_assert(P::G() != 0);
-    static_assert(P::w[0] == M(1) && P::iw[0] == M(1));
-    static_assert(P::w[P::LG] != M(1));
-    static_assert(P::w[P::LG] * P::iw[P::LG] == M(1));
+    {
+        constexpr int n = 64;
+        P a(n), b(n), c(n);
+        for (int i = 0; i < n; i++) a[i] = b[i] = M(i * i + 3);
+        c[0] = 1;
+        P::dft(c.data(), n);
+        for (int i = 0; i < n; i++) assert(c[i] == M(1));
+        // w[h + j] is (2h-th root)^j; the single forward table is enough.
+        assert(P::w[1] == M(1) && P::w[2] == M(1));
+        assert(P::w[3] * P::w[3] == M(-1));
+        P::dft(a.data(), n);
+        P::idft(a.data(), n);
+        for (int i = 0; i < n; i++) assert(a[i] == b[i]);
+    }
     std::mt19937 rng(3);
     for (int tc = 0; tc < 50; tc++) {
         std::vector<M> x(40), y(35), want(74);

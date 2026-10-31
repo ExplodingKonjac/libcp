@@ -39,8 +39,7 @@ public:
     usize size_E() const { return e.size() / 2; }
 
     Edge edge(usize i) const {
-        const auto& a = e[2 * i];
-        const auto& b = e[2 * i + 1];
+        const auto &a = e[2 * i], &b = e[2 * i + 1];
         return {b.to, a.to, a.w + b.w, b.w};
     }
 
@@ -68,33 +67,29 @@ public:
             while (h < r) {
                 usize u = q[h++];
                 for (usize i = head[u]; i != npos; i = e[i].nxt) {
-                    const auto& a = e[i];
-                    if (!a.w || dep[a.to] != npos) continue;
-                    dep[a.to] = dep[u] + 1;
-                    q[r++] = a.to;
+                    if (!e[i].w || dep[e[i].to] != npos) continue;
+                    dep[e[i].to] = dep[u] + 1;
+                    q[r++] = e[i].to;
                 }
             }
             return dep[t] != npos;
         };
-
-        auto dfs = [&](auto&& self, usize u, FlowT f) -> FlowT {
-            if (u == t || !f) return f;
+        auto dfs = [&](auto&& self, usize u, FlowT flow) -> FlowT {
+            if (u == t || !flow) return flow;
+            FlowT res = flow;
             for (usize& i = cur[u]; i != npos; i = e[i].nxt) {
-                auto& a = e[i];
-                if (!a.w || dep[a.to] != dep[u] + 1) continue;
-                FlowT c = self(self, a.to, std::min(f, a.w));
-                if (!c) continue;
-                a.w -= c;
+                if (!e[i].w || dep[e[i].to] != dep[u] + 1) continue;
+                FlowT c = self(self, e[i].to, std::min(res, e[i].w));
+                e[i].w -= c;
                 e[i ^ 1].w += c;
-                return c;
+                if (!(res -= c)) break;
             }
-            dep[u] = npos;
-            return 0;
+            if (res == flow) dep[u] = npos;
+            return flow - res;
         };
 
         FlowT ans = 0;
-        while (bfs())
-            while (FlowT f = dfs(dfs, s, INF)) ans += f;
+        while (bfs()) ans += dfs(dfs, s, INF);
         return ans;
     }
 };

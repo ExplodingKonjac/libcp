@@ -482,8 +482,8 @@ auto cover = cp::minimum_enclosing_circle(
 
 ### `cp/geometry/polygon.hpp` — 多边形与凸几何
 
-提供逆时针存储的 `Polygon<T>`、面积、凸性和点与多边形的位置关系，以及上下凸壳、
-完整凸包、凸多边形 Minkowski 和与半平面交。点的位置由
+提供逆时针存储的 `Polygon<T>`、面积、凸性和点与多边形的位置关系，以及
+Graham 扫描凸包、凸多边形 Minkowski 和与半平面交。点的位置由
 `PointPolygonRelation::{outside,boundary,inside}` 区分。
 
 ```cpp

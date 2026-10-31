@@ -49,8 +49,10 @@ void test_text(const std::string& text) {
             std::string pattern(length, 'a');
             for (acm::usize i = 0; i < length; i++)
                 if (mask & (acm::usize{1} << i)) pattern[i] = 'b';
-            assert(contains(sam, pattern) ==
-                   (text.find(pattern) != std::string::npos));
+            assert(
+                contains(sam, pattern) ==
+                (text.find(pattern) != std::string::npos)
+            );
         }
     }
 }
