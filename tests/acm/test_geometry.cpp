@@ -3,6 +3,7 @@
 #include <cmath>
 #include <concepts>
 #include <iostream>
+#include <random>
 #include <type_traits>
 
 #include "acm/geometry.hpp"
@@ -198,6 +199,27 @@ void test_line_intersections() {
     assert(intersects(
         Line2<double>{{0, 0}, {1, 0}}, Line2<double>{{2, 0}, {-3, 0}}
     ));
+
+    // A direction's magnitude must not change the result. The old formula
+    // divided by the raw cross product, which overflows in the first case.
+    const auto overflowing = intersection(
+        Line2<double>{{1, 1}, {1e155, 0}}, Line2<double>{{0, 2}, {0, 1e155}}
+    );
+    assert(overflowing.kind == LineIntersectionKind::point);
+    require_point_near(overflowing.point, {0, 1});
+
+    const auto underflowing = intersection(
+        Line2<double>{{1, 1}, {1e-155, 0}}, Line2<double>{{0, 2}, {0, 1e-155}}
+    );
+    assert(underflowing.kind == LineIntersectionKind::point);
+    require_point_near(underflowing.point, {0, 1});
+
+    const auto scaled_direction = intersection(
+        Line2<double>{{0, 0}, {1e155, 1e155}},
+        Line2<double>{{0, 2}, {1e155, -1e155}}
+    );
+    assert(scaled_direction.kind == LineIntersectionKind::point);
+    require_point_near(scaled_direction.point, {1, 1});
 }
 
 void test_segment_intersections() {
@@ -281,6 +303,77 @@ void test_segment_intersections() {
     );
     assert(tiny_direction.kind == LineIntersectionKind::point);
     require_point_near(tiny_direction.point, {0, 0});
+
+    // A degenerate point on a vertical segment: the dominant axis of the
+    // point is ambiguous, so this must go through on_segment.
+    const auto on_vertical = intersection(
+        Segment2<double>{{0, 1}, {0, 1}}, Segment2<double>{{0, 0}, {0, 2}}
+    );
+    assert(on_vertical.kind == LineIntersectionKind::point);
+    require_point_near(on_vertical.point, {0, 1});
+
+    assert(
+        intersection(
+            Segment2<double>{{0, 0}, {0, 0}}, Segment2<double>{{0, 5}, {0, 5}}
+        )
+            .kind == LineIntersectionKind::none
+    );
+
+    // Collinear diagonal segments: disjoint, touching, overlapping.
+    assert(
+        intersection(
+            Segment2<double>{{0, 0}, {2, 2}}, Segment2<double>{{3, 3}, {5, 5}}
+        )
+            .kind == LineIntersectionKind::none
+    );
+    const auto diagonal_touch = intersection(
+        Segment2<double>{{0, 0}, {2, 2}}, Segment2<double>{{2, 2}, {4, 4}}
+    );
+    assert(diagonal_touch.kind == LineIntersectionKind::point);
+    require_point_near(diagonal_touch.point, {2, 2});
+    assert(
+        intersection(
+            Segment2<double>{{0, 0}, {2, 2}}, Segment2<double>{{1, 1}, {3, 3}}
+        )
+            .kind == LineIntersectionKind::coincident
+    );
+}
+
+void test_intersection_properties() {
+    std::mt19937_64 rng(20240601);
+    std::uniform_int_distribution<int> coord(-4, 4);
+    auto point = [&] {
+        return Vec2<double>{double(coord(rng)), double(coord(rng))};
+    };
+    for (int i = 0; i < 2000; i++) {
+        const Segment2<double> a{point(), point()}, b{point(), point()};
+        const auto ab = intersection(a, b), ba = intersection(b, a);
+        assert(ab.kind == ba.kind);
+        if (ab.kind == LineIntersectionKind::point) {
+            require_point_near(ab.point, ba.point);
+            // Within ~1 ulp of an endpoint the returned point is only
+            // approximate, and orientation's relative tolerance is then
+            // meaningless (pre-existing behaviour); away from the endpoints
+            // the point must lie on both segments.
+            bool far = distance(ab.point, a.a) > 1e-6 &&
+                distance(ab.point, a.b) > 1e-6 &&
+                distance(ab.point, b.a) > 1e-6 &&
+                distance(ab.point, b.b) > 1e-6;
+            if (far)
+                assert(
+                    on_segment(a.a, a.b, ab.point) &&
+                    on_segment(b.a, b.b, ab.point)
+                );
+        }
+
+        const Line2<double> la = Line2<double>::through(point(), point());
+        const Line2<double> lb = Line2<double>::through(point(), point());
+        if (!la.valid() || !lb.valid()) continue;
+        const auto x = intersection(la, lb), y = intersection(lb, la);
+        assert(x.kind == y.kind);
+        if (x.kind == LineIntersectionKind::point)
+            require_point_near(x.point, y.point);
+    }
 }
 
 void test_properties() {
@@ -306,6 +399,7 @@ int main() {
     test_projection_and_distances();
     test_line_intersections();
     test_segment_intersections();
+    test_intersection_properties();
     test_properties();
     std::cout << "All geometry tests passed!\n";
 }

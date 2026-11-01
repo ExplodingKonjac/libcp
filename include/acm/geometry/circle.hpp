@@ -69,6 +69,17 @@ struct PointIntersection2 {
     }
 };
 
+namespace detail
+{
+
+// Half chord length sqrt(r^2 - d^2), factored to avoid cancellation.
+template <std::floating_point T>
+T chord_half(T r, T d) {
+    return std::sqrt(std::max(T{}, r - d)) * std::sqrt(std::max(T{}, r + d));
+}
+
+}  // namespace detail
+
 template <std::floating_point T>
 PointIntersection2<T> intersection(Line2<T> l, Circle2<T> c) {
     assert(l.valid() && c.valid());
@@ -77,7 +88,7 @@ PointIntersection2<T> intersection(Line2<T> l, Circle2<T> c) {
     int s = cmp(x, c.r);
     if (s > 0) return {};
     if (!s) return {PointIntersectionKind::one, {p, {}}};
-    T h = std::sqrt(std::max(T{}, c.r - x)) * std::sqrt(c.r + x);
+    T h = detail::chord_half(c.r, x);
     Vec2<T> d = l.d / norm(l.d);
     return {PointIntersectionKind::two, {p - d * h, p + d * h}};
 }
@@ -98,7 +109,7 @@ PointIntersection2<T> intersection(Circle2<T> a, Circle2<T> b) {
     Vec2<T> m = a.o + d * (t / z);
     if (!cmp(z, sum) || !cmp(z, dif))
         return {PointIntersectionKind::one, {m, {}}};
-    T h = std::sqrt(std::max(T{}, a.r - t)) * std::sqrt(std::max(T{}, a.r + t));
+    T h = detail::chord_half(a.r, t);
     Vec2<T> v{-d.y, d.x};
     v *= h / z;
     return {PointIntersectionKind::two, {m + v, m - v}};

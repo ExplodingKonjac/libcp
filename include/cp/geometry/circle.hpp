@@ -68,6 +68,17 @@ struct PointIntersection2 {
     }
 };
 
+namespace detail
+{
+
+// Half chord length sqrt(r^2 - d^2), factored to avoid cancellation.
+template <std::floating_point T>
+T chord_half(T r, T d) {
+    return std::sqrt(std::max(T{}, r - d)) * std::sqrt(std::max(T{}, r + d));
+}
+
+}  // namespace detail
+
 template <GeometryScalar T>
 PointIntersection2<geometry_real_t<T>> intersection(Line2<T> l, Circle2<T> c) {
     using R = geometry_real_t<T>;
@@ -78,7 +89,7 @@ PointIntersection2<geometry_real_t<T>> intersection(Line2<T> l, Circle2<T> c) {
     int s = cmp(x, r);
     if (s > 0) return {};
     if (!s) return {PointIntersectionKind::one, {p, {}}};
-    R h = std::sqrt(std::max<R>(R{}, r - x)) * std::sqrt(r + x);
+    R h = detail::chord_half(r, x);
     d /= std::hypot(d.x, d.y);
     return {PointIntersectionKind::two, {p - d * h, p + d * h}};
 }
@@ -104,8 +115,7 @@ PointIntersection2<geometry_real_t<T>> intersection(
     auto m = p + d * (t / z);
     if (!cmp(z, sum) || !cmp(z, dif))
         return {PointIntersectionKind::one, {m, {}}};
-    R h =
-        std::sqrt(std::max<R>(R{}, x - t)) * std::sqrt(std::max<R>(R{}, x + t));
+    R h = detail::chord_half(x, t);
     auto v = Vec2{-d.y, d.x} * (h / z);
     return {PointIntersectionKind::two, {m + v, m - v}};
 }

@@ -191,16 +191,12 @@ struct Segment2 {
 namespace detail
 {
 
+// Scale a direction so that its larger component has magnitude one;
+// a zero vector stays zero.
 template <std::floating_point T>
-inline constexpr T max_norm(T x, T y) {
-    return std::max(x < T{} ? -x : x, y < T{} ? -y : y);
-}
-
-template <std::floating_point T>
-inline constexpr int unit_det_sgn(T ax, T ay, T bx, T by) {
-    T an = max_norm(ax, ay), bn = max_norm(bx, by);
-    if (an == T{} || bn == T{}) return 0;
-    return sgn((ax / an) * (by / bn) - (ay / an) * (bx / bn));
+inline constexpr Vec2<T> max_norm_scale(Vec2<T> v) {
+    T n = std::max(std::abs(v.x), std::abs(v.y));
+    return n == T{} ? Vec2<T>{} : Vec2<T>{v.x / n, v.y / n};
 }
 
 template <GeometryScalar T>
@@ -220,24 +216,27 @@ inline constexpr int det_sgn(
 
 template <GeometryScalar T>
 inline constexpr int line_side(Line2<T> l, Point2<T> p) {
-    using W = geometry_wide_t<T>;
-    W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
-    W a = (W)l.direction.x, b = (W)l.direction.y;
-    if constexpr (std::floating_point<T>) {
-        W n = detail::max_norm(a, b);
-        return sgn((a / n) * y - (b / n) * x);
+    if constexpr (std::floating_point<T>)
+        return sgn(cross(detail::max_norm_scale(l.direction), p - l.point));
+    else {
+        using W = geometry_wide_t<T>;
+        W x = (W)p.x - (W)l.point.x, y = (W)p.y - (W)l.point.y;
+        return detail::det_sgn<T>((W)l.direction.x, (W)l.direction.y, x, y);
     }
-    return detail::det_sgn<T>(a, b, x, y);
 }
 
 template <GeometryScalar T>
 inline constexpr int orientation(Point2<T> o, Point2<T> a, Point2<T> b) {
-    using W = geometry_wide_t<T>;
-    W ax = (W)a.x - (W)o.x, ay = (W)a.y - (W)o.y;
-    W bx = (W)b.x - (W)o.x, by = (W)b.y - (W)o.y;
     if constexpr (std::floating_point<T>)
-        return detail::unit_det_sgn(ax, ay, bx, by);
-    return detail::det_sgn<T>(ax, ay, bx, by);
+        return sgn(
+            cross(detail::max_norm_scale(a - o), detail::max_norm_scale(b - o))
+        );
+    else {
+        using W = geometry_wide_t<T>;
+        W ax = (W)a.x - (W)o.x, ay = (W)a.y - (W)o.y;
+        W bx = (W)b.x - (W)o.x, by = (W)b.y - (W)o.y;
+        return detail::det_sgn<T>(ax, ay, bx, by);
+    }
 }
 
 template <GeometryScalar T>
@@ -248,14 +247,14 @@ inline constexpr bool parallel(Line2<T> a, Line2<T> b) {
 
 template <GeometryScalar T>
 inline constexpr bool perpendicular(Line2<T> a, Line2<T> b) {
-    using W = geometry_wide_t<T>;
     assert(a.is_valid() && b.is_valid());
-    if constexpr (std::floating_point<T>) {
-        W an = detail::max_norm(a.direction.x, a.direction.y);
-        W bn = detail::max_norm(b.direction.x, b.direction.y);
-        return sgn((a.direction.x / an) * (b.direction.x / bn) +
-                   (a.direction.y / an) * (b.direction.y / bn)) == 0;
-    } else {
+    if constexpr (std::floating_point<T>)
+        return !sgn(
+            dot(detail::max_norm_scale(a.direction),
+                detail::max_norm_scale(b.direction))
+        );
+    else {
+        using W = geometry_wide_t<T>;
         return (W)a.direction.x * (W)b.direction.x +
             (W)a.direction.y * (W)b.direction.y ==
             0;
@@ -320,12 +319,15 @@ inline LineIntersection2<geometry_real_t<T>> intersection(
         return {on_line(a, b.point) ? LineIntersectionKind::coincident
                                     : LineIntersectionKind::none,
                 {}};
-    auto p = a.point.template cast<R>(), d = a.direction.template cast<R>();
-    auto q = b.point.template cast<R>(), e = b.direction.template cast<R>();
-    d /= std::hypot(d.x, d.y);
-    e /= std::hypot(e.x, e.y);
-    R t = cross(q - p, e) / cross(d, e);
-    return {LineIntersectionKind::point, p + d * t};
+    // Both directions are max-norm scaled, so the denominator stays O(1) for
+    // any direction magnitude; the parameter is measured in units of u, which
+    // cancels the scaling factor of the direction exactly.
+    const auto p = a.point.template cast<R>();
+    const auto q = b.point.template cast<R>();
+    const auto u = detail::max_norm_scale(a.direction.template cast<R>());
+    const auto v = detail::max_norm_scale(b.direction.template cast<R>());
+    return {LineIntersectionKind::point,
+            p + u * (cross(q - p, v) / cross(u, v))};
 }
 
 template <GeometryScalar T>
@@ -333,43 +335,39 @@ inline LineIntersection2<geometry_real_t<T>> intersection(
     Segment2<T> a, Segment2<T> b
 ) {
     using R = geometry_real_t<T>;
-    const bool a_point = a.a == a.b, b_point = b.a == b.b;
-    if (a_point && b_point)
-        return on_segment(a.a, a.b, b.a)
-            ? LineIntersection2<R>{LineIntersectionKind::point,
-                                   a.a.template cast<R>()}
-            : LineIntersection2<R>{};
-    if (a_point)
+    if (a.a == a.b)
         return on_segment(b.a, b.b, a.a)
             ? LineIntersection2<R>{LineIntersectionKind::point,
                                    a.a.template cast<R>()}
             : LineIntersection2<R>{};
-    if (b_point)
+    if (b.a == b.b)
         return on_segment(a.a, a.b, b.a)
             ? LineIntersection2<R>{LineIntersectionKind::point,
                                    b.a.template cast<R>()}
             : LineIntersection2<R>{};
-    auto x = a.a.template cast<R>(), y = a.b.template cast<R>();
-    auto u = b.a.template cast<R>(), v = b.b.template cast<R>();
-    const auto result =
+
+    const auto x = a.a.template cast<R>(), y = a.b.template cast<R>();
+    const auto u = b.a.template cast<R>(), v = b.b.template cast<R>();
+    const auto r =
         intersection(Line2<R>::through(x, y), Line2<R>::through(u, v));
-    if (result.kind == LineIntersectionKind::point)
-        return orientation(a.a, a.b, b.a) * orientation(a.a, a.b, b.b) <= 0 &&
-                orientation(b.a, b.b, a.a) * orientation(b.a, b.b, a.b) <= 0
-            ? result
-            : LineIntersection2<R>{};
-    if (result.kind == LineIntersectionKind::none) return result;
+    if (r.kind == LineIntersectionKind::none) return r;
+    int s1 = orientation(a.a, a.b, b.a), s2 = orientation(a.a, a.b, b.b);
+    int s3 = orientation(b.a, b.b, a.a), s4 = orientation(b.a, b.b, a.b);
+    if (r.kind == LineIntersectionKind::point)
+        return s1 * s2 <= 0 && s3 * s4 <= 0 ? r : LineIntersection2<R>{};
+
+    // Coincident lines: both segments share a direction, so their overlap is
+    // a one-dimensional interval on the dominant axis of a.
     const R dx = y.x - x.x, dy = y.y - x.y;
     const bool use_x = std::abs(dx) >= std::abs(dy);
     const auto coord = [use_x](Point2<R> p) { return use_x ? p.x : p.y; };
-    const R lo =
-        std::max(std::min(coord(x), coord(y)), std::min(coord(u), coord(v)));
-    const R hi =
-        std::min(std::max(coord(x), coord(y)), std::max(coord(u), coord(v)));
+    const R a1 = coord(x), a2 = coord(y), b1 = coord(u), b2 = coord(v);
+    const R lo = std::max(std::min(a1, a2), std::min(b1, b2));
+    const R hi = std::min(std::max(a1, a2), std::max(b1, b2));
     if (cmp(hi, lo) < 0) return {};
-    if (cmp(hi, lo) == 0)
-        for (auto p: {x, y, u, v})
-            if (cmp(coord(p), lo) == 0) return {LineIntersectionKind::point, p};
+    if (cmp(hi, lo) > 0) return {LineIntersectionKind::coincident, {}};
+    for (const auto p: {x, y, u, v})
+        if (cmp(coord(p), lo) == 0) return {LineIntersectionKind::point, p};
     return {LineIntersectionKind::coincident, {}};
 }
 
