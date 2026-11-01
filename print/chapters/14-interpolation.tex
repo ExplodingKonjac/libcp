@@ -1,0 +1,18 @@
+\chapter{多项式插值}\label{ch:interpolation}
+
+\chaptermeta{interpolation.hpp}{def.hpp}{$O(n^2)$}
+
+给定互异的点值，求插值多项式在某点的取值，或恢复其升幂系数；不假设节点等距。
+
+\section{接口}
+
+\apitable{
+    \api{polynomial_interpolation<T>(r, x0)}{在 $x_0$ 处求插值多项式的值并返回 \code{T}}
+    \api{polynomial_coefficients<T>(r, eq = F{})}{返回升幂排列的系数；\code{eq} 用于判断系数是否为零}
+}
+
+\section{约定}
+
+节点横坐标必须互异，实现里不检查，重复节点会导致除以零。\code{T} 需要支持减法、乘法与除法；浮点类型在 $n$ 较大、节点跨度较大时数值稳定性一般。返回的系数是升幂的，长度最多为点数，尾部零会被裁掉但至少保留一个元素；空输入时求值返回 \code{T{0}}，系数返回长度为 1 的零多项式。
+
+\fullsource{interpolation.hpp}

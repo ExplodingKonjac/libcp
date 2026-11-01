@@ -1,0 +1,26 @@
+\chapter{圆}\label{ch:circle}
+
+\chaptermeta{geometry/circle.hpp}{geometry.hpp}{最小覆盖圆期望 $O(n)$}
+
+圆的基本判定与求交，以及两个常用构造：由三点求外接圆、对点集求最小覆盖圆。
+
+\section{接口}
+
+\apitable{
+    \api{Circle2<T>{o, r}}{圆心与半径；\code{valid()} 要求 $r\ge0$（零半径合法）}
+    \api{on_circle(c, p) / contains(c, p)}{点在圆周上 / 在圆内或圆上；整数用平方比较，浮点用 \code{eps}}
+    \api{distance_to_circle(p, c)}{点到圆周的距离；仅浮点}
+    \api{distance_to_disk(p, c)}{点到圆盘的距离（内部为 0）；仅浮点}
+    \api{PointIntersectionKind}{枚举：\code{none}、\code{one}、\code{two}、\code{coincident}}
+    \api{PointIntersection2<T>}{结果 \code{{kind, points[2]}}；\code{count()} 返回 0/1/2}
+    \api{intersection(Line2, Circle2)}{直线与圆求交；仅浮点 \code{T}}
+    \api{intersection(Circle2, Circle2)}{两圆求交；同心同半径时返回 \code{coincident}}
+    \api{circle_from(a, b, c)}{三点外接圆；共线时取最远点对为直径；仅浮点 \code{T}}
+    \api{minimum_enclosing_circle(points)}{返回 \code{std::optional<Circle2<T>>}；空集为 \code{nullopt}；仅浮点 \code{T}}
+}
+
+\section{约定}
+
+负半径圆无效，相关函数在入口断言 \code{valid()}；零半径圆是合法的退化情形。\code{circle_from}、直线与圆求交、两圆求交以及 \code{minimum_enclosing_circle} 只对浮点坐标实例化，整数坐标请先 \code{cast<long double>()}，只有 \code{contains} 与 \code{on_circle} 对整数类型可用。三点共线时 \code{circle_from} 返回以最远两点为直径的圆，不报错。空点集的最小覆盖圆为 \code{nullopt}，该函数内部用 \code{std::random_device} 打乱点集，结果正确但每次点序不同。
+
+\fullsource{geometry/circle.hpp}

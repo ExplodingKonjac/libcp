@@ -1,0 +1,46 @@
+\chapter{计算几何基础}\label{ch:geometry}
+
+\chaptermeta{geometry.hpp}{def.hpp}{单次 $O(1)$}
+
+二维向量与点、由「点 + 方向」表示的直线与线段，以及方向判定、投影、交点等基础谓词。
+
+\section{接口}
+
+\apitable{
+    \api{Vec2<T> / Point2<T>}{坐标 \code{x}、\code{y}；\code{Point2} 只是同类型别名}
+    \api{cast<U>()}{显式转换坐标类型，不做隐式转换}
+    \api{+ - * /}{向量加减、标量乘除与复合赋值；除法只在浮点 \code{T} 上可用}
+    \api{== != <}{精确比较；浮点请改用 \code{cmp}，否则等于「逐位相同」}
+    \api{cmp(a, b) / sgn(x)}{三值比较，返回 $-1/0/1$；浮点用绝对容差 \code{eps}}
+    \api{dot(a, b) / cross(a, b)}{点积 / 叉积；返回 \code{Wide<T>}}
+    \api{cross(o, a, b)}{以 $o$ 为原点的叉积，即 $(a-o)\times(b-o)$}
+    \api{norm_sq / distance_sq}{平方长度 / 平方距离；返回 \code{Wide<T>}}
+    \api{norm / distance / angle / rotate}{模长、距离、极角、旋转；仅浮点 \code{T}}
+    \api{normalized(a)}{单位向量；零向量返回 \code{nullopt}}
+}
+
+
+\subsection{直线、线段与交点}
+
+\apitable{
+    \api{Line2<T>{p, d}}{点 + 方向表示直线；方向必须非零}
+    \api{Line2<T>::through(a, b)}{过两点的直线；要求 $b-a$ 能由 \code{T} 表示}
+    \api{valid()}{方向非零时为真；多数几何函数在入口断言它}
+    \api{Segment2<T>{a, b}}{线段；\code{line()} 返回所在直线，要求 $a\ne b$}
+    \api{line_side(l, q)}{点在直线左侧 / 上 / 右侧，返回 $1/0/-1$}
+    \api{orientation(o, a, b)}{三点转向，返回 $1/0/-1$}
+    \api{parallel / perpendicular}{平行 / 垂直判定}
+    \api{on_line / on_segment}{点是否在直线 / 线段上；后者对浮点带 \code{eps} 容差}
+    \api{project / reflect / distance(p, l)}{投影、对称点、点到直线距离；仅浮点}
+    \api{LineIntersectionKind}{枚举：\code{none}、\code{point}、\code{coincident}}
+    \api{LineIntersection2<T>{kind, point}}{交点结果；\code{coincident} 时 \code{point} 无意义}
+    \api{intersection(Line2, Line2)}{直线交点；仅浮点 \code{T}}
+    \api{intersection(Segment2, Segment2)}{线段交点；退化为点、共线重叠都单独处理；仅浮点 \code{T}}
+    \api{intersects(Line2, Line2)}{交点是否存在的布尔包装}
+}
+
+\section{约定}
+
+坐标类型受 \code{GeomScalar} 约束：有符号整数、浮点或 \code{i128}，不接受无符号整数与 \code{bool}。整数运算前把坐标提升到 \code{Wide<T>}：不超过 4 字节的整型提升为 \code{i64}，8 字节提升为 \code{i128}；结果仍可能溢出，这种情形不受支持。浮点比较统一使用绝对容差 \code{eps}，默认 $10^{-9}$，可在包含任何几何头文件之前用 \code{ACM_EPS} 覆盖，且必须对整个程序统一。零方向直线无效，多数函数在入口断言；\code{Line2::through} 会计算 $b-a$，端点差需能由 \code{T} 表示；直线交点只对浮点类型实例化，整数坐标需要先 \code{cast<long double>()}。
+
+\fullsource{geometry.hpp}

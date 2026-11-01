@@ -1,0 +1,17 @@
+# 构建中间产物（正常情况下输出到仓库根 build/print/，这里兜底就地构建的情形）
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.xdv
+*.bbl
+*.blg
+_minted/
+_minted-*/
+build/
+dist/

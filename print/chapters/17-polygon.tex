@@ -1,0 +1,27 @@
+\chapter{多边形}\label{ch:polygon}
+
+\chaptermeta{geometry/polygon.hpp}{geometry.hpp}{凸包、半平面交 $O(n\log n)$}
+
+逆时针存储的多边形：面积、凸性、点与多边形的位置关系，以及凸包、凸多边形 Minkowski 和与半平面交。
+
+\section{接口}
+
+\apitable{
+    \api{Polygon<T>{p}}{顶点序列，要求逆时针；构造时自动去尾重复点并规范方向}
+    \api{Polygon(vector<Vec2<T>>)}{按给定顶点构造；空序列合法}
+    \api{vertices() / size() / operator[]}{只读访问顶点}
+    \api{edges()}{返回每条边对应的 \code{Segment2}}
+    \api{area()}{有向面积的绝对值，整数坐标返回 \code{long double}}
+    \api{is_convex()}{逆时针意义下是否凸；少于 3 个点时返回 true}
+    \api{relation(q)}{返回 \code{outside} / \code{boundary} / \code{inside}}
+    \api{ConvexHull: convex_hull(points)}{Graham 凸包；会丢弃共线点，返回严格凸包}
+    \api{minkowski_sum(a, b)}{两个凸多边形的 Minkowski 和；要求两者都凸}
+    \api{half_plane_intersection(lines)}{返回 \code{optional<Polygon>}；左侧为可行域，仅浮点 \code{T}}
+    \api{PointPolygonRelation}{枚举：\code{outside}、\code{boundary}、\code{inside}}
+}
+
+\section{约定}
+
+顶点必须逆时针；用构造函数传入顶点时会去掉与首点重合的尾点并自动规范方向，直接写 \code{p} 字段时需自行保证顺序。\code{area()} 返回有向面积的绝对值，整数坐标返回 \code{long double}。\code{convex_hull} 丢弃共线点，返回严格凸包；\code{minkowski_sum} 只在调试构建中断言输入为凸，非凸输入不保证结果。\code{half_plane_intersection} 只接受浮点坐标，并且只会在交集为有界、非退化多边形时返回结果：空集、无界区域、点或线段都返回 \code{nullopt}。
+
+\fullsource{geometry/polygon.hpp}

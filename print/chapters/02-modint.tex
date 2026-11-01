@@ -1,0 +1,27 @@
+\chapter{模运算}\label{ch:modint}
+
+\chaptermeta{modint.hpp}{def.hpp}{乘法 $O(1)$，求逆 $O(\log p)$}
+
+提供静态模数 \code{SModint<P>} 与动态模数 \code{DModint} 两种模整数，四则运算按模进行；另附快速幂、Legendre 符号与模平方根。
+
+\section{接口}
+
+\apitable{
+    \api{SModint<P>}{编译期模数；\code{static_assert} 要求 $0<P<2^{31}$，实际应取素数}
+    \api{DModint}{运行期模数；\code{set_mod(p)} 修改全局模数，默认 $998244353$}
+    \api{Mint(x)}{由任意整型构造，内部先 \code{x} 对模数取余 再归约，负数也正确}
+    \api{mod()}{返回当前模数；\code{SModint} 为 \code{constexpr}，\code{DModint} 为运行期}
+    \api{operator()}{取出内部 \code{i32} 值；\code{explicit operator bool} 判断是否非零}
+    \api{+ - * / += -= *= /=}{四则运算与复合赋值；除法通过乘逆元实现}
+    \api{== != ++ --}{比较与自增自减；一元负号按模取反，语义与内置整数一致}
+    \api{inv()}{返回乘法逆元；内部值必须非零，否则 \code{assert} 失败}
+    \api{acm::pow(a, b)}{快速幂；\code{b} 为任意整型，为负时先对 \code{a} 求逆}
+    \api{acm::legendre(x)}{返回 $0/1/-1$，要求模数为奇素数}
+    \api{acm::sqrt(a)}{返回 \code{std::optional<Mint>}；无平方根时为空，要求模数为奇素数}
+}
+
+\section{约定}
+
+模数上限 $2^{31}$ 是硬约束：乘法用 \code{i64} 中间量，模数再大会溢出。\code{DModint::set_mod} 修改的是全局静态变量，必须在构造任何 \code{DModint} 之前调用，同一进程内混用多个模数会互相污染。除法与 \code{inv()} 在除数为零时断言失败，关闭断言后是未定义行为；模数非素数时，扩展欧几里得只对 $\gcd(a,p)=1$ 的情形给出逆元。\code{pow} 的指数为负时先对底数求逆，因此底数不能为 0。
+
+\fullsource{modint.hpp}

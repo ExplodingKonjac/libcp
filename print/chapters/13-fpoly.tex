@@ -1,0 +1,30 @@
+\chapter{多项式运算}\label{ch:fpoly}
+
+\chaptermeta{fpoly.hpp}{modint.hpp、def.hpp}{$O(n\log n)$}
+
+以 \code{SModint<P>} 为系数的多项式，支持加减乘、带余除法，以及求逆、对数、指数、平方根、求导与积分。
+
+\section{接口}
+
+\apitable{
+    \api{FPoly<P>}{公有继承 \code{std::vector<SModint<P>>}；\code{static_assert(P >= 3 && is_prime(P))}}
+    \api{FPoly{...} / FPoly(v)}{由初始化列表或 \code{vector} 构造；空多项式合法}
+    \api{void trim()}{删除尾部零系数；大多数运算不会自动调用它}
+    \api{+ - * /}{按多项式语义运算；另有标量乘；\code{operator/} 是带余除法的商}
+    \api{== / !=}{逐系数比较，不忽略尾部零，比较前建议先 \code{trim()}}
+    \api{static convolution(a, b)}{卷积；当 $\min(|a|,|b|)\le32$ 时走暴力}
+    \api{static polyinv(f)}{返回 $f^{-1}\bmod x^{|f|}$，要求 $f_0\ne0$}
+    \api{static polyder(f) / polyint(f)}{求导 / 积分；积分要求 $|f|<P$}
+    \api{static polyln(f)}{返回 $\ln f\bmod x^{|f|}$，要求 $f_0=1$}
+    \api{static polyexp(f)}{返回 $e^{f}\bmod x^{|f|}$，要求 $f_0=0$}
+    \api{static polysqrt(f)}{返回 $\sqrt f\bmod x^{|f|}$，要求 $f_0\ne0$ 且为二次剩余}
+    \api{acm::inv / ln / exp / sqrt(f)}{便捷包装，返回 \code{FPoly}}
+    \api{acm::div(f, g)}{返回 \code{{q, r}}（商式与余式）；要求 $g$ 非空且首项非零}
+    \api{derivative(f) / integrate(f)}{求导 / 积分的自由函数包装}
+}
+
+\section{约定}
+
+模数必须是 $\ge 3$ 的奇素数，否则 \code{static_assert} 直接报错，$P=2$ 不可用。NTT 长度上限是 $2^{\mathrm{ctz}(P-1)}$（对 $998244353$ 为 $2^{23}$），卷积超过上限会在断言处失败。常数项要求是硬性的：求逆 $f_0\ne0$、对数 $f_0=1$、指数 $f_0=0$、平方根 $f_0\ne0$，自由函数版本的 \code{sqrt} 还要求前导零个数为偶数。\code{FPoly} 继承自 \code{vector}，尾部零会参与 \code{size()} 与比较，需要标准形式时先调用 \code{trim()}；\code{polyint} 要求 $n<P$。
+
+\fullsource{fpoly.hpp}

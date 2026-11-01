@@ -1,0 +1,92 @@
+%% macros.tex —— 正文使用的排版宏
+%%
+%% 源码路径只出现在 \srcfile / \fullsource 的参数里，正文中的代码一律由 minted
+%% 从 ../include/acm/ 读取。表格用 longtable（begin/end 都在宏里，不做向前扫描）。
+
+% ---------------------------------------------------------------- 行内代码
+% \code{add_edge}：先整体 \detokenize，再逐字符输出，在 _ . : / , ( - 处允许断行。
+\ExplSyntaxOn
+\tl_new:N \l__acm_code_tl
+\NewDocumentCommand \code { m }
+    {
+        \group_begin:
+        \tl_set:Nx \l__acm_code_tl { \detokenize {#1} }
+        \tl_replace_all:Nnn \l__acm_code_tl { ~ } { \c_space_tl }
+        \texttt
+            {
+                \tl_map_inline:Nn \l__acm_code_tl
+                    {
+                        ##1
+                        \str_case_e:nn { \tl_to_str:n {##1} }
+                            {
+                                {_} { \allowbreak }
+                                {.} { \allowbreak }
+                                {:} { \allowbreak }
+                                {/} { \allowbreak }
+                                {,} { \allowbreak }
+                                {(} { \allowbreak }
+                                {-} { \allowbreak }
+                            }
+                            { }
+                    }
+            }
+        \group_end:
+    }
+\ExplSyntaxOff
+
+% 头文件路径（相对仓库根）
+\newcommand{\srcfile}[1]{\code{include/acm/#1}}
+
+% ---------------------------------------------------------------- 章首元数据
+% \chaptermeta{头文件}{依赖}{复杂度}
+\newcommand{\chaptermeta}[3]{%
+    \noindent
+    {\small\color{muted}%
+        头文件\enspace\code{#1}\enspace·\enspace
+        依赖\enspace\code{#2}\enspace·\enspace
+        复杂度\enspace#3}%
+    \par\vspace{1.4em}%
+}
+
+% ---------------------------------------------------------------- 接口表
+% \apitable{ \api{签名}{说明} ... }
+\newcommand{\apitable}[1]{%
+    \par\medskip\noindent
+    \begingroup
+    \small
+    \renewcommand{\arraystretch}{1.38}%
+    \begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{\dimexpr0.60\linewidth-2\tabcolsep\relax}@{}}
+        \toprule
+        \textbf{接口} & \textbf{说明} \\
+        \midrule
+        \endfirsthead
+        \toprule
+        \textbf{接口} & \textbf{说明} \\
+        \midrule
+        \endhead
+        \bottomrule
+        \endfoot
+        #1%
+    \end{longtable}%
+    \endgroup
+    \par\medskip
+}
+
+\newcommand{\api}[2]{\code{#1} & #2 \\}
+
+% ---------------------------------------------------------------- 分部副标题
+% \partsubtitle{...} 设置随后一个 \part 页的说明行
+\newcommand{\acmpartsub}{}
+\newcommand{\partsubtitle}[1]{\gdef\acmpartsub{#1}}
+
+% ---------------------------------------------------------------- 完整源码
+% \fullsource{max_flow.hpp}：与其它小节统一的标题，不重复源码路径
+\newcommand{\fullsource}[1]{%
+    \par\needspace{6\baselineskip}%
+    \section{完整源码}%
+    \tcbinputlisting{acmcode, listing file = {../include/acm/#1}}%
+}
+
+% ---------------------------------------------------------------- 速查索引
+% \quickrefrow{模块}{头文件}{复杂度}{ch:label}
+\newcommand{\quickrefrow}[4]{#1 & #2 & #3 & \pageref{#4} \\}

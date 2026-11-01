@@ -1,0 +1,21 @@
+\chapter{基础类型别名}\label{ch:def}
+
+\chaptermeta{def.hpp}{——}{——}
+
+本模块为定长整数与常用浮点类型提供短别名，并暴露 GCC/Clang 的 128 位扩展类型；库中其余头文件都直接或间接依赖它，没有函数与类。
+
+\section{接口}
+
+\apitable{
+    \api{i8 / u8 / i16 / u16}{8 位、16 位有符号 / 无符号整数，对应 \code{std::int8_t} 等}
+    \api{i32 / u32 / i64 / u64}{32 位、64 位有符号 / 无符号整数}
+    \api{i128 / u128}{128 位整数，GNU 扩展（\code{__int128} / \code{unsigned __int128}）}
+    \api{isize / usize}{指针宽度整数，等价于 \code{std::ptrdiff_t} / \code{std::size_t}}
+    \api{f32 / f64}{单精度 / 双精度浮点，等价于 \code{float} / \code{double}}
+}
+
+\section{约定}
+
+别名全部位于命名空间 \code{acm}；除 \code{def.hpp} 外的头文件都以 \code{"def.hpp"} 相对引入它，单独复制某个模块时需要一并复制 \code{def.hpp}。\code{usize} 就是 \code{std::size_t}，用 \code{printf} 输出时格式串写 \texttt{\%zu}，混用 \texttt{\%d} 在 64 位平台上会截断。\code{i128} 与 \code{u128} 是编译器扩展而非标准类型，MSVC 不支持，也没有对应的 \code{std::cin} / \code{std::cout} 重载。
+
+\fullsource{def.hpp}

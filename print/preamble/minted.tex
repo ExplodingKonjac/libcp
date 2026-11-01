@@ -1,0 +1,46 @@
+%% minted.tex —— 代码高亮
+%%
+%% vs（Visual Studio）配色：注释绿、关键字蓝、类型青、字符串暗红，与参考风格一致。
+
+\usemintedstyle{vs}
+
+
+% 代码块外框：圆角矩形，可跨页；minted 负责高亮，tcolorbox 负责画框
+\tcbset{
+    acmcode/.style = {
+        enhanced,
+        breakable,
+        listing only,
+        listing engine = minted,
+        minted language = cpp,
+        minted style = vs,
+        minted options = {
+            fontsize = \normalsize,
+            linenos,
+            numbers = left,
+            numbersep = 12pt,
+            breaklines,
+            breakindent = 1.5em,
+            breaksymbolleft = {},
+            tabsize = 4,
+            frame = none,
+            xleftmargin = 16pt,
+            baselinestretch = 1.35,
+        },
+        colback = white,
+        colframe = rule,
+        boxrule = 0.4pt,
+        arc = 3pt,
+        outer arc = 3pt,
+        left = 8pt, right = 6pt,
+        top = 5pt, bottom = 5pt,
+        boxsep = 0pt,
+        before skip = 6pt,
+        after skip = 8pt,
+    },
+}
+
+% 行号：小一号的浅灰
+\renewcommand{\theFancyVerbLine}{%
+    \ttfamily\scriptsize\color{muted}\arabic{FancyVerbLine}%
+}

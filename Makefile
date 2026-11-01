@@ -1,4 +1,4 @@
-# ACM / cp-lib test driver
+# ACM / cp-lib - test driver and print build
 #
 # The default CXX is clang++ because the GCC 15.2 libstdc++ installation in this
 # environment fails to compile <mutex> (and therefore several cp tests).
@@ -16,7 +16,18 @@ CPSTD ?= -std=c++23 -mavx2 -Wno-unknown-pragmas
 
 OUT ?= build/make
 
-.PHONY: all test test-acm test-cp test-acm-san headers clean
+# 打印版 LaTeX 工程（print/），需要 XeLaTeX + Pygments，并允许 -shell-escape
+PRINT_DIR  ?= print
+PRINT_OUT  ?= build/print
+PRINT_MAIN ?= main.tex
+PRINT_PDF   = $(PRINT_OUT)/main.pdf
+LATEXMK    ?= latexmk
+PYTHON     ?= python3
+LATEXMKFLAGS = -xelatex -shell-escape -interaction=nonstopmode \
+               -halt-on-error -file-line-error
+
+.PHONY: all test test-acm test-cp test-acm-san headers clean \
+        print print-once print-watch print-check print-clean
 
 all: test
 
@@ -61,5 +72,31 @@ headers:
 		$(CXX) $(ACSTD) $(CPPFLAGS) $(WARN) -fsyntax-only $(OUT)/header.cpp; \
 	done
 
+# ---------------------------------------------------------------- 打印版
+
+print:
+	@mkdir -p "$(PRINT_OUT)"
+	cd "$(PRINT_DIR)" && $(LATEXMK) $(LATEXMKFLAGS) "-outdir=../$(PRINT_OUT)" "$(PRINT_MAIN)"
+	@printf 'PDF: %s\n' "$(PRINT_PDF)"
+	@pdfinfo "$(PRINT_PDF)" | sed -n 's/^Pages:/页数:/p'
+
+print-once:
+	@mkdir -p "$(PRINT_OUT)"
+	cd "$(PRINT_DIR)" && xelatex -shell-escape -interaction=nonstopmode -file-line-error \
+		"-output-directory=../$(PRINT_OUT)" "$(PRINT_MAIN)" || true
+	@printf 'PDF: %s（单遍结果，目录与交叉引用可能未解析）\n' "$(PRINT_PDF)"
+
+print-watch:
+	@mkdir -p "$(PRINT_OUT)"
+	cd "$(PRINT_DIR)" && $(LATEXMK) $(LATEXMKFLAGS) -pvc "-outdir=../$(PRINT_OUT)" "$(PRINT_MAIN)"
+
+print-check:
+	cd "$(PRINT_DIR)" && $(PYTHON) tools/check_sources.py
+
+print-clean:
+	rm -rf "$(PRINT_OUT)"
+
+# ---------------------------------------------------------------- 清理
+
 clean:
-	rm -rf $(OUT)
+	rm -rf $(OUT) $(PRINT_OUT)

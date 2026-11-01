@@ -1,0 +1,23 @@
+\chapter{最大流}\label{ch:max-flow}
+
+\chaptermeta{max_flow.hpp}{def.hpp}{$O(V^{2}E)$}
+
+在整数容量网络中求 $s$ 到 $t$ 的最大流。边以链式前向星成对存储，第 $i$ 条边的残量弧为 $2i$ 与 $2i+1$，因此可以按编号回读任意边的容量与当前流量。
+
+\section{接口}
+
+\apitable{
+    \api{MaxFlow<FlowT = i32>}{模板参数须为整型（\code{static_assert} 检查）；容量与流值都用 \code{FlowT} 表示}
+    \api{MaxFlow(usize n)}{构造 $n$ 个点、零条边的网络，编号 $[0,n)$}
+    \api{usize size_V()}{点数}
+    \api{usize size_E()}{边数（成对存储，故为残量弧数的一半）}
+    \api{usize add_edge(u, v, cap)}{加入 $u\to v$、容量为 \code{cap} 的有向边，返回边编号，供 \code{edge()} 回读}
+    \api{Edge edge(usize i)}{返回第 \code{i} 条边的 \code{{from, to, capacity, flow}}；反映调用时的残量状态}
+    \api{FlowT max_flow(usize s, usize t)}{在残量网络上求最大流并返回流量；\code{s == t} 时返回 0}
+}
+
+\section{约定}
+
+\code{edge(i).capacity} 由正向与反向残量相加还原，因此 \code{FlowT} 必须能容纳「容量 + 已流流量」，否则溢出；无向边要正反各加一条，只加一条表示单向容量。\code{max_flow} 就地修改残量网络，重复调用是增量增广而非从零重算，需要重算时请重新构图。顶点数在构造时固定，没有动态加点接口；默认构造得到空图，实际应使用 \code{MaxFlow(n)}。
+
+\fullsource{max_flow.hpp}

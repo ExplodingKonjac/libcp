@@ -1,0 +1,25 @@
+\chapter{一般图最大权完美匹配}\label{ch:general-weighted-matching}
+
+\chaptermeta{general_weighted_matching.hpp}{def.hpp}{$O(V^3)$}
+
+在无向一般图中求覆盖所有顶点且边权和最大的匹配，支持负权边与浮点边权。
+
+\section{接口}
+
+\apitable{
+    \api{GeneralWeightedMatching<T>}{模板参数须为有符号整数或浮点（\code{requires} 约束）}
+    \api{GeneralWeightedMatching(usize n)}{建 $n$ 个点的空图，编号 $[0,n)$，无向}
+    \api{usize size()}{点数}
+    \api{void add_edge(u, v, T w)}{加无向边；重边保留较大权值}
+    \api{void set_edge(u, v, T w)}{直接覆盖边权（两个方向同时写入）}
+    \api{T get_edge(u, v)}{当前边权；无边时为 \code{no_edge}}
+    \api{max_weighted_matching()}{返回 \code{std::optional<std::pair<T, std::vector<usize>>>}：最大权与 \code{match}；无完美匹配时为空}
+    \api{no_edge}{「无边」哨兵，等于 \code{std::numeric_limits<T>::lowest()}，不可作有效边权}
+    \api{npos}{表示「无」的哨兵，等于 \code{usize(-1)}}
+}
+
+\section{约定}
+
+顶点数为奇数时直接返回 \code{nullopt}，顶点数为 0 时返回 \code{{0, {}}}。返回前会逐个顶点检查：只要有一个顶点未匹配或匹配边不存在就返回 \code{nullopt}，因此成功返回的一定是完美匹配，\code{match} 中不会出现 \code{npos}。浮点边权必须是有限值，\code{no_edge} 不能作为有效边权；最终权值和仍须由 \code{T} 表示。
+
+\fullsource{general_weighted_matching.hpp}

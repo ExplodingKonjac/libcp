@@ -1,0 +1,25 @@
+\chapter{二分图最大权匹配}\label{ch:bipartite-weighted-matching}
+
+\chaptermeta{bipartite_weighted_matching.hpp}{def.hpp}{$O(n^2m)$}
+
+把每个左部点匹配到不同的右部点并使总权最大，边权可为负；不存在覆盖全部左部点的匹配时返回空。
+
+\section{接口}
+
+\apitable{
+    \api{BipartiteWeightedMatching<T>}{模板参数须为有符号整数或浮点（\code{static_assert} 检查）}
+    \api{BipartiteWeightedMatching(usize n, usize m)}{建左右部各 $n$、$m$ 个点的完全空图，编号从 0 开始}
+    \api{usize size_l() / size_r()}{左部 / 右部点数}
+    \api{void add_edge(u, v, T x)}{加边；重边保留较大权值，等价于 \code{set_edge(u,v,max(old,x))}}
+    \api{void set_edge(u, v, T x)}{直接覆盖边权，不做取大}
+    \api{T get_edge(u, v)}{返回当前边权；无边时返回 \code{no_edge}}
+    \api{max_weighted_matching()}{返回 \code{std::optional<std::pair<T, std::vector<usize>>>}：最大权与 \code{match[u]}；无解时为空}
+    \api{no_edge}{「无边」哨兵，等于 \code{std::numeric_limits<T>::lowest()}，不能作为有效边权}
+    \api{npos}{表示「无」的哨兵，等于 \code{usize(-1)}}
+}
+
+\section{约定}
+
+必须 $n\le m$，否则直接返回 \code{nullopt}；每个左部点至少要有一条边，否则同样无解。\code{no_edge} 是 \code{lowest()}，不能作为有效边权。\code{add_edge} 对重边保留较大值，\code{set_edge} 直接覆盖，\code{get_edge} 查当前权值。返回 \code{{weight, match}}，\code{match} 长度等于 $n$，无解时整体为空；最终权值和必须能由 \code{T} 表示。
+
+\fullsource{bipartite_weighted_matching.hpp}

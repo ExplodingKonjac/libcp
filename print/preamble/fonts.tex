@@ -1,0 +1,30 @@
+%% fonts.tex —— 字体
+%%
+%% 中文：ctex 的 fandol 方案（宋体 / 黑体 / 楷体，随 TeX Live 分发，简体字形正确）。
+%% 西文：Latin Modern；等宽：Latin Modern Mono（与参考风格一致的打字机体）。
+
+\usepackage{fontspec}
+\usepackage{unicode-math}
+
+\setmainfont{lmroman10-regular.otf}[
+    Ligatures = TeX,
+    BoldFont = lmroman10-bold.otf,
+    ItalicFont = lmroman10-italic.otf,
+    BoldItalicFont = lmroman10-bolditalic.otf,
+]
+\setsansfont{lmsans10-regular.otf}[
+    Ligatures = TeX,
+    BoldFont = lmsans10-bold.otf,
+    ItalicFont = lmsans10-oblique.otf,
+    BoldItalicFont = lmsans10-boldoblique.otf,
+]
+\setmonofont{lmmono10-regular.otf}[
+    ItalicFont = lmmono10-italic.otf,
+]
+\setmathfont{latinmodern-math.otf}
+
+% 源码注释里出现的 floor/ceil 符号不在 Latin Modern Mono 中，映射到数学字体
+\usepackage{newunicodechar}
+\newunicodechar{⌊}{\ensuremath{\lfloor}}
+\newunicodechar{⌋}{\ensuremath{\rfloor}}
+\newunicodechar{≡}{\ensuremath{\equiv}}

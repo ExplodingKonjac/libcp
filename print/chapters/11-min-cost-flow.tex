@@ -1,0 +1,23 @@
+\chapter{最小费用流}\label{ch:min-cost-flow}
+
+\chaptermeta{min_cost_flow.hpp}{def.hpp}{$O(FE\log V)$}
+
+整数容量、有符号费用的费用流，既支持最小费用最大流，也支持只沿负费用增广路推流。
+
+\section{接口}
+
+\apitable{
+    \api{MinCostFlow<FlowT = i32, CostT = i64>}{\code{FlowT} 须整型，\code{CostT} 须有符号整型}
+    \api{MinCostFlow(usize n)}{建 $n$ 个点、零条边的网络}
+    \api{usize size_V() / size_E()}{点数 / 边数}
+    \api{usize add_edge(u, v, cap, cost)}{加 $u\to v$、容量 \code{cap}、单位费用 \code{cost} 的边，返回边编号}
+    \api{Edge edge(usize i)}{返回 \code{{from, to, capacity, flow, cost}}；反映调用时的残量状态}
+    \api{min_cost_flow(s, t)}{只沿负费用增广路推流，返回 \code{{flow, cost}}}
+    \api{min_cost_max_flow(s, t)}{在最大流前提下最小化费用，返回 \code{{flow, cost}}}
+}
+
+\section{约定}
+
+\code{min_cost_flow} 的语义是「在费用最小的前提下尽量少流」：当前最短增广路费用非负时立即停止，费用全非负时返回 \code{{0, 0}}，求最大流请用 \code{min_cost_max_flow}。\code{s == t} 时返回 \code{{0, 0}}；与最大流一样，重复调用会在残量网络上继续推进。\code{CostT} 必须有符号，费用的绝对值与总流量都要能被容纳，实现用 \code{numeric_limits<CostT>::max()/4} 作无穷大。
+
+\fullsource{min_cost_flow.hpp}

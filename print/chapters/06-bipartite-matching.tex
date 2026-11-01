@@ -1,0 +1,21 @@
+\chapter{二分图最大匹配}\label{ch:bipartite-matching}
+
+\chaptermeta{bipartite_matching.hpp}{def.hpp}{$O(E\sqrt{V})$}
+
+左右部分别编号的二分图，求最大匹配，返回匹配数与每个左部点的匹配对象。
+
+\section{接口}
+
+\apitable{
+    \api{BipartiteMatching(usize n, usize m)}{建左右部分别为 $n$、$m$ 个点的空图，编号均为 $[0,n)$ / $[0,m)$}
+    \api{usize size_l() / size_r()}{左部 / 右部点数}
+    \api{void add_edge(usize u, usize v)}{加入左部 $u$ 到右部 $v$ 的边；允许重边，无自环概念}
+    \api{std::pair<usize, std::vector<usize>> max_matching()}{返回 \code{{size, match}}（匹配数与左部匹配表）；\code{match[u]} 为左部 $u$ 匹配的右部点，未匹配时为 \code{npos}}
+    \api{npos}{表示「未匹配」的哨兵，等于 \code{usize(-1)}}
+}
+
+\section{约定}
+
+左右部各自从 0 开始独立编号，不要把右部点编到 $[n,n+m)$。\code{max_matching} 返回 \code{{size, match}}，\code{match[u]} 为左部 $u$ 匹配的右部点，未匹配时为 \code{npos}。求解状态全部是函数内的局部变量，可以重复调用；两次调用之间新增的边会在下一次求解中计入。允许重边，重边会重复计入 $E$。
+
+\fullsource{bipartite_matching.hpp}

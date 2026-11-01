@@ -1,0 +1,116 @@
+%% style.tex —— 页面、标题、页眉页脚、目录
+%%
+%% 风格：纯黑白、正文宋体、标题黑体、细横线分栏页眉页脚、大面积留白。
+
+\definecolor{muted}{gray}{0.35}
+\definecolor{rule}{gray}{0.35}
+
+% ---------------------------------------------------------------- 页面
+\geometry{
+    a4paper,
+    top = 2.2cm, bottom = 2.2cm,
+    left = 2cm, right = 2cm,
+    headheight = 14pt, headsep = 0.5cm, footskip = 1.1cm,
+}
+\linespread{1.45}
+\raggedbottom
+\emergencystretch=3em
+\tolerance=2000
+
+% ---------------------------------------------------------------- 标题
+\ctexset{
+    chapter = {
+        name = {第\hspace{0.15em},\hspace{0.15em}章},
+        number = \arabic{chapter},
+        format = \sffamily\raggedright\Large,
+        nameformat = \sffamily\large\mdseries,
+        aftername = \hspace{1em},
+        titleformat = \sffamily\LARGE\bfseries,
+        beforeskip = 1.2cm,
+        afterskip = 1.4cm,
+        pagestyle = plain,
+    },
+    section = {
+        format = \sffamily\large\bfseries,
+        aftername = \hspace{0.6em},
+        beforeskip = 2.2ex plus .4ex minus .2ex,
+        afterskip = 1.0ex plus .2ex,
+    },
+    subsection = {
+        format = \sffamily\normalsize\bfseries,
+        aftername = \hspace{0.6em},
+        beforeskip = 1.4ex plus .2ex minus .1ex,
+        afterskip = .6ex plus .1ex,
+    },
+    part = {
+        name = {第,部分：},
+        number = \chinese{part},
+        format = \sffamily\raggedright,
+        nameformat = \sffamily\mdseries\fontsize{22}{28}\selectfont,
+        titleformat = \sffamily\bfseries\fontsize{22}{28}\selectfont,
+        aftername = \hspace{1.6em},
+        aftertitle = {\par\vspace{1.1em}{\normalfont\mdseries\normalsize\acmpartsub}},
+        beforeskip = 3.0cm,
+        afterskip = 2.2cm,
+    },
+}
+
+% ---------------------------------------------------------------- 页眉页脚
+% fancyhdr 的页眉域是全局寄存器，\thispagestyle{plain} 会清掉 L/R 域，
+% 因此 fancy 与 plain 都用 \fancypagestyle 完整重装自己的域。
+\renewcommand{\headrule}{\vskip-\headrulewidth{\color{rule}\hrule width\headwidth height\headrulewidth}}
+\renewcommand{\footrule}{\vskip-\footrulewidth{\color{rule}\hrule width\headwidth height\footrulewidth}}
+
+\fancypagestyle{fancy}{%
+    \fancyhf{}%
+    \fancyhead[L]{\small\sffamily\leftmark}%
+    \fancyhead[C]{\footnotesize\sffamily\acmshorttitle}%
+    \fancyhead[R]{\small\sffamily\rightmark}%
+    \fancyfoot[C]{\small\sffamily 第 \thepage{} 页\quad 共 \pageref{LastPage} 页}%
+    \renewcommand{\headrulewidth}{0.3pt}%
+    \renewcommand{\footrulewidth}{0.3pt}%
+}
+
+\fancypagestyle{plain}{%
+    \fancyhf{}%
+    \fancyhead[C]{\footnotesize\sffamily\acmshorttitle}%
+    \fancyfoot[C]{\small\sffamily 第 \thepage{} 页\quad 共 \pageref{LastPage} 页}%
+    \renewcommand{\headrulewidth}{0.3pt}%
+    \renewcommand{\footrulewidth}{0.3pt}%
+}
+
+\pagestyle{fancy}
+
+\renewcommand{\chaptermark}[1]{\markboth{\CTEXthechapter\hspace{0.6em}#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\hspace{0.6em}#1}}
+
+% ---------------------------------------------------------------- 目录
+\setcounter{tocdepth}{2}
+\renewcommand{\contentsname}{目录}
+
+\renewcommand{\cftpartfont}{\sffamily\bfseries}
+\renewcommand{\cftpartpagefont}{\sffamily\bfseries}
+\renewcommand{\cftpartleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftchapfont}{\sffamily\bfseries}
+\renewcommand{\cftchappagefont}{\sffamily\bfseries}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecfont}{\small\sffamily}
+\renewcommand{\cftsecpagefont}{\small\sffamily}
+\setlength{\cftbeforepartskip}{1.8em}
+\setlength{\cftaftertoctitleskip}{1.2em}
+\setlength{\cftbeforechapskip}{0.35em}
+\setlength{\cftbeforesecskip}{0.1em}
+\setlength{\cftchapindent}{0pt}
+\setlength{\cftsecindent}{2em}
+
+% ---------------------------------------------------------------- 超链接
+\usepackage{hyperref}
+\hypersetup{
+    hidelinks,
+    pdftitle = {\acmtitle},
+    pdfauthor = {\acmauthor},
+    bookmarksnumbered = true,
+    bookmarksopen = true,
+    bookmarksopenlevel = 1,
+    unicode = true,
+}

@@ -1,0 +1,69 @@
+%% main.tex —— 打印版主文件
+%%
+%% 只负责装配：文档类 → 导言区 → 封面/目录 → \include 各章。
+
+\documentclass[
+    UTF8,
+    zihao = 5,
+    a4paper,
+    twoside,
+    openany,
+    fontset = fandol,
+]{ctexbook}
+
+\input{preamble/packages}
+\input{preamble/fonts}
+\input{preamble/meta}
+\input{preamble/style}
+\input{preamble/minted}
+\input{preamble/macros}
+
+\begin{document}
+
+% 页码从封面开始连续编号，不区分前置部分
+\pagenumbering{arabic}
+
+\input{frontmatter/cover}
+\input{frontmatter/toc}
+\input{frontmatter/quickref}
+
+
+\partsubtitle{类型别名 · 模运算 · 数论}
+\part{基础}
+\include{chapters/01-def}
+\include{chapters/02-modint}
+\include{chapters/03-number-theory}
+
+\partsubtitle{后缀数组 · 后缀自动机}
+\part{字符串}
+\include{chapters/04-suffix-array}
+\include{chapters/05-suffix-automaton}
+
+\partsubtitle{二分图匹配 · 一般图匹配}
+\part{匹配}
+\include{chapters/06-bipartite-matching}
+\include{chapters/07-bipartite-weighted-matching}
+\include{chapters/08-general-matching}
+\include{chapters/09-general-weighted-matching}
+
+\partsubtitle{最大流 · 最小费用流 · 最小费用可行环流}
+\part{网络流}
+\include{chapters/10-max-flow}
+\include{chapters/11-min-cost-flow}
+\include{chapters/12-min-cost-circulation}
+
+\partsubtitle{多项式运算 · 多项式插值}
+\part{多项式}
+\include{chapters/13-fpoly}
+\include{chapters/14-interpolation}
+
+\partsubtitle{向量与谓词 · 圆 · 多边形}
+\part{计算几何}
+\include{chapters/15-geometry}
+\include{chapters/16-circle}
+\include{chapters/17-polygon}
+
+\appendix
+\include{chapters/18-all}
+
+\end{document}

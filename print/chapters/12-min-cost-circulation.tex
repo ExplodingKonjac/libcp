@@ -1,0 +1,24 @@
+\chapter{最小费用可行环流}\label{ch:min-cost-circulation}
+
+\chaptermeta{min_cost_circulation.hpp}{def.hpp}{实际近似线性}
+
+给定每个点的净供给与带容量、费用的有向边，求满足供给约束的最小费用可行流。
+
+\section{接口}
+
+\apitable{
+    \api{MinCostCirculation<FlowT, CostT>}{\code{FlowT} 与 \code{CostT} 都必须是有符号类型（\code{static_assert}）}
+    \api{MinCostCirculation(usize V)}{建 $V$ 个点、零条边、供给全为 0 的图}
+    \api{FlowT& supply(usize i)}{点的净供给，可读可写；正值表示流出，总和必须为 0}
+    \api{add_edge(u, v, cap, cost)}{加 $u\to v$、容量 \code{cap}、单位费用 \code{cost} 的边，返回边编号}
+    \api{const Node& node(usize i)}{内部结点信息 \code{{supply, potential}}}
+    \api{const Edge& edge(usize i)}{边信息 \code{{from, to, capacity, flow, cost}}；求解后 \code{flow} 即答案流量}
+    \api{size_V() / size_E()}{点数 / 边数}
+    \api{std::optional<CostT> circulation()}{返回最小费用；供给不平衡或不可行时返回 \code{std::nullopt}}
+}
+
+\section{约定}
+
+所有 \code{supply} 之和必须为 0，否则在算法开始前就返回 \code{nullopt}；正值表示流出，负值表示吸收。\code{FlowT} 与 \code{CostT} 都必须是有符号类型。求解会在内部临时加点、加边（人工弧），结束后恢复，\code{size_V()} 与 \code{size_E()} 与调用前一致，\code{edge(i).flow} 保留答案流量。不可行时返回 \code{nullopt}；有源汇的问题可把源汇并入供给，或直接用 \code{min_cost_flow.hpp}。
+
+\fullsource{min_cost_circulation.hpp}
