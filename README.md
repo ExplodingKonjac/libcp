@@ -22,7 +22,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 
 `include/acm/` 是与主库并存的 C++20 赛场抄写版：命名空间 `acm`，无 SIMD、无内存池/分配器，内部变量尽量短，单头文件即可复制。它只保留以下组件：
 
-`def`、`fast_io`、`modint`、`number_theory`、`suffix_array`、`suffix_automaton`、`bipartite_matching`、`bipartite_weighted_matching`、`general_matching`、`general_weighted_matching`、`max_flow`、`min_cost_flow`、`min_cost_circulation`、`fpoly`、`interpolation`、`geometry`（含 `geometry/circle`、`geometry/polygon`）。
+`def`、`fast_io`、`modint`、`number_theory`、`suffix_array`、`suffix_automaton`、`bipartite_matching`、`bipartite_weighted_matching`、`general_matching`、`general_weighted_matching`、`max_flow`、`min_cost_flow`、`min_cost_circulation`、`fpoly`、`interpolation`、`link_cut_tree`、`geometry`（含 `geometry/circle`、`geometry/polygon`）。
 
 使用方式、与 `cp` 的 API 差异和复杂度表见 [`include/acm/README.md`](include/acm/README.md)。
 
@@ -38,6 +38,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 | [`cp/interpolation.hpp`](cp/interpolation.hpp) | 多项式插值与系数求解 |
 | [`cp/fenwick_tree.hpp`](cp/fenwick_tree.hpp) | 泛化树状数组 |
 | [`cp/graph.hpp`](cp/graph.hpp) | 有向图容器 |
+| [`cp/link_cut_tree.hpp`](cp/link_cut_tree.hpp) | 动态森林与路径聚合（Link-Cut Tree） |
 | [`cp/suffix_automaton.hpp`](cp/suffix_automaton.hpp) | 后缀自动机 |
 | [`cp/suffix_array.hpp`](cp/suffix_array.hpp) | 后缀数组，支持后缀排序、排名和最长公共前缀 |
 | [`cp/bipartite_matching.hpp`](cp/bipartite_matching.hpp) | 二分图最大匹配（Hopcroft–Karp） |
@@ -579,6 +580,31 @@ bool supset = a > b;               // 判断 a 真包含 b
 bool subseteq = c <= b;            // 判断 c 是 b 的子集
 ```
 
+---
+
+### `cp/link_cut_tree.hpp` — Link-Cut Tree
+
+`LinkCutTree<T, Op, Alloc>` 维护动态森林，支持点权修改、路径聚合、加边、删边、显式换根与连通性查询。顶点编号为 `[0, n)`，路径包含两端点；`Op` 需满足结合律与交换律，默认 `std::plus<T>`。
+
+```cpp
+#include "cp/link_cut_tree.hpp"
+
+cp::LinkCutTree<int> lct(n, [&](cp::usize i) { return a[i]; });
+lct.link(0, 1);
+lct.modify(0, 5);
+auto sum = lct.query(0, 1);        // optional<int>
+bool ok = lct.connected(0, 1);
+lct.make_root(0);                  // 把 0 变成其所在树的根
+lct.cut(0, 1);
+
+// 洛谷 P3690 的路径异或版本
+cp::LinkCutTree<int, std::bit_xor<int>> xors(n, [&](cp::usize i) {
+    return a[i];
+});
+```
+
+所有操作均摊 $O(\log n)$，空间 $O(n)$。`query` 在端点越界或不在同一棵树时返回 `std::nullopt`；`find_root` 越界返回 `npos`；`link` 拒绝自环和已连通端点；`cut` 只删除直接边。`make_root` 会改变当前有根方向，之后 `find_root(v)` 返回新的根。实现只维护一个聚合值，要求 `Op` 可交换；非交换路径积和边权问题需另行处理（边权可拆点）。
+
 ## 构建测试
 
 测试目录按实现分为 `tests/cp/`（主库）和 `tests/acm/`（赛场版），统一通过 `-Iinclude` 编译。根目录的 `Makefile` 提供以下目标：
@@ -623,6 +649,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 | `tests/cp/test_pairing_heap.cpp` | 配对堆正确性 + 对比 benchmark |
 | `tests/cp/test_fenwick.cpp` | 树状数组正确性 |
 | `tests/cp/test_graph.cpp` | 图容器正确性 |
+| `tests/cp/test_link_cut_tree.cpp` | Link-Cut Tree 路径聚合、换根与随机森林对照 |
 | `tests/cp/test_suffix_automaton.cpp` | 后缀自动机子串判断、转移与状态结构 |
 | `tests/cp/test_geometry.cpp` | 二维向量、直线、距离与直线交点正确性 |
 | `tests/cp/test_geometry_epsilon.cpp` | 自定义全局几何容差 |
@@ -638,7 +665,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 
 ### acm 测试
 
-`tests/acm/` 覆盖 `include/acm` 的全部 18 个算法头：快速 IO、模运算、数论、后缀数组/自动机、匹配、流、环流、多项式、插值和几何。`make test-acm` 会先执行 `make headers` 的逐头文件编译检查。
+`tests/acm/` 覆盖 `include/acm` 的全部 19 个算法头：模运算、数论、后缀数组/自动机、匹配、流、环流、动态树、多项式、插值和几何。`make test-acm` 会先执行 `make headers` 的逐头文件编译检查。
 
 ## 设计原则
 

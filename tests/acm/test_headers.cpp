@@ -27,6 +27,10 @@ int main() {
     (void)mcf;
     acm::MinCostCirculation<acm::i32, acm::i64> mcc(1);
     (void)mcc;
+    acm::LinkCutTree<acm::i32> lct(1, 0);
+    lct.make_root(0);
+    lct.modify(0, 1);
+    (void)lct;
     acm::FPoly<998244353> f{1, 2};
     (void)f;
     acm::Vec2<acm::i64> v{0, 0};

@@ -1,0 +1,33 @@
+\chapter{动态树（Link-Cut Tree）}\label{ch:link-cut-tree}
+
+\chaptermeta{link_cut_tree.hpp}{def.hpp}{各项操作均摊 $O(\log n)$，空间 $O(n)$}
+
+用 Splay 维护动态森林的实链剖分，支持点权修改、路径聚合、加边、删边、显式换根与连通性查询。路径聚合要求运算满足结合律与交换律，不要求单位元。
+
+\section{接口}
+
+\apitable{
+    \api{LinkCutTree<T, Op>}{动态森林；点权类型 \code{T}，路径聚合运算 \code{Op}，默认 \code{std::plus<T>}}
+    \api{LinkCutTree(const R& a, Op op = {})}{用范围 \code{a} 初始化点权；要求 \code{a.size()} 与下标访问}
+    \api{LinkCutTree(usize n, T v, Op op = {})}{构造 $n$ 个点，点权全部为 \code{v}}
+    \api{usize size()}{点数 $n$}
+    \api{bool modify(usize u, T v)}{把点 \code{u} 的权值改为 \code{v}；越界返回 \code{false}}
+    \api{bool update(usize u, F f)}{用 \code{f} 变换点 \code{u} 的权值；越界返回 \code{false}}
+    \api{std::optional<T> query(usize u, usize v)}{返回路径 $u \to v$ 的聚合值；越界或不在同一棵树时返回 \code{nullopt}}
+    \api{usize find_root(usize u)}{返回 \code{u} 当前所在树的根；越界返回 \code{npos}}
+    \api{bool connected(usize u, usize v)}{判断 \code{u} 与 \code{v} 是否连通；越界返回 \code{false}}
+    \api{bool make_root(usize u)}{把 \code{u} 变成其所在树的根；越界返回 \code{false}}
+    \api{bool link(usize u, usize v)}{加入边 \code{u-v}；越界、自环或已连通时返回 \code{false}}
+    \api{bool cut(usize u, usize v)}{删除直接边 \code{u-v}；越界、自环或边不存在时返回 \code{false}}
+    \api{npos}{表示「无」的哨兵值，等于 \code{usize(-1)}}
+}
+
+\section{约定}
+
+顶点编号为 $[0,n)$，路径聚合包含两个端点；\code{query(u, u)} 返回单点权值。\code{Op} 必须满足结合律与交换律，\code{plus}、\code{max}、\code{min}、\code{bit_xor}、\code{gcd} 等都可直接使用；实现只维护一个聚合值，不跟踪路径方向，因此不支持非交换路径积。由于不要求单位元，\code{pushup} 只合并非空儿子，\code{max/min} 不需要额外构造零元。
+
+\code{query} 会先检查端点是否连通，因此断开时返回 \code{nullopt}，不会给出无意义的结果。\code{make_root(u)} 成功后，\code{u} 所在连通分量的当前根变为 \code{u}，该分量内所有点的 \code{find_root} 都返回 \code{u}，直到下一次 \code{make_root}、\code{query}、\code{link} 或 \code{cut} 再次改变根方向；\code{find_root} 只适合判断当前根或连通性，不能当作稳定标识。
+
+\code{link} 拒绝自环与已连通端点，\code{cut} 只删除直接边；失败调用不改变逻辑森林，但可能改变内部有根方向。只支持点权；边权问题可把每条边拆成额外点后使用。所有操作均摊 $O(\log n)$，空间 $O(n)$。
+
+\fullsource{link_cut_tree.hpp}

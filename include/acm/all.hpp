@@ -10,6 +10,7 @@
 #include "geometry/circle.hpp"
 #include "geometry/polygon.hpp"
 #include "interpolation.hpp"
+#include "link_cut_tree.hpp"
 #include "max_flow.hpp"
 #include "min_cost_circulation.hpp"
 #include "min_cost_flow.hpp"
