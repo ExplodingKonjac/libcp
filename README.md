@@ -22,7 +22,7 @@ g++ -std=c++23 -O2 -Wall -o solve solve.cpp
 
 `include/acm/` 是与主库并存的 C++20 赛场抄写版：命名空间 `acm`，无 SIMD、无内存池/分配器，内部变量尽量短，单头文件即可复制。它只保留以下组件：
 
-`def`、`fast_io`、`modint`、`number_theory`、`suffix_array`、`suffix_automaton`、`bipartite_matching`、`bipartite_weighted_matching`、`general_matching`、`general_weighted_matching`、`max_flow`、`min_cost_flow`、`min_cost_circulation`、`fpoly`、`interpolation`、`link_cut_tree`、`geometry`（含 `geometry/circle`、`geometry/polygon`）。
+`def`、`fast_io`、`modint`、`number_theory`、`suffix_array`、`suffix_automaton`、`bipartite_matching`、`bipartite_weighted_matching`、`general_matching`、`general_weighted_matching`、`max_flow`、`min_cost_flow`、`min_cost_circulation`、`fpoly`、`interpolation`、`link_cut_tree`、`pairing_heap`、`geometry`（含 `geometry/circle`、`geometry/polygon`）。
 
 使用方式、与 `cp` 的 API 差异和复杂度表见 [`include/acm/README.md`](include/acm/README.md)。
 
@@ -665,7 +665,7 @@ VSCode 用户可使用 `.vscode/tasks.json` 的 "C++ Compile" 任务一键编译
 
 ### acm 测试
 
-`tests/acm/` 覆盖 `include/acm` 的全部 19 个算法头：模运算、数论、后缀数组/自动机、匹配、流、环流、动态树、多项式、插值和几何。`make test-acm` 会先执行 `make headers` 的逐头文件编译检查。
+`tests/acm/` 覆盖 `include/acm` 的全部 20 个算法头：模运算、数论、后缀数组/自动机、匹配、流、环流、动态树、配对堆、多项式、插值和几何。`make test-acm` 会先执行 `make headers` 的逐头文件编译检查。
 
 ## 设计原则
 

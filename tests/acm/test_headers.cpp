@@ -31,6 +31,9 @@ int main() {
     lct.make_root(0);
     lct.modify(0, 1);
     (void)lct;
+    acm::PairingHeap<acm::i32> heap;
+    heap.modify(heap.push(1), 2);
+    (void)heap.top();
     acm::FPoly<998244353> f{1, 2};
     (void)f;
     acm::Vec2<acm::i64> v{0, 0};

@@ -1,0 +1,33 @@
+\chapter{配对堆}\label{ch:pairing-heap}
+
+\chaptermeta{pairing_heap.hpp}{def.hpp}{合并、插入、取堆顶 $O(1)$；删除与改键均摊 $O(\log n)$}
+
+配对堆是一种可并堆：每个结点的所有儿子用一条兄弟链维护，合并时只需比较两个根，把较小者挂到较大者的儿子链首，因此合并、插入与取堆顶都是 $O(1)$，同时支持删除任意元素与修改键值。
+
+\section{接口}
+
+\apitable{
+    \api{PairingHeap<T, Compare>}{堆；元素类型 \code{T}，比较器 \code{Compare}，默认分别为 \code{i32} 与 \code{std::less<T>}}
+    \api{point_iterator}{结点迭代器；\code{*it}、\code{it->} 访问元素，插入与合并不会使其失效}
+    \api{point_iterator push(T v)}{插入 \code{v}，返回指向它的迭代器}
+    \api{point_iterator emplace(Args&&... args)}{用参数原地构造元素并插入，返回其迭代器}
+    \api{const T& top() const}{堆顶元素；空堆调用未定义}
+    \api{T pop()}{弹出并返回堆顶；空堆调用未定义}
+    \api{T erase(point_iterator it)}{删除 \code{it} 指向的元素并返回它}
+    \api{void modify(point_iterator it, T v)}{把 \code{it} 指向的元素改为 \code{v}}
+    \api{void join(PairingHeap& other)}{把 \code{other} 的元素全部并入，\code{other} 变空}
+    \api{void clear()}{清空；所有迭代器失效}
+    \api{usize size() const / bool empty() const}{元素个数 / 是否为空}
+    \api{拷贝构造、拷贝赋值}{深复制整棵堆，副本与原件互不影响}
+    \api{移动构造、移动赋值}{转移所有权，源堆变为空}
+}
+
+\section{约定}
+
+默认是\textbf{大根堆}：\code{Compare = std::less<T>} 时 \code{top()} 是最大元素，换成 \code{std::greater<>} 即得小根堆。\code{Compare} 须是严格弱序，\code{T} 须可构造且可赋值（\code{modify} 会赋值，\code{emplace} 会转发参数给 \code{T} 的构造函数）。
+
+\code{push} / \code{emplace} 返回的 \code{point_iterator} 直接指向结点本身：插入、合并与修改其它元素都不会使它失效，只有该元素被 \code{pop}、\code{erase} 或堆被 \code{clear} 后才失效。\code{modify} 同时支持增大与减小键值：键值变大时保留子树，变小时把子树拆开重新合并，再把结点并回堆，因此 \code{it} 在修改后仍然有效，可以继续用于下一次 \code{modify} 或 \code{erase}。
+
+\code{join(other)} 只改指针，$O(1)$ 完成；两个堆应使用相同的比较器，且不要传入自身。所有操作都不做空堆检查，\code{top}、\code{pop} 以及使用已失效的迭代器都是未定义行为。复杂度：\code{push}、\code{emplace}、\code{top}、\code{join} 为 $O(1)$，\code{pop}、\code{erase}、\code{modify} 均摊 $O(\log n)$，空间 $O(n)$。两遍合并、析构与拷贝都用递归遍历结点，代码更短；但递归深度与树高或兄弟链长度同阶，最坏可达 $O(n)$，深链很长（几十万级）时要留足栈空间。
+
+\fullsource{pairing_heap.hpp}

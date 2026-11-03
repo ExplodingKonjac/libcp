@@ -3,7 +3,7 @@
 
 检查项：
   1. 每个 \\fullsource{...} 指向的 include/acm 文件存在；
-  2. include/acm 下的每个 .hpp 恰好被引用一次；
+  2. include/acm 下每个模块头文件恰好被引用一次（all.hpp 是汇总头，不要求成章）；
   3. 被引入的源码不含制表符，且最长行不超过 80 列（minted 版心的假设）。
 
 用法：python3 tools/check_sources.py [--root .]
@@ -23,6 +23,9 @@ INPUTMINTED_RE = re.compile(
 )
 
 MAX_COLUMNS = 80
+
+# 汇总头不对应具体算法，不要求单独成章；若某章收录了它也不报错。
+OPTIONAL = {"all.hpp"}
 
 
 def main() -> int:
@@ -45,6 +48,7 @@ def main() -> int:
         return 1
 
     headers = sorted(p.relative_to(acm_dir).as_posix() for p in acm_dir.rglob("*.hpp"))
+    required = [h for h in headers if h not in OPTIONAL]
 
     tex_files = sorted(root.glob("chapters/*.tex")) + sorted(
         root.glob("frontmatter/*.tex")
@@ -66,7 +70,7 @@ def main() -> int:
 
     # 2. 覆盖情况
     referenced = [rel for _, rel in fullsources]
-    missing = [h for h in headers if h not in referenced]
+    missing = [h for h in required if h not in referenced]
     duplicated = sorted({h for h in referenced if referenced.count(h) > 1})
     unknown = [r for r in referenced if r not in headers]
     for h in missing:
@@ -98,8 +102,8 @@ def main() -> int:
 
     # 汇总
     print(f"print/ 目录：{root}")
-    print(f"头文件：{len(headers)} 个，已收录 {len(set(referenced) & set(headers))} 个")
-    print(f"章节 \\fullsource 引用：{len(fullsources)} 处")
+    print(f"模块头文件：{len(required)} 个（另有汇总头 {len(headers) - len(required)} 个）")
+    print(f"已收录：{len(set(referenced) & set(headers))} 个")
     print(f"源码引入（\\fullsource）：{len(fullsources)} 处")
     if warnings:
         print("\n提醒：")

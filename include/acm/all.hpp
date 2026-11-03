@@ -16,5 +16,6 @@
 #include "min_cost_flow.hpp"
 #include "modint.hpp"
 #include "number_theory.hpp"
+#include "pairing_heap.hpp"
 #include "suffix_array.hpp"
 #include "suffix_automaton.hpp"
