@@ -1,10 +1,8 @@
-\chapter{圆}\label{ch:circle}
-
-\chaptermeta{geometry/circle.hpp}{geometry.hpp}{最小覆盖圆期望 $O(n)$}
+\section{圆}\label{sec:circle}
 
 圆的基本判定与求交，以及两个常用构造：由三点求外接圆、对点集求最小覆盖圆。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{Circle2<T>{o, r}}{圆心与半径；\code{valid()} 要求 $r\ge0$（零半径合法）}
@@ -19,7 +17,7 @@
     \api{minimum_enclosing_circle(points)}{返回 \code{std::optional<Circle2<T>>}；空集为 \code{nullopt}；仅浮点 \code{T}}
 }
 
-\section{约定}
+\subsection{约定}
 
 负半径圆无效，相关函数在入口断言 \code{valid()}；零半径圆是合法的退化情形。\code{circle_from}、直线与圆求交、两圆求交以及 \code{minimum_enclosing_circle} 只对浮点坐标实例化，整数坐标请先 \code{cast<long double>()}，只有 \code{contains} 与 \code{on_circle} 对整数类型可用。三点共线时 \code{circle_from} 返回以最远两点为直径的圆，不报错。空点集的最小覆盖圆为 \code{nullopt}，该函数内部用 \code{std::random_device} 打乱点集，结果正确但每次点序不同。
 

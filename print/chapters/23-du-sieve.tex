@@ -1,0 +1,52 @@
+\section{杜教筛}\label{sec:du-sieve}
+
+\subsection{作用与适用范围}
+
+杜教筛对任意数论函数 $f$ 求前缀和 $S(n)=\sum_{i=1}^{n}f(i)$。适用于 $n$ 大到不能预处理 $1..n$ 的情形。递归只依赖 $O(\sqrt n)$ 个不同的 $\lfloor n/i\rfloor$，配合记忆化可做到亚线性。线性筛预处理前 $B\approx n^{2/3}$ 项后复杂度为 $O(n^{2/3})$，不做预处理为 $O(n^{3/4})$。
+
+它不要求 $f$ 是积性函数；需要构造数论函数 $g$（$f*g$ 为狄利克雷卷积），使
+\begin{itemize}[leftmargin=1.8em, itemsep=0.15em, topsep=0.2em]
+    \item $\sum_{i=1}^{n}(f*g)(i)$ 能快速求值；
+    \item $\sum_{i=1}^{n}g(i)$ 能快速求值，且 $g(1)$ 非零（模意义下可逆）。
+\end{itemize}
+
+\subsection{算法简述}
+
+按
+$$
+g(1)S(n)=\sum_{i=1}^{n}(f*g)(i)-\sum_{i=2}^{n}g(i)S\left(\left\lfloor\frac{n}{i}\right\rfloor\right)
+$$
+递归，右侧用数论分块，$S$ 记忆化。通常取 $g(1)=1$；若 $g(1)\ne1$，最后除以 $g(1)$。常见构造是 $\mu*1=\epsilon$、$\varphi*1=\operatorname{id}$；例如 $f=\operatorname{id}^2\varphi$ 时取 $g=\operatorname{id}^2$，则 $f*g=\operatorname{id}^3$。
+
+\subsection{伪代码}
+
+记 $\pvar{pre}[n]$ 为线性筛预处理的 $S(n)$，$\pvar{mem}$ 为记忆化表：
+
+\begin{algorithm}[H]
+    \caption{杜教筛}
+    \begin{algorithmic}[1]
+        \Procedure{SumFG}{$n$}
+            \State \Return $\sum_{i=1}^{n}(f*g)(i)$
+        \EndProcedure
+        \Procedure{SumG}{$n$}
+            \State \Return $\sum_{i=1}^{n}g(i)$
+        \EndProcedure
+        \Procedure{Sum}{$n$}
+            \If{$n \le B$}
+                \State \Return $\pvar{pre}[n]$
+            \EndIf
+            \If{$n \in \pvar{mem}$}
+                \State \Return $\pvar{mem}[n]$
+            \EndIf
+            \State $\pvar{ans} \gets \Call{SumFG}{n}$
+            \State $l \gets 2$
+            \While{$l \le n$}
+                \State $r \gets n / (n / l)$
+                \State $\pvar{ans} \gets \pvar{ans} - (\Call{SumG}{r}-\Call{SumG}{l-1})\cdot \Call{Sum}{n/l}$
+                \State $l \gets r + 1$
+            \EndWhile
+            \State $\pvar{mem}[n] \gets \pvar{ans} / g(1)$
+            \State \Return $\pvar{mem}[n]$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}

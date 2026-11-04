@@ -1,10 +1,8 @@
-\chapter{配对堆}\label{ch:pairing-heap}
-
-\chaptermeta{pairing_heap.hpp}{def.hpp}{合并、插入、取堆顶 $O(1)$；删除与改键均摊 $O(\log n)$}
+\section{配对堆}\label{sec:pairing-heap}
 
 配对堆是一种可并堆：每个结点的所有儿子用一条兄弟链维护，合并时只需比较两个根，把较小者挂到较大者的儿子链首，因此合并、插入与取堆顶都是 $O(1)$，同时支持删除任意元素与修改键值。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{PairingHeap<T, Compare>}{堆；元素类型 \code{T}，比较器 \code{Compare}，默认分别为 \code{i32} 与 \code{std::less<T>}}
@@ -22,7 +20,7 @@
     \api{移动构造、移动赋值}{转移所有权，源堆变为空}
 }
 
-\section{约定}
+\subsection{约定}
 
 默认是\textbf{大根堆}：\code{Compare = std::less<T>} 时 \code{top()} 是最大元素，换成 \code{std::greater<>} 即得小根堆。\code{Compare} 须是严格弱序，\code{T} 须可构造且可赋值（\code{modify} 会赋值，\code{emplace} 会转发参数给 \code{T} 的构造函数）。
 

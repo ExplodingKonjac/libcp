@@ -1,0 +1,74 @@
+\section{Min\_25 筛}\label{sec:min-25}
+
+\subsection{作用与适用范围}
+
+Min\_25 筛求积性函数 $f$ 的前缀和 $\sum_{i=1}^{n}f(i)$，适合杜教筛难以构造 $g$、而 $f(p)$ 是低次多项式或若干完全积性函数之和的情形，$n$ 通常到 $10^{10}$ 量级；复杂度为 $O(n^{3/4}/\log n)$ 或 $O(n^{1-\epsilon})$。
+
+它要求：
+\begin{itemize}[leftmargin=1.8em, itemsep=0.15em, topsep=0.2em]
+    \item $f$ 是积性函数，且 $f(1)=1$；
+    \item $f(p)$ 可写成 $\sum_j a_j p^{c_j}$（或若干完全积性函数在质数处的线性组合），项数较少；
+    \item $f(p^c)$ 能快速计算；
+    \item 能筛出 $\sqrt n$ 内的质数，并能快速求各辅助完全积性函数 $g$ 的整数前缀和 $\sum_{1\le t\le x}g(t)$。特别地，当 $g(t)=t^e$ 且 $e$ 为非负整数时，低次幂和可用公式计算，高次幂和可用 Lagrange 插值计算。
+\end{itemize}
+
+\subsection{算法简述}
+
+记 $p_1,p_2,\dots$ 为质数，$F_{\mathrm{prime}}(x)=\sum_{p\le x}f(p)$，$F_k(x)$ 为 $2\le t\le x$ 且最小质因子不小于 $p_k$ 的 $f(t)$ 之和（$p_0=1$）。当 $x<p_k$ 时，约定 $F_k(x)=0$。先对 $f(p)$ 的每个单项 $g(p)=p^e$ 做埃氏筛式递推
+$$
+G_k(x)=G_{k-1}(x)-p_k^e\left(G_{k-1}\left(\left\lfloor\frac{x}{p_k}\right\rfloor\right)-G_{k-1}(p_{k-1})\right),\qquad p_k^2\le x,
+$$
+其中 $G_0(x)=\sum_{2\le t\le x}t^e$，$G_k(x)$ 是筛掉最小质因子不大于 $p_k$ 的合数后，剩余整数的 $g$ 值之和；当 $p_k^2>x$ 时，$G_k(x)=G_{k-1}(x)$。由于 $G_{k-1}(p_k-1)=G_{k-1}(p_{k-1})$，递推时也可使用前者。合并各单项，得到所有 $x=\lfloor n/i\rfloor$ 处的 $F_{\mathrm{prime}}(x)$，再对 $x\ge p_k$ 按
+$$
+F_k(x)=F_{\mathrm{prime}}(x)-F_{\mathrm{prime}}(p_{k-1})
++\sum_{\substack{i\ge k\\p_i^2\le x}}\sum_{\substack{c\ge1\\p_i^c\le x}}
+f(p_i^c)\left([c>1]+F_{i+1}\left(\left\lfloor\frac{x}{p_i^c}\right\rfloor\right)\right)
+$$
+递归，答案为 $1+F_1(n)$。例如 $f(p^c)=p^c(p^c-1)$ 时 $f(p)=p^2-p$，拆成 $p^2$ 与 $-p$ 两个单项即可。
+
+\subsection{伪代码}
+
+下面用 $w_1>\dots>w_m$ 表示所有不同的 $\lfloor n/i\rfloor$，$\pvar{id}(x)$ 为 $x$ 在其中的下标，$a_e$ 为单项 $p^e$ 的系数，$r$ 为不超过 $\sqrt n$ 的质数个数。$\pvar{Fprime}$、$\pvar{id}$ 和质数表由 $\operatorname{BuildFprime}(n)$ 构造，并供 $\operatorname{Calc}(x,k)$ 使用；伪代码中的除法均取下整。
+
+\begin{algorithm}[H]
+    \caption{Min\_25 筛}
+    \begin{algorithmic}[1]
+        \Procedure{BuildFprime}{$n$}
+            \State \textbf{let} $p_1,p_2,\dots,p_r$ \textbf{be all primes} $\le\lfloor\sqrt n\rfloor$, $p_0=1$
+            \State \textbf{let} $w_1>\dots>w_m$ \textbf{be all distinct} $\lfloor n/i\rfloor$, \textbf{with} $\pvar{id}(w_i)=i$
+            \State $\pvar{Fprime}[1..m] \gets 0$
+            \For{\textbf{each monomial} $g(p)=p^e$ \textbf{with coefficient} $a_e$}
+                \For{$i \gets 1$ \textbf{to} $m$}
+                    \State $G[i] \gets \sum_{2\le t\le w_i} t^e$
+                \EndFor
+                \For{$j \gets 1$ \textbf{to} $r$}
+                    \State $p \gets p_j$
+                    \For{$i \gets 1$ \textbf{to} $m$ \textbf{with} $p^2 \le w_i$}
+                        \State $G[i] \gets G[i]-p^e\left(G[\pvar{id}(\lfloor w_i/p\rfloor)]-G[\pvar{id}(p-1)]\right)$
+                    \EndFor
+                \EndFor
+                \State $\pvar{Fprime}[1..m] \gets \pvar{Fprime}[1..m]+a_e G[1..m]$
+            \EndFor
+        \EndProcedure
+        \Procedure{Calc}{$x,k$}
+            \If{$x\le p_{k-1}$}
+                \State \Return $0$
+            \EndIf
+            \State $\pvar{ans} \gets \pvar{Fprime}[\pvar{id}(x)]-\pvar{Fprime}[\pvar{id}(p_{k-1})]$
+            \State $i \gets k$
+            \While{$i\le r$ \textbf{and} $p_i^2 \le x$}
+                \State $\pvar{pe} \gets p_i$
+                \State $c \gets 1$
+                \While{$\pvar{pe} \le x$}
+                    \State $\pvar{ans} \gets \pvar{ans} + f(\pvar{pe})\left([c>1]+\operatorname{Calc}(\lfloor x/\pvar{pe}\rfloor,i+1)\right)$
+                    \State $\pvar{pe} \gets \pvar{pe}\cdot p_i$
+                    \State $c \gets c+1$
+                \EndWhile
+                \State $i \gets i+1$
+            \EndWhile
+            \State \Return $\pvar{ans}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+调用 $\operatorname{BuildFprime}(n)$ 后，最终答案为 $1+\operatorname{Calc}(n,1)$。

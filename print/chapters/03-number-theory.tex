@@ -1,10 +1,8 @@
-\chapter{数论}\label{ch:number-theory}
-
-\chaptermeta{number_theory.hpp}{def.hpp}{快速幂 $O(\log b)$，分解期望 $O(n^{1/4})$}
+\section{数论}\label{sec:number-theory}
 
 模幂、扩展欧几里得、一次不定方程、判素与分解、模平方根，以及可组合的 Universal Euclidean Algorithm。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{qpow<T>(a, b, p)}{返回 $a^b \bmod p$；要求 \code{sizeof(T) <= 8} 且 $b \ge 0$}
@@ -18,7 +16,7 @@
     \api{uniclidean<D,T,Op>(p, q, r, n, R, U, init, mul)}{返回格路径上各段按 \code{mul} 合并的结果}
 }
 
-\section{约定}
+\subsection{约定}
 
 \code{qpow} 的指数必须非负，负数会在移位循环中死循环，模数不要求素数。\code{biequation} 无解时返回 \code{{-1, -1}}，有解时返回 $x$ 最小非负的一组解。\code{factorize} 只断言 $n>0$：$n=1$ 返回空数组，结果升序且含重数；\code{pollard_rho} 要求输入为合数，内部随机数种子固定，结果可复现。\code{legendre} 与 \code{cipolla} 要求 $p$ 为奇素数，\code{cipolla} 返回其中一根，需要较小根时自行取 $\min(x,p-x)$。
 

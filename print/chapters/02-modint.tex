@@ -1,10 +1,8 @@
-\chapter{模运算}\label{ch:modint}
-
-\chaptermeta{modint.hpp}{def.hpp}{乘法 $O(1)$，求逆 $O(\log p)$}
+\section{模运算}\label{sec:modint}
 
 提供静态模数 \code{SModint<P>} 与动态模数 \code{DModint} 两种模整数，四则运算按模进行；另附快速幂、Legendre 符号与模平方根。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{SModint<P>}{编译期模数；\code{static_assert} 要求 $0<P<2^{31}$，实际应取素数}
@@ -20,7 +18,7 @@
     \api{acm::sqrt(a)}{返回 \code{std::optional<Mint>}；无平方根时为空，要求模数为奇素数}
 }
 
-\section{约定}
+\subsection{约定}
 
 模数上限 $2^{31}$ 是硬约束：乘法用 \code{i64} 中间量，模数再大会溢出。\code{DModint::set_mod} 修改的是全局静态变量，必须在构造任何 \code{DModint} 之前调用，同一进程内混用多个模数会互相污染。除法与 \code{inv()} 在除数为零时断言失败，关闭断言后是未定义行为；模数非素数时，扩展欧几里得只对 $\gcd(a,p)=1$ 的情形给出逆元。\code{pow} 的指数为负时先对底数求逆，因此底数不能为 0。
 

@@ -1,10 +1,8 @@
-\chapter{多项式运算}\label{ch:fpoly}
-
-\chaptermeta{fpoly.hpp}{modint.hpp、def.hpp}{$O(n\log n)$}
+\section{多项式运算}\label{sec:fpoly}
 
 以 \code{SModint<P>} 为系数的多项式，支持加减乘、带余除法，以及求逆、对数、指数、平方根、求导与积分。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{FPoly<P>}{公有继承 \code{std::vector<SModint<P>>}；\code{static_assert(P >= 3 && is_prime(P))}}
@@ -23,7 +21,7 @@
     \api{derivative(f) / integrate(f)}{求导 / 积分的自由函数包装}
 }
 
-\section{约定}
+\subsection{约定}
 
 模数必须是 $\ge 3$ 的奇素数，否则 \code{static_assert} 直接报错，$P=2$ 不可用。NTT 长度上限是 $2^{\mathrm{ctz}(P-1)}$（对 $998244353$ 为 $2^{23}$），卷积超过上限会在断言处失败。常数项要求是硬性的：求逆 $f_0\ne0$、对数 $f_0=1$、指数 $f_0=0$、平方根 $f_0\ne0$，自由函数版本的 \code{sqrt} 还要求前导零个数为偶数。\code{FPoly} 继承自 \code{vector}，尾部零会参与 \code{size()} 与比较，需要标准形式时先调用 \code{trim()}；\code{polyint} 要求 $n<P$。
 

@@ -1,0 +1,117 @@
+\section{Tarjan}\label{sec:tarjan}
+
+\subsection{边双连通分量}\label{sec:edge-bcc}
+
+\begin{algorithm}[H]
+    \caption{边双连通分量（Tarjan）}
+    \begin{algorithmic}[1]
+        \Procedure{Tarjan}{$u, \pvar{in}$}
+            \State $\pvar{dfc} \gets \pvar{dfc} + 1$
+            \State $\pvar{dfn}[u] \gets \pvar{dfc}$
+            \State $\pvar{low}[u] \gets \pvar{dfc}$
+            \State $\pvar{stk}.\Call{Push}{u}$
+            \State $\pvar{vis}[u] \gets \mathrm{true}$
+            \For{$i \in G[u]$}
+                \If{$i = \pvar{in} \oplus 1$}
+                    \State \textbf{continue}
+                \EndIf
+                \State $v \gets \pvar{to}[i]$
+                \If{$\pvar{dfn}[v] = 0$}
+                    \State \Call{Tarjan}{v, i}
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{low}[v])$
+                \ElsIf{$\pvar{vis}[v]$}
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{dfn}[v])$
+                \EndIf
+            \EndFor
+            \If{$\pvar{dfn}[u] = \pvar{low}[u]$}
+                \State $C \gets \varnothing$
+                \Repeat
+                    \State $x \gets \pvar{stk}.\Call{Pop}{}$
+                    \State $\pvar{vis}[x] \gets \mathrm{false}$
+                    \State $C.\Call{Add}{x}$
+                \Until{$x = u$}
+            \EndIf
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{点双连通分量}\label{sec:vertex-bcc}
+
+\begin{algorithm}[H]
+    \caption{点双连通分量（Tarjan）}
+    \begin{algorithmic}[1]
+        \Procedure{Tarjan}{$u$}
+            \State $\pvar{dfc} \gets \pvar{dfc} + 1$
+            \State $\pvar{dfn}[u] \gets \pvar{dfc}$
+            \State $\pvar{low}[u] \gets \pvar{dfc}$
+            \State $\pvar{stk}.\Call{Push}{u}$
+            \If{$u = \pvar{root}$ \textbf{and} $G[u] = \varnothing$}
+                \State $C \gets \varnothing$
+                \State $C.\Call{Add}{u}$
+                \State \Return
+            \EndIf
+            \State $f \gets 0$
+            \For{$v \in G[u]$}
+                \If{$\pvar{dfn}[v] = 0$}
+                    \State \Call{Tarjan}{v}
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{low}[v])$
+                    \If{$\pvar{low}[v] \ge \pvar{dfn}[u]$}
+                        \State $f \gets f + 1$
+                        \If{$u \ne \pvar{root}$ \textbf{or} $f > 1$}
+                            \State $\pvar{cut}[u] \gets \mathrm{true}$
+                        \EndIf
+                        \State $C \gets \varnothing$
+                        \Repeat
+                            \State $x \gets \pvar{stk}.\Call{Pop}{}$
+                            \State $C.\Call{Add}{x}$
+                        \Until{$x = v$}
+                        \State $C.\Call{Add}{u}$
+                    \EndIf
+                \Else
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{dfn}[v])$
+                \EndIf
+            \EndFor
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{圆方树}\label{sec:block-forest}
+
+\begin{algorithm}[H]
+    \caption{圆方树}
+    \begin{algorithmic}[1]
+        \Procedure{Tarjan}{$u$}
+            \State $\pvar{dfc} \gets \pvar{dfc} + 1$
+            \State $\pvar{dfn}[u] \gets \pvar{dfc}$
+            \State $\pvar{low}[u] \gets \pvar{dfc}$
+            \State $\pvar{stk}.\Call{Push}{u}$
+            \For{$v \in G[u]$}
+                \If{$\pvar{dfn}[v] = 0$}
+                    \State \Call{Tarjan}{v}
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{low}[v])$
+                    \If{$\pvar{low}[v] = \pvar{dfn}[u]$}
+                        \State $\pvar{cnt} \gets \pvar{cnt} + 1$
+                        \State \textbf{create square vertex} $\pvar{cnt}$
+                        \Repeat
+                            \State $x \gets \pvar{stk}.\Call{Pop}{}$
+                            \State \Call{AddEdge}{\pvar{cnt}, x}
+                        \Until{$x = v$}
+                        \State \Call{AddEdge}{\pvar{cnt}, u}
+                    \EndIf
+                \Else
+                    \State $\pvar{low}[u] \gets \min(\pvar{low}[u], \pvar{dfn}[v])$
+                \EndIf
+            \EndFor
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{数据契约}\label{sec:tarjan-contract}
+
+边双连通分量：\code{G[u]} 存弧编号，\code{to[i]} 是弧头；\code{in} 是进入 \code{u} 的弧编号，只跳过 \code{in ^ 1}，不能按 \code{fa} 跳过，重边是合法返祖边。\code{vis} 只表示点还在栈中，已出栈的点不能再更新 \code{low}。边池从 2 开始编号，1 号空着，无向边按 \code{2k / 2k+1} 成对加入，保证 \code{in = 0} 时 \code{in ^ 1 = 1} 不对应任何弧；自环要先删掉。
+
+点双连通分量：满足 \code{low[v] >= dfn[u]} 时弹栈到 \code{v}，再把 \code{u} 加入该点双；\code{u} 不弹，它还可能属于父方向的点双。\code{f} 只数满足该条件的分支：非根点第一次就标割点，根要 \code{f > 1}。孤立根没有分支，要单独产出一个点双；已访问邻居用 \code{dfn[v]} 更新 \code{low}，只有树边递归返回后才用 \code{low[v]}。
+
+圆方树：\code{cnt} 从 \code{n} 开始，方点编号是 \code{n+1..}，数组要开两倍。每个点双建一个方点，向分量内所有圆点连无向边；桥也形成一个二元点双，所以桥两端会通过方点相连。\code{u} 只连方点，不从栈中弹出；孤立点没有点双，保持为单独的圆点。点双与圆方树的 \code{low} 计入父边；圆方树的判定用 \code{low[v] == dfn[u]}，若 \code{low} 不含父边则改用 \code{low[v] >= dfn[u]}，两种写法不要混用。
+
+图不连通时，三者都要对每个未访问点重新调用：边双传 \code{in = 0}，点双与圆方树重设 \code{root}。

@@ -1,0 +1,66 @@
+\section{PN 筛}\label{sec:powerful-number}
+
+\subsection{作用与适用范围}
+
+PN 筛对积性函数 $f$ 求前缀和 $F(n)=\sum_{i=1}^{n}f(i)$。它利用 Powerful Number（所有质因子指数均 $\ge2$ 的数；计算时把 $1$ 也计入）把求和压到 $O(\sqrt n)$ 个 PN 上，适合 $f(p)$ 形式简单、$f(p^c)$ 可快速计算，且能构造出易求前缀和的 $g$ 的情形。
+
+它要求：
+\begin{itemize}[leftmargin=1.8em, itemsep=0.15em, topsep=0.2em]
+    \item $f$ 是积性函数；
+    \item 存在积性函数 $g$，满足 $g(p)=f(p)$（对所有质数 $p$），且 $G(n)=\sum_{i=1}^{n}g(i)$ 易求（$O(1)$ 或杜教筛）；
+    \item $f(p^c)$ 能快速计算；
+    \item 能筛出 $\sqrt n$ 内的质数，用于 DFS 枚举 PN。
+\end{itemize}
+
+\subsection{算法简述}
+
+令 $h=f/g$（狄利克雷卷积除法，即 $f=g*h$），则 $h$ 积性、$h(1)=1$、$h(p)=0$，且 $h$ 只在 PN 处非零。于是
+$$
+F(n)=\sum_{\substack{d\le n\\ d\text{ 是 PN}}}h(d)\,G\left(\left\lfloor\frac{n}{d}\right\rfloor\right).
+$$
+其中 $d=1$ 也计入。
+
+$h(p^c)$ 按
+$$
+h(p^c)=f(p^c)-\sum_{i=1}^{c}g(p^i)h(p^{c-i})
+$$
+递推（$h(p)=0$）。按质因数指数 DFS 枚举所有 PN（每个 PN 可写成 $a^2b^3$），边搜边累加；$n$ 内 PN 只有 $O(\sqrt n)$ 个。若 $G$ 用杜教筛，总复杂度为 $O(n^{2/3})$。
+
+\subsection{伪代码}
+
+设 $p_1,p_2,\dots$ 为质数，`Dfs(d, k, hd)` 中 $d$ 是当前 PN，$k$ 是下一个可用的最小质因子下标，$hd=h(d)$。循环只枚举 $i\ge k$ 且 $p_i^2\le n/d$ 的质数，保证当前 $d$ 还能再乘上 $p_i^2$；对每个这样的质数，先按递推求出 $h(p_i^0),\dots,h(p_i^C)$，再枚举指数 $c\ge2$：
+
+\begin{algorithm}[H]
+    \caption{PN 筛}
+    \begin{algorithmic}[1]
+        \Procedure{CalcH}{$p, C$}
+            \State $\pvar{hp}[0] \gets 1$
+            \State $\pvar{hp}[1] \gets 0$
+            \For{$c \gets 2$ \textbf{to} $C$}
+                \State $\pvar{hp}[c] \gets f(p^c)$
+                \For{$i \gets 1$ \textbf{to} $c$}
+                    \State $\pvar{hp}[c] \gets \pvar{hp}[c]-g(p^i)\cdot \pvar{hp}[c-i]$
+                \EndFor
+            \EndFor
+            \State \Return $\pvar{hp}[0..C]$
+        \EndProcedure
+        \Procedure{SumG}{$n$}
+            \State \Return $\sum_{i=1}^{n}g(i)$
+        \EndProcedure
+        \Procedure{Dfs}{$d, k, \pvar{hd}$}
+            \State $\pvar{ans} \gets \pvar{ans} + \pvar{hd} \cdot \Call{SumG}{n/d}$
+            \For{\textbf{each} $i \ge k$ \textbf{with} $p_i^2 \le n/d$}
+                \State $C \gets \max\{c \ge 2 : d\cdot p_i^c \le n\}$
+                \State $\pvar{hp} \gets \Call{CalcH}{p_i, C}$
+                \For{$c \gets 2$ \textbf{to} $C$}
+                    \State \Call{Dfs}{d \cdot p_i^c, i+1, \pvar{hd} \cdot \pvar{hp}[c]}
+                \EndFor
+            \EndFor
+        \EndProcedure
+        \Procedure{Calc}{$n$}
+            \State $\pvar{ans} \gets 0$
+            \State \Call{Dfs}{1, 1, 1}
+            \State \Return $\pvar{ans}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}

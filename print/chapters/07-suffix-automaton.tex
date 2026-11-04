@@ -1,10 +1,8 @@
-\chapter{后缀自动机}\label{ch:suffix-automaton}
-
-\chaptermeta{suffix_automaton.hpp}{def.hpp}{$O(n)$，空间 $O(nZ)$}
+\section{后缀自动机}\label{sec:suffix-automaton}
 
 逐字符插入并维护字符串的后缀自动机，可判断任意串是否为子串，也可遍历状态转移；转移用定长数组稠密存储，适合字符集很小的情形。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{SuffixAutomaton<Symbol, Z>}{建一个只含初始状态 0 的空自动机；\code{Z} 为字符集大小}
@@ -18,7 +16,7 @@
     \api{npos}{表示「无」的哨兵值，等于 \code{usize(-1)}}
 }
 
-\section{约定}
+\subsection{约定}
 
 模板参数 \code{Symbol} 只决定参数类型，\code{extend} 与 \code{transition} 直接把参数当转移下标，因此必须传 $0\dots Z-1$ 的编号（例如 \code{c - 'a'}），传字符本身会越界。\code{Z} 是字符集大小，转移为定长稠密数组，空间 $O(|V|Z)$；字符集大时应改用 \code{std::map} 版本，本模块不提供。状态 0 为初始状态，\code{link(0)} 为 \code{npos}；\code{extend} 返回新状态编号并更新 \code{last()}，克隆产生的新状态也会计入 \code{size()}。
 

@@ -1,0 +1,47 @@
+\section{虚树}\label{sec:virtual-tree}
+
+\begin{algorithm}[H]
+    \caption{虚树（单调栈）}
+    \begin{algorithmic}[1]
+        \Procedure{Build}{$h, k$}
+            \State \textbf{sort} $h[1..k]$ \textbf{by} $\pvar{dfn}$
+            \State $\pvar{top} \gets 1$
+            \State $\pvar{sta}[1] \gets 1$
+            \For{$i \gets 1$ \textbf{to} $k$}
+                \If{$h[i] = 1$}
+                    \State \textbf{continue}
+                \EndIf
+                \State $l \gets \Call{LCA}{h[i], \pvar{sta}[\pvar{top}]}$
+                \If{$l \ne \pvar{sta}[\pvar{top}]$}
+                    \While{$\pvar{dfn}[l] < \pvar{dfn}[\pvar{sta}[\pvar{top}-1]]$}
+                        \State \Call{AddEdge}{\pvar{sta}[\pvar{top}-1], \pvar{sta}[\pvar{top}]}
+                        \State $\pvar{top} \gets \pvar{top} - 1$
+                    \EndWhile
+                    \If{$\pvar{dfn}[l] > \pvar{dfn}[\pvar{sta}[\pvar{top}-1]]$}
+                        \State \Call{AddEdge}{l, \pvar{sta}[\pvar{top}]}
+                        \State $\pvar{sta}[\pvar{top}] \gets l$
+                    \Else
+                        \State \Call{AddEdge}{l, \pvar{sta}[\pvar{top}]}
+                        \State $\pvar{top} \gets \pvar{top} - 1$
+                    \EndIf
+                \EndIf
+                \State $\pvar{top} \gets \pvar{top} + 1$
+                \State $\pvar{sta}[\pvar{top}] \gets h[i]$
+            \EndFor
+            \For{$i \gets 1$ \textbf{to} $\pvar{top} - 1$}
+                \State \Call{AddEdge}{\pvar{sta}[i], \pvar{sta}[i + 1]}
+            \EndFor
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{待实现}
+
+\code{Build} 依赖预处理好的 \code{dfn} 与 \code{LCA}。\code{AddEdge(u, v)} 加有向边 $u \to v$（父到子），有边权时取原树 \code{dist[v] - dist[u]}；建完后从根 $1$ 开始跑 \code{Calc}，进入前标好关键点，结束后撤销。
+
+\needspace{6\baselineskip}
+\subsection{数据契约}
+
+\code{h[1..k]} 是互异的关键点，1-indexed，原树根固定为 $1$；进入 \code{Build} 前未排序，返回时按 \code{dfn} 升序。
+
+\code{sta[1..top]} 维护当前最右链，\code{dfn} 从栈底到栈顶递增，\code{sta[1] = 1}。弹栈条件比较 \code{l} 与次栈顶 \code{sta[top-1]}，不是栈顶；循环结束后剩下的 \code{sta[1..top]} 还要逐条连边。

@@ -1,10 +1,8 @@
-\chapter{计算几何基础}\label{ch:geometry}
-
-\chaptermeta{geometry.hpp}{def.hpp}{单次 $O(1)$}
+\section{计算几何基础}\label{sec:geometry}
 
 二维向量与点、由「点 + 方向」表示的直线与线段，以及方向判定、投影、交点等基础谓词。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{Vec2<T> / Point2<T>}{坐标 \code{x}、\code{y}；\code{Point2} 只是同类型别名}
@@ -19,8 +17,7 @@
     \api{normalized(a)}{单位向量；零向量返回 \code{nullopt}}
 }
 
-
-\subsection{直线、线段与交点}
+\subsubsection{直线、线段与交点}
 
 \apitable{
     \api{Line2<T>{p, d}}{点 + 方向表示直线；方向必须非零}
@@ -39,7 +36,7 @@
     \api{intersects(Line2, Line2)}{交点是否存在的布尔包装}
 }
 
-\section{约定}
+\subsection{约定}
 
 坐标类型受 \code{GeomScalar} 约束：有符号整数、浮点或 \code{i128}，不接受无符号整数与 \code{bool}。整数运算前把坐标提升到 \code{Wide<T>}：不超过 4 字节的整型提升为 \code{i64}，8 字节提升为 \code{i128}；结果仍可能溢出，这种情形不受支持。浮点比较统一使用绝对容差 \code{eps}，默认 $10^{-9}$，可在包含任何几何头文件之前用 \code{ACM_EPS} 覆盖，且必须对整个程序统一。零方向直线无效，多数函数在入口断言；\code{Line2::through} 会计算 $b-a$，端点差需能由 \code{T} 表示；直线交点只对浮点类型实例化，整数坐标需要先 \code{cast<long double>()}。
 

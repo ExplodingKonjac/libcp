@@ -1,0 +1,54 @@
+\section{点分治}\label{sec:point-divide}
+
+\begin{algorithm}[H]
+    \caption{点分治}
+    \begin{algorithmic}[1]
+        \Procedure{Solve}{$n$}
+            \State \Call{Decompose}{1, n}
+        \EndProcedure
+        \Procedure{Decompose}{$u, \pvar{whole}$}
+            \State $\pvar{rt} \gets 0$
+            \State \Call{FindRoot}{u, \pvar{whole}, \pvar{rt}, 0}
+            \State $\pvar{vis}[\pvar{rt}] \gets \mathrm{true}$
+            \State \Call{Calc}{\pvar{rt}}
+            \For{$v \in G[\pvar{rt}]$}
+                \If{$\pvar{vis}[v]$}
+                    \State \textbf{continue}
+                \EndIf
+                \State $\pvar{ss} \gets \begin{cases} \pvar{siz}[v], & \text{if }\,\pvar{siz}[v] < \pvar{siz}[\pvar{rt}], \\ \pvar{whole} - \pvar{siz}[\pvar{rt}], & \text{otherwise}. \end{cases}$
+                \State \Call{Decompose}{v, \pvar{ss}}
+            \EndFor
+        \EndProcedure
+        \Procedure{FindRoot}{$u, \pvar{whole}, \mathrm{out}\ \pvar{rt}, \pvar{fa}$}
+            \State $\pvar{siz}[u] \gets 1$
+            \State $\pvar{mxs}[u] \gets 0$
+            \For{$v \in G[u]$}
+                \If{$\pvar{vis}[v]$ \textbf{or} $v = \pvar{fa}$}
+                    \State \textbf{continue}
+                \EndIf
+                \State \Call{FindRoot}{v, \pvar{whole}, \pvar{rt}, u}
+                \State $\pvar{siz}[u] \gets \pvar{siz}[u] + \pvar{siz}[v]$
+                \State $\pvar{mxs}[u] \gets \max(\pvar{mxs}[u], \pvar{siz}[v])$
+            \EndFor
+            \State $\pvar{mxs}[u] \gets \max(\pvar{mxs}[u], \pvar{whole} - \pvar{siz}[u])$
+            \If{$2 \cdot \pvar{mxs}[u] \le \pvar{whole}$}
+                \State $\pvar{rt} \gets u$
+            \EndIf
+        \EndProcedure
+        \Procedure{Calc}{$\pvar{rt}$}
+            \State \Comment{problem-specific; do not modify \pvar{vis}, \pvar{siz}, \pvar{mxs}}
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{待实现}
+
+\code{Calc(rt)} 统计经过 \code{rt} 的路径。按子树分批处理：先查询当前结构，再插入该子树，避免同子树点对。
+
+\subsection{数据契约}
+
+\code{siz} 以本次 \code{FindRoot} 的入口 \code{u} 为根，故 \code{ss} 要按 \code{siz[v] < siz[rt]} 分儿子 / 父亲，父亲一侧取 \code{whole - siz[rt]}。
+
+\code{Decompose} 在 \code{Calc} 之后才用 \code{siz} 算 \code{ss}，因此 \code{Calc} 不得改写 \code{vis}、\code{siz}、\code{mxs}。
+
+\code{FindRoot} 递归深度为连通块高度，链上可达 $O(n)$；\code{Decompose} 的递归深度才是 $O(\log n)$。

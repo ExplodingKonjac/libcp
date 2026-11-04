@@ -1,10 +1,8 @@
-\chapter{最大流}\label{ch:max-flow}
-
-\chaptermeta{max_flow.hpp}{def.hpp}{$O(V^{2}E)$}
+\section{最大流}\label{sec:max-flow}
 
 在整数容量网络中求 $s$ 到 $t$ 的最大流。边以链式前向星成对存储，第 $i$ 条边的残量弧为 $2i$ 与 $2i+1$，因此可以按编号回读任意边的容量与当前流量。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{MaxFlow<FlowT = i32>}{模板参数须为整型（\code{static_assert} 检查）；容量与流值都用 \code{FlowT} 表示}
@@ -16,7 +14,7 @@
     \api{FlowT max_flow(usize s, usize t)}{在残量网络上求最大流并返回流量；\code{s == t} 时返回 0}
 }
 
-\section{约定}
+\subsection{约定}
 
 \code{edge(i).capacity} 由正向与反向残量相加还原，因此 \code{FlowT} 必须能容纳「容量 + 已流流量」，否则溢出；无向边要正反各加一条，只加一条表示单向容量。\code{max_flow} 就地修改残量网络，重复调用是增量增广而非从零重算，需要重算时请重新构图。顶点数在构造时固定，没有动态加点接口；默认构造得到空图，实际应使用 \code{MaxFlow(n)}。
 

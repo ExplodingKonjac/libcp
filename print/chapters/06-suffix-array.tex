@@ -1,10 +1,8 @@
-\chapter{后缀数组}\label{ch:suffix-array}
-
-\chaptermeta{suffix_array.hpp}{def.hpp}{$O(n\log n)$，LCP $O(n)$}
+\section{后缀数组}\label{sec:suffix-array}
 
 对任意可随机访问、元素可比较的序列构造后缀数组，给出字典序排名、每个起点的排名以及相邻后缀的最长公共前缀。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{SuffixArray(const R& s)}{构造；\code{R} 需支持 \code{size()} 与随机访问，元素之间可比较大小}
@@ -14,7 +12,7 @@
     \api{usize height(usize i)}{第 $i$ 小与第 $i-1$ 小后缀的 LCP；\code{height(0) == 0}}
 }
 
-\section{约定}
+\subsection{约定}
 
 元素只需支持 \code{<} 与 \code{!=}，不必是字符；整数序列、\code{std::string} 与 \code{std::vector<int>} 都可直接传入。空序列合法，但此时不要调用 \code{sa}、\code{rk}、\code{height}。\code{sa} 与 \code{rk} 互为逆映射，下标均从 0 开始；\code{height(0)} 没有「前一个后缀」，按定义为 0，求任意两后缀的 LCP 需要另做 RMQ。
 

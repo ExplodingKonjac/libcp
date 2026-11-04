@@ -37,17 +37,6 @@
 % 头文件路径（相对仓库根）
 \newcommand{\srcfile}[1]{\code{include/acm/#1}}
 
-% ---------------------------------------------------------------- 章首元数据
-% \chaptermeta{头文件}{依赖}{复杂度}
-\newcommand{\chaptermeta}[3]{%
-    \noindent
-    {\small\color{muted}%
-        头文件\enspace\code{#1}\enspace·\enspace
-        依赖\enspace\code{#2}\enspace·\enspace
-        复杂度\enspace#3}%
-    \par\vspace{1.4em}%
-}
-
 % ---------------------------------------------------------------- 接口表
 % \apitable{ \api{签名}{说明} ... }
 \newcommand{\apitable}[1]{%
@@ -74,19 +63,14 @@
 
 \newcommand{\api}[2]{\code{#1} & #2 \\}
 
-% ---------------------------------------------------------------- 分部副标题
-% \partsubtitle{...} 设置随后一个 \part 页的说明行
-\newcommand{\acmpartsub}{}
-\newcommand{\partsubtitle}[1]{\gdef\acmpartsub{#1}}
-
 % ---------------------------------------------------------------- 完整源码
 % \fullsource{max_flow.hpp}：与其它小节统一的标题，不重复源码路径
 \newcommand{\fullsource}[1]{%
     \par\needspace{6\baselineskip}%
-    \section{完整源码}%
+    \subsection{完整源码}%
     \tcbinputlisting{acmcode, listing file = {../include/acm/#1}}%
 }
 
 % ---------------------------------------------------------------- 速查索引
-% \quickrefrow{模块}{头文件}{复杂度}{ch:label}
+% \quickrefrow{模块}{头文件}{复杂度}{sec:label}
 \newcommand{\quickrefrow}[4]{#1 & #2 & #3 & \pageref{#4} \\}

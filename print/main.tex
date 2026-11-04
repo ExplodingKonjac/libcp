@@ -1,6 +1,6 @@
 %% main.tex —— 打印版主文件
 %%
-%% 只负责装配：文档类 → 导言区 → 封面/目录 → \include 各章。
+%% 只负责装配：文档类 → 导言区 → 封面/目录 → \input 各节。
 
 \documentclass[
     UTF8,
@@ -15,6 +15,7 @@
 \input{preamble/fonts}
 \input{preamble/meta}
 \input{preamble/style}
+\input{preamble/pseudocode}
 \input{preamble/minted}
 \input{preamble/macros}
 
@@ -28,44 +29,46 @@
 \input{frontmatter/quickref}
 
 
-\partsubtitle{类型别名 · 模运算 · 数论}
-\part{基础}
-\include{chapters/01-def}
-\include{chapters/02-modint}
-\include{chapters/03-number-theory}
+\chapter{基础}
+\input{chapters/01-def}
+\input{chapters/02-modint}
+\input{chapters/03-number-theory}
 
-\partsubtitle{Link-Cut Tree · 配对堆}
-\part{数据结构}
-\include{chapters/04-link-cut-tree}
-\include{chapters/05-pairing-heap}
+\chapter{数据结构}
+\input{chapters/04-link-cut-tree}
+\input{chapters/05-pairing-heap}
 
-\partsubtitle{后缀数组 · 后缀自动机}
-\part{字符串}
-\include{chapters/06-suffix-array}
-\include{chapters/07-suffix-automaton}
+\chapter{字符串}
+\input{chapters/06-suffix-array}
+\input{chapters/07-suffix-automaton}
 
-\partsubtitle{二分图匹配 · 一般图匹配}
-\part{匹配}
-\include{chapters/08-bipartite-matching}
-\include{chapters/09-bipartite-weighted-matching}
-\include{chapters/10-general-matching}
-\include{chapters/11-general-weighted-matching}
+\chapter{匹配}
+\input{chapters/08-bipartite-matching}
+\input{chapters/09-bipartite-weighted-matching}
+\input{chapters/10-general-matching}
+\input{chapters/11-general-weighted-matching}
 
-\partsubtitle{最大流 · 最小费用流 · 最小费用可行环流}
-\part{网络流}
-\include{chapters/12-max-flow}
-\include{chapters/13-min-cost-flow}
-\include{chapters/14-min-cost-circulation}
+\chapter{网络流}
+\input{chapters/12-max-flow}
+\input{chapters/13-min-cost-flow}
+\input{chapters/14-min-cost-circulation}
 
-\partsubtitle{多项式运算 · 多项式插值}
-\part{多项式}
-\include{chapters/15-fpoly}
-\include{chapters/16-interpolation}
+\chapter{多项式}
+\input{chapters/15-fpoly}
+\input{chapters/16-interpolation}
 
-\partsubtitle{向量与谓词 · 圆 · 多边形}
-\part{计算几何}
-\include{chapters/17-geometry}
-\include{chapters/18-circle}
-\include{chapters/19-polygon}
+\chapter{计算几何}
+\input{chapters/17-geometry}
+\input{chapters/18-circle}
+\input{chapters/19-polygon}
+
+\chapter{算法}
+\input{chapters/20-point-divide}
+\input{chapters/21-virtual-tree}
+\input{chapters/22-tarjan}
+
+\input{chapters/23-du-sieve}
+\input{chapters/24-min-25}
+\input{chapters/25-powerful-number}
 
 \end{document}

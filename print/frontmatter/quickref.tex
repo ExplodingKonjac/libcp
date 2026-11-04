@@ -5,13 +5,13 @@
 \markboth{}{}
 \pagestyle{plain}
 
-下表按「基础 → 数据结构 → 字符串 → 匹配 → 网络流 → 多项式 → 几何」分组，右列为各章起始页码；模块下方的小字是对应头文件名（省略 \texttt{.hpp} 后缀）。
+下表按「基础 → 数据结构 → 字符串 → 匹配 → 网络流 → 多项式 → 几何 → 算法」分组，右列为各节起始页码；头文件列省略 \texttt{.hpp} 后缀，\texttt{——} 表示该节不对应头文件。
 
 \begingroup
 \small
-\linespread{1.15}\selectfont
+\linespread{1.0}\selectfont
 \setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.25}
+\renewcommand{\arraystretch}{1.1}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.29\linewidth}>{\raggedright\arraybackslash}p{0.35\linewidth}>{\raggedleft\arraybackslash}p{0.05\linewidth}@{}}
     \toprule
     \textbf{模块} & \textbf{头文件} & \textbf{复杂度} & \textbf{页} \\
@@ -25,43 +25,52 @@
     \endfoot
     \multicolumn{4}{@{}l}{\sffamily\bfseries 基础}\\
     \midrule[0.3pt]
-    \quickrefrow{类型别名}{\code{def}}{——}{ch:def}
-    \quickrefrow{模运算}{\code{modint}}{乘除 $O(\log p)$}{ch:modint}
-    \quickrefrow{数论}{\code{number_theory}}{分解期望 $O(n^{1/4})$}{ch:number-theory}
+    \quickrefrow{类型别名}{\code{def}}{——}{sec:def}
+    \quickrefrow{模运算}{\code{modint}}{乘除 $O(\log p)$}{sec:modint}
+    \quickrefrow{数论}{\code{number_theory}}{分解期望 $O(n^{1/4})$}{sec:number-theory}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 数据结构}\\
     \midrule[0.3pt]
-    \quickrefrow{动态树}{\code{link_cut_tree}}{各项均摊 $O(\log n)$}{ch:link-cut-tree}
-    \quickrefrow{配对堆}{\code{pairing_heap}}{合并 $O(1)$，删除均摊 $O(\log n)$}{ch:pairing-heap}
+    \quickrefrow{动态树}{\code{link_cut_tree}}{各项均摊 $O(\log n)$}{sec:link-cut-tree}
+    \quickrefrow{配对堆}{\code{pairing_heap}}{合并 $O(1)$，删除均摊 $O(\log n)$}{sec:pairing-heap}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 字符串}\\
     \midrule[0.3pt]
-    \quickrefrow{后缀数组}{\code{suffix_array}}{$O(n\log n)$}{ch:suffix-array}
-    \quickrefrow{后缀自动机}{\code{suffix_automaton}}{$O(n)$（空间 $O(nZ)$）}{ch:suffix-automaton}
+    \quickrefrow{后缀数组}{\code{suffix_array}}{$O(n\log n)$}{sec:suffix-array}
+    \quickrefrow{后缀自动机}{\code{suffix_automaton}}{$O(n)$（空间 $O(nZ)$）}{sec:suffix-automaton}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 匹配}\\
     \midrule[0.3pt]
-    \quickrefrow{二分图最大匹配}{\code{bipartite_matching}}{$O(E\sqrt{V})$}{ch:bipartite-matching}
-    \quickrefrow{二分图最大权匹配}{\code{bipartite_weighted_matching}}{$O(n^2m)$}{ch:bipartite-weighted-matching}
-    \quickrefrow{一般图最大匹配}{\code{general_matching}}{$O(V^3)$}{ch:general-matching}
-    \quickrefrow{一般图最大权完美匹配}{\code{general_weighted_matching}}{$O(V^3)$}{ch:general-weighted-matching}
+    \quickrefrow{二分图最大匹配}{\code{bipartite_matching}}{$O(E\sqrt{V})$}{sec:bipartite-matching}
+    \quickrefrow{二分图最大权匹配}{\code{bipartite_weighted_matching}}{$O(n^2m)$}{sec:bipartite-weighted-matching}
+    \quickrefrow{一般图最大匹配}{\code{general_matching}}{$O(V^3)$}{sec:general-matching}
+    \quickrefrow{一般图最大权完美匹配}{\code{general_weighted_matching}}{$O(V^3)$}{sec:general-weighted-matching}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 网络流}\\
     \midrule[0.3pt]
-    \quickrefrow{最大流}{\code{max_flow}}{$O(V^2E)$}{ch:max-flow}
-    \quickrefrow{最小费用流}{\code{min_cost_flow}}{$O(FE\log V)$}{ch:min-cost-flow}
-    \quickrefrow{最小费用可行环流}{\code{min_cost_circulation}}{实际近似线性}{ch:min-cost-circulation}
+    \quickrefrow{最大流}{\code{max_flow}}{$O(V^2E)$}{sec:max-flow}
+    \quickrefrow{最小费用流}{\code{min_cost_flow}}{$O(FE\log V)$}{sec:min-cost-flow}
+    \quickrefrow{最小费用可行环流}{\code{min_cost_circulation}}{实际近似线性}{sec:min-cost-circulation}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 多项式}\\
     \midrule[0.3pt]
-    \quickrefrow{多项式运算}{\code{fpoly}}{$O(n\log n)$}{ch:fpoly}
-    \quickrefrow{多项式插值}{\code{interpolation}}{$O(n^2)$}{ch:interpolation}
+    \quickrefrow{多项式运算}{\code{fpoly}}{$O(n\log n)$}{sec:fpoly}
+    \quickrefrow{多项式插值}{\code{interpolation}}{$O(n^2)$}{sec:interpolation}
     \midrule[0.3pt]
     \multicolumn{4}{@{}l}{\sffamily\bfseries 计算几何}\\
     \midrule[0.3pt]
-    \quickrefrow{计算几何基础}{\code{geometry}}{单次 $O(1)$}{ch:geometry}
-    \quickrefrow{圆}{\code{geometry/circle}}{最小覆盖圆期望 $O(n)$}{ch:circle}
-    \quickrefrow{多边形}{\code{geometry/polygon}}{$O(n\log n)$}{ch:polygon}
+    \quickrefrow{计算几何基础}{\code{geometry}}{单次 $O(1)$}{sec:geometry}
+    \quickrefrow{圆}{\code{geometry/circle}}{最小覆盖圆期望 $O(n)$}{sec:circle}
+    \quickrefrow{多边形}{\code{geometry/polygon}}{$O(n\log n)$}{sec:polygon}
+    \midrule[0.3pt]
+    \multicolumn{4}{@{}l}{\sffamily\bfseries 算法}\\
+    \midrule[0.3pt]
+    \quickrefrow{点分治}{——}{$O(n\log n)$}{sec:point-divide}
+    \quickrefrow{虚树}{——}{$O(k\log n)$}{sec:virtual-tree}
+    \quickrefrow{Tarjan}{——}{$O(n+m)$}{sec:tarjan}
+    \quickrefrow{杜教筛}{——}{$O(n^{2/3})$}{sec:du-sieve}
+    \quickrefrow{Min\_25 筛}{——}{$O(n^{3/4}/\log n)$}{sec:min-25}
+    \quickrefrow{PN 筛}{——}{$O(n^{2/3})$}{sec:powerful-number}
 \end{longtable}
 \endgroup
 \clearpage

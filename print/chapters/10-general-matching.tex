@@ -1,10 +1,8 @@
-\chapter{一般图最大匹配}\label{ch:general-matching}
-
-\chaptermeta{general_matching.hpp}{def.hpp}{$O(V^3)$}
+\section{一般图最大匹配}\label{sec:general-matching}
 
 无向一般图的最大匹配。奇数长度的环无法用二分图方法处理，实现中使用 Edmonds Blossom 缩花。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{GeneralMatching(usize n)}{建 $n$ 个点、零条边的无向图，编号 $[0,n)$}
@@ -14,7 +12,7 @@
     \api{npos}{表示「未匹配」的哨兵，等于 \code{usize(-1)}}
 }
 
-\section{约定}
+\subsection{约定}
 
 每条无向边只需 \code{add_edge} 一次，内部会同时加入两个方向；重复添加不影响正确性，但会增大常数。端点必须不同，自环在匹配中没有意义，实现也未专门处理。返回 \code{{size, match}}，\code{match} 是对称的，未匹配为 \code{npos}；每次调用都从零开始求解，状态不跨调用保留。
 

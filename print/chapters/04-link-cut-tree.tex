@@ -1,10 +1,8 @@
-\chapter{动态树（Link-Cut Tree）}\label{ch:link-cut-tree}
-
-\chaptermeta{link_cut_tree.hpp}{def.hpp}{各项操作均摊 $O(\log n)$，空间 $O(n)$}
+\section{动态树（Link-Cut Tree）}\label{sec:link-cut-tree}
 
 用 Splay 维护动态森林的实链剖分，支持点权修改、路径聚合、加边、删边、显式换根与连通性查询。路径聚合要求运算满足结合律与交换律，不要求单位元。
 
-\section{接口}
+\subsection{接口}
 
 \apitable{
     \api{LinkCutTree<T, Op>}{动态森林；点权类型 \code{T}，路径聚合运算 \code{Op}，默认 \code{std::plus<T>}}
@@ -22,7 +20,7 @@
     \api{npos}{表示「无」的哨兵值，等于 \code{usize(-1)}}
 }
 
-\section{约定}
+\subsection{约定}
 
 顶点编号为 $[0,n)$，路径聚合包含两个端点；\code{query(u, u)} 返回单点权值。\code{Op} 必须满足结合律与交换律，\code{plus}、\code{max}、\code{min}、\code{bit_xor}、\code{gcd} 等都可直接使用；实现只维护一个聚合值，不跟踪路径方向，因此不支持非交换路径积。由于不要求单位元，\code{pushup} 只合并非空儿子，\code{max/min} 不需要额外构造零元。
 

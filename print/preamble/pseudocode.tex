@@ -1,0 +1,16 @@
+%% pseudocode.tex —— 伪代码
+%%
+%% 算法章用 algorithm + algpseudocode 排骨架：标题、编号、缩进与正文一致，
+%% 具体题目相关的部分只留过程名，由正文的「待实现」说明其职责。
+
+\floatname{algorithm}{算法}
+\numberwithin{algorithm}{chapter}
+
+% 过程名用无衬线体；Latin Modern 没有小体大写，\textsc 会静默回退。
+\renewcommand{\textproc}[1]{\textsf{#1}}
+
+% 伪代码中的多字母变量：\pvar{siz}[u] 排成直立 siz[u]，避免被当成 s·i·z。
+\newcommand{\pvar}[1]{\ifmmode\mathrm{#1}\else\textrm{#1}\fi}
+
+% 函数调用：文本/数学模式均可，参数按数学排版
+\renewcommand{\Call}[2]{\ensuremath{\mathsf{#1}(#2)}}
